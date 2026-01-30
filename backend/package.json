@@ -1,0 +1,21 @@
+{
+  "name": "portal-chamados-backend",
+  "version": "1.0.0",
+  "description": "Backend API para Portal de Chamados",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "kill-port": "node scripts/kill-port.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "@supabase/supabase-js": "^2.38.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

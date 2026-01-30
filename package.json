@@ -1,0 +1,23 @@
+{
+  "name": "portal-chamados",
+  "version": "1.0.0",
+  "description": "Portal de Chamados - Sistema de gerenciamento de tickets",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "npm run build:frontend && npm run dev:backend",
+    "dev:watch": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "build:frontend": "cd frontend && npm run build",
+    "start": "npm run build:frontend && cd backend && npm start",
+    "kill-port": "cd backend && npm run kill-port",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
