@@ -75,4 +75,15 @@ export const ticketAPI = {
   },
 };
 
+export const templateAPI = {
+  getTemplate: async (departamento) => {
+    const response = await api.get(`/templates/${encodeURIComponent(departamento)}`);
+    return response.data;
+  },
+  saveTemplate: async (departamento, fields) => {
+    const response = await api.put('/templates', { departamento, fields });
+    return response.data;
+  },
+};
+
 export default api;

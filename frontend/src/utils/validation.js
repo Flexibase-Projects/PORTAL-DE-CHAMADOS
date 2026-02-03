@@ -23,11 +23,7 @@ export const validateForm = (formData) => {
   }
 
   if (!formData.area || formData.area.trim().length === 0) {
-    errors.area = 'Área é obrigatória';
-  }
-
-  if (!formData.tipoSuporte || formData.tipoSuporte.trim().length === 0) {
-    errors.tipoSuporte = 'Tipo de Suporte é obrigatório';
+    errors.area = 'Departamento é obrigatório';
   }
 
   if (!formData.assunto || formData.assunto.trim().length === 0) {

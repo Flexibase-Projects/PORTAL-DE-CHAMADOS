@@ -11,6 +11,7 @@ export class Ticket {
     this.assunto = data.assunto || '';
     this.mensagem = data.mensagem || '';
     this.anexo = data.anexo || null;
+    this.dadosExtras = data.dadosExtras || {};
     this.status = data.status || 'Pendente';
     this.dataCriacao = data.dataCriacao || new Date().toISOString();
     this.dataAtualizacao = data.dataAtualizacao || new Date().toISOString();
@@ -35,6 +36,7 @@ export class Ticket {
       assunto: this.assunto,
       mensagem: this.mensagem,
       anexo: this.anexo,
+      dadosExtras: this.dadosExtras,
       status: this.status,
       dataCriacao: this.dataCriacao,
       dataAtualizacao: this.dataAtualizacao,

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
 import ticketRoutes from './routes/tickets.js';
+import templateRoutes from './routes/templates.js';
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // API Routes (devem vir antes do static)
 app.use('/api/tickets', ticketRoutes);
+app.use('/api/templates', templateRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

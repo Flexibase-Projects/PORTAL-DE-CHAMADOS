@@ -6,7 +6,7 @@ export const validateEmail = (email) => {
 };
 
 export const validateTicket = (req, res, next) => {
-  const { nome, email, setor, area, tipoSuporte, assunto, mensagem } = req.body;
+  const { nome, email, setor, area, assunto, mensagem } = req.body;
 
   const errors = [];
 
@@ -26,10 +26,6 @@ export const validateTicket = (req, res, next) => {
 
   if (!area || area.trim().length === 0) {
     errors.push('Área é obrigatória');
-  }
-
-  if (!tipoSuporte || tipoSuporte.trim().length === 0) {
-    errors.push('Tipo de Suporte é obrigatório');
   }
 
   if (!assunto || assunto.trim().length === 0) {

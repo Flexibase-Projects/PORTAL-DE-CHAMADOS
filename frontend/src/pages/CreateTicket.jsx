@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Typography,
@@ -16,16 +16,13 @@ import {
   CardContent,
   CircularProgress,
 } from '@mui/material';
-import { ticketAPI } from '../services/api';
+import { ticketAPI, templateAPI } from '../services/api';
 import { validateForm } from '../utils/validation';
-
-const areas = ['TI', 'RH', 'Financeiro', 'Operações'];
-const setores = ['Vendas', 'Suporte', 'Administração', 'Produção'];
-const tiposSuporte = ['Técnico', 'Consulta', 'Solicitação', 'Problema'];
+import { SETORES, DEPARTAMENTOS_POR_SETOR } from '../constants/departamentos';
+import TemplateFieldRenderer from '../components/Templates/TemplateFieldRenderer';
 
 const CreateTicket = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [ticketId, setTicketId] = useState(null);
@@ -33,35 +30,79 @@ const CreateTicket = () => {
     nome: '',
     email: '',
     setor: '',
-    area: location.state?.area || '',
-    tipoSuporte: '',
+    area: '',
     ramal: '',
     assunto: '',
     mensagem: '',
   });
+  const [templateFields, setTemplateFields] = useState([]);
+  const [dadosExtras, setDadosExtras] = useState({});
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    if (location.state?.area) {
-      setFormData((prev) => ({ ...prev, area: location.state.area }));
+    if (formData.area) {
+      templateAPI
+        .getTemplate(formData.area)
+        .then((res) => {
+          if (res.success && res.template && Array.isArray(res.template.fields)) {
+            setTemplateFields(res.template.fields.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+          } else {
+            setTemplateFields([]);
+          }
+        })
+        .catch(() => setTemplateFields([]));
+      setDadosExtras({});
+    } else {
+      setTemplateFields([]);
+      setDadosExtras({});
     }
-  }, [location.state]);
+  }, [formData.area]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    // Limpar erro do campo quando o usuário começar a digitar
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === 'setor') {
+        next.area = '';
+      }
+      return next;
+    });
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
 
+  const handleDynamicChange = (key, value) => {
+    setDadosExtras((prev) => ({ ...prev, [key]: value }));
+    if (errors[key]) {
+      setErrors((prev) => ({ ...prev, [key]: '' }));
+    }
+  };
+
+  const validateDynamicFields = () => {
+    const dynamicErrors = {};
+    templateFields.forEach((field) => {
+      if (field.type === 'info') return;
+      if (!field.required) return;
+      const val = dadosExtras[field.key];
+      if (val === undefined || val === null || val === '') {
+        dynamicErrors[field.key] = `${field.label || field.key} é obrigatório`;
+      }
+    });
+    return dynamicErrors;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const validation = validateForm(formData);
     if (!validation.isValid) {
       setErrors(validation.errors);
+      return;
+    }
+    const dynamicErrors = validateDynamicFields();
+    if (Object.keys(dynamicErrors).length > 0) {
+      setErrors((prev) => ({ ...prev, ...dynamicErrors }));
       return;
     }
 
@@ -69,7 +110,8 @@ const CreateTicket = () => {
     setErrors({});
 
     try {
-      const response = await ticketAPI.createTicket(formData);
+      const payload = { ...formData, dadosExtras };
+      const response = await ticketAPI.createTicket(payload);
       if (response.success) {
         setTicketId(response.ticket.id);
         setSuccess(true);
@@ -115,11 +157,12 @@ const CreateTicket = () => {
                       email: '',
                       setor: '',
                       area: '',
-                      tipoSuporte: '',
                       ramal: '',
                       assunto: '',
                       mensagem: '',
                     });
+                    setDadosExtras({});
+                    setTemplateFields([]);
                   }}
                   size="large"
                 >
@@ -193,7 +236,7 @@ const CreateTicket = () => {
                     <MenuItem value="">
                       <em>Selecione um setor</em>
                     </MenuItem>
-                    {setores.map((setor) => (
+                    {SETORES.map((setor) => (
                       <MenuItem key={setor} value={setor}>
                         {setor}
                       </MenuItem>
@@ -208,52 +251,26 @@ const CreateTicket = () => {
               </Grid>
 
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth error={!!errors.area}>
-                  <InputLabel>Área</InputLabel>
+                <FormControl fullWidth error={!!errors.area} disabled={!formData.setor}>
+                  <InputLabel>Departamento</InputLabel>
                   <Select
                     name="area"
                     value={formData.area}
                     onChange={handleChange}
-                    label="Área"
+                    label="Departamento"
                   >
                     <MenuItem value="">
-                      <em>Selecione uma área</em>
+                      <em>Selecione um departamento</em>
                     </MenuItem>
-                    {areas.map((area) => (
-                      <MenuItem key={area} value={area}>
-                        {area}
+                    {(DEPARTAMENTOS_POR_SETOR[formData.setor] || []).map((dept) => (
+                      <MenuItem key={dept} value={dept}>
+                        {dept}
                       </MenuItem>
                     ))}
                   </Select>
                   {errors.area && (
                     <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
                       {errors.area}
-                    </Typography>
-                  )}
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth error={!!errors.tipoSuporte}>
-                  <InputLabel>Tipo de Suporte</InputLabel>
-                  <Select
-                    name="tipoSuporte"
-                    value={formData.tipoSuporte}
-                    onChange={handleChange}
-                    label="Tipo de Suporte"
-                  >
-                    <MenuItem value="">
-                      <em>Selecione um tipo</em>
-                    </MenuItem>
-                    {tiposSuporte.map((tipo) => (
-                      <MenuItem key={tipo} value={tipo}>
-                        {tipo}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {errors.tipoSuporte && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
-                      {errors.tipoSuporte}
                     </Typography>
                   )}
                 </FormControl>
@@ -280,7 +297,7 @@ const CreateTicket = () => {
                   value={formData.assunto}
                   onChange={handleChange}
                   error={!!errors.assunto}
-                  helperText={errors.assunto}
+                  helperText={errors.assunto || 'Título que aparecerá para o responsável pelo chamado'}
                   required
                 />
               </Grid>
@@ -298,6 +315,79 @@ const CreateTicket = () => {
                   helperText={errors.mensagem}
                   required
                 />
+              </Grid>
+
+              <Grid item xs={12}>
+                <Box
+                  sx={{
+                    position: 'relative',
+                    width: '100%',
+                    minHeight: 500,
+                    bgcolor: 'grey.50',
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {templateFields.map((field, index) => {
+                    const key = field.key;
+                    const value = dadosExtras[key];
+                    const err = errors[key];
+                    let xPct = field.x;
+                    let yPct = field.y;
+                    let widthPct = field.widthPct;
+                    let heightPct = field.heightPct;
+                    if (xPct == null || yPct == null || widthPct == null || heightPct == null) {
+                      if (field.widthPx != null && field.heightPx != null && field.widthPx <= 100 && field.heightPx <= 100) {
+                        xPct = field.x ?? 0;
+                        yPct = field.y ?? 0;
+                        widthPct = field.widthPx;
+                        heightPct = field.heightPx;
+                      } else if (field.widthPx != null && field.heightPx != null) {
+                        xPct = ((field.x ?? 0) / 1920) * 100;
+                        yPct = ((field.y ?? 0) / 1080) * 100;
+                        widthPct = ((field.widthPx ?? 400) / 1920) * 100;
+                        heightPct = ((field.heightPx ?? 120) / 1080) * 100;
+                      } else {
+                        const col = field.col ?? 0;
+                        const row = field.row ?? field.order ?? index;
+                        const colSpan = Math.min(12, Math.max(1, field.colSpan ?? field.width ?? (field.size === 'half' ? 6 : 12)));
+                        const rowSpan = Math.max(1, field.rowSpan ?? 1);
+                        xPct = (col / 12) * 100;
+                        yPct = row * 8;
+                        widthPct = (colSpan / 12) * 100;
+                        heightPct = rowSpan * 8;
+                      }
+                    }
+                    const x = Math.max(0, Math.min(100 - (widthPct ?? 50), xPct ?? 0));
+                    const y = Math.max(0, Math.min(100 - (heightPct ?? 15), yPct ?? 0));
+                    const w = Math.min(100, Math.max(5, widthPct ?? 50));
+                    const h = Math.min(100, Math.max(3, heightPct ?? 15));
+                    return (
+                      <Box
+                        key={field.id}
+                        sx={{
+                          position: 'absolute',
+                          left: `${x}%`,
+                          top: `${y}%`,
+                          width: `${w}%`,
+                          height: `${h}%`,
+                          minWidth: 0,
+                          boxSizing: 'border-box',
+                          overflow: 'auto',
+                          p: 1,
+                        }}
+                      >
+                        <TemplateFieldRenderer
+                          field={field}
+                          value={value}
+                          onChange={(v) => handleDynamicChange(key, v)}
+                          error={err}
+                          preview={false}
+                        />
+                      </Box>
+                    );
+                  })}
+                </Box>
               </Grid>
 
               <Grid item xs={12}>

@@ -18,6 +18,17 @@ import {
   Divider,
   Grid,
   Paper,
+  Tabs,
+  Tab,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 import {
   CheckCircle as CheckIcon,
@@ -26,9 +37,13 @@ import {
 } from '@mui/icons-material';
 import { ticketAPI } from '../services/api';
 import TicketCard from '../components/Tickets/TicketCard';
+import TemplateEditor from '../components/Templates/TemplateEditor';
+import { getAllDepartamentos } from '../constants/departamentos';
 
 const AdminPanel = () => {
   const location = useLocation();
+  const [tabValue, setTabValue] = useState(0);
+  const [templateDepartamento, setTemplateDepartamento] = useState('');
   const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -37,6 +52,7 @@ const AdminPanel = () => {
   const [responseText, setResponseText] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const departamentos = getAllDepartamentos();
 
   useEffect(() => {
     loadTickets();
@@ -172,9 +188,14 @@ const AdminPanel = () => {
           Painel Administrativo
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Gerencie e responda aos chamados recebidos.
+          Gerencie chamados e templates por departamento.
         </Typography>
       </Box>
+
+      <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} sx={{ mb: 3 }}>
+        <Tab label="Chamados recebidos" />
+        <Tab label="Templates por departamento" />
+      </Tabs>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
@@ -188,6 +209,30 @@ const AdminPanel = () => {
         </Alert>
       )}
 
+      {tabValue === 1 && (
+        <Box sx={{ mb: 4 }}>
+          <FormControl sx={{ minWidth: 280, mb: 2 }}>
+            <InputLabel>Departamento</InputLabel>
+            <Select
+              value={templateDepartamento}
+              label="Departamento"
+              onChange={(e) => setTemplateDepartamento(e.target.value)}
+            >
+              <MenuItem value="">
+                <em>Selecione um departamento</em>
+              </MenuItem>
+              {departamentos.map((d) => (
+                <MenuItem key={d} value={d}>
+                  {d}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TemplateEditor departamento={templateDepartamento} />
+        </Box>
+      )}
+
+      {tabValue === 0 && (
       <Grid container spacing={3}>
         {/* Lista de Chamados */}
         <Grid item xs={12} md={selectedTicket ? 4 : 12}>
@@ -267,12 +312,14 @@ const AdminPanel = () => {
                     </Typography>
                     <Typography variant="body1">{selectedTicket.area}</Typography>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="body2" color="text.secondary">
-                      Tipo de Suporte
-                    </Typography>
-                    <Typography variant="body1">{selectedTicket.tipoSuporte}</Typography>
-                  </Grid>
+                  {selectedTicket.tipoSuporte && (
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        Tipo de Suporte
+                      </Typography>
+                      <Typography variant="body1">{selectedTicket.tipoSuporte}</Typography>
+                    </Grid>
+                  )}
                   {selectedTicket.ramal && (
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary">
@@ -299,6 +346,55 @@ const AdminPanel = () => {
                 <Typography variant="body1" paragraph sx={{ whiteSpace: 'pre-wrap' }}>
                   {selectedTicket.mensagem}
                 </Typography>
+
+                {selectedTicket.dadosExtras && Object.keys(selectedTicket.dadosExtras).length > 0 && (
+                  <>
+                    <Divider sx={{ my: 3 }} />
+                    <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
+                      Dados adicionais
+                    </Typography>
+                    <Box sx={{ mb: 2 }}>
+                      {Object.entries(selectedTicket.dadosExtras).map(([key, value]) => (
+                        <Box key={key} sx={{ mb: 1 }}>
+                          {Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && !Array.isArray(value[0]) ? (
+                            <Paper variant="outlined" sx={{ p: 1, overflow: 'auto' }}>
+                              <Typography variant="caption" color="text.secondary">
+                                {key}
+                              </Typography>
+                              <Table size="small">
+                                <TableHead>
+                                  <TableRow>
+                                    {Object.keys(value[0]).map((col) => (
+                                      <TableCell key={col}>{col}</TableCell>
+                                    ))}
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {value.map((row, i) => (
+                                    <TableRow key={i}>
+                                      {Object.values(row).map((cell, j) => (
+                                        <TableCell key={j}>{String(cell)}</TableCell>
+                                      ))}
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </Paper>
+                          ) : (
+                            <>
+                              <Typography variant="body2" color="text.secondary">
+                                {key}
+                              </Typography>
+                              <Typography variant="body1">
+                                {Array.isArray(value) ? value.join(', ') : String(value)}
+                              </Typography>
+                            </>
+                          )}
+                        </Box>
+                      ))}
+                    </Box>
+                  </>
+                )}
 
                 {selectedTicket.respostas && selectedTicket.respostas.length > 0 && (
                   <>
@@ -355,6 +451,7 @@ const AdminPanel = () => {
           </Grid>
         )}
       </Grid>
+      )}
 
       {/* Dialog de Resposta */}
       <Dialog open={responseDialogOpen} onClose={handleCloseResponseDialog} maxWidth="sm" fullWidth>

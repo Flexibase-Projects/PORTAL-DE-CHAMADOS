@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -9,10 +9,6 @@ import {
   CardActions,
   Button,
   Box,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
 } from '@mui/material';
 import {
   Send as SendIcon,
@@ -21,22 +17,11 @@ import {
   MenuBook as KnowledgeIcon,
 } from '@mui/icons-material';
 
-const areas = ['TI', 'RH', 'Financeiro', 'Operações'];
-
 const Home = () => {
   const navigate = useNavigate();
-  const [selectedArea, setSelectedArea] = useState('');
-
-  const handleAreaChange = (event) => {
-    setSelectedArea(event.target.value);
-  };
 
   const handleNavigate = (path) => {
-    if (path === '/criar-chamado' && !selectedArea) {
-      alert('Por favor, selecione uma área antes de criar um chamado.');
-      return;
-    }
-    navigate(path, { state: { area: selectedArea } });
+    navigate(path);
   };
 
   const menuCards = [
@@ -77,30 +62,8 @@ const Home = () => {
           Portal de Chamados
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
-          Bem-vindo ao sistema de gerenciamento de chamados. Selecione a área do chamado e escolha uma opção abaixo.
+          Bem-vindo ao sistema de gerenciamento de chamados. Escolha uma opção abaixo.
         </Typography>
-      </Box>
-
-      <Box sx={{ mb: 4 }}>
-        <FormControl fullWidth sx={{ maxWidth: 400 }}>
-          <InputLabel id="area-select-label">Seleção da Área do Chamado</InputLabel>
-          <Select
-            labelId="area-select-label"
-            id="area-select"
-            value={selectedArea}
-            label="Seleção da Área do Chamado"
-            onChange={handleAreaChange}
-          >
-            <MenuItem value="">
-              <em>Selecione uma área</em>
-            </MenuItem>
-            {areas.map((area) => (
-              <MenuItem key={area} value={area}>
-                {area}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
       </Box>
 
       <Grid container spacing={3}>
