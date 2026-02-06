@@ -1,21 +1,25 @@
-// Configuração do Supabase (preparado para integração futura)
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Carrega .env.local da raiz do projeto
+dotenv.config({ path: join(__dirname, '..', '..', '..', '.env.local') });
+dotenv.config({ path: join(__dirname, '..', '..', '.env') });
 dotenv.config();
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
-// Por enquanto, retorna null se as variáveis não estiverem configuradas
-// Isso permite que o sistema funcione sem Supabase inicialmente
-let supabase = null;
-
-if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-  console.log('✅ Supabase configurado');
-} else {
-  console.log('⚠️ Supabase não configurado - usando armazenamento em memória');
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ SUPABASE_URL e SUPABASE_KEY são obrigatórios no .env.local');
+  process.exit(1);
 }
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+console.log('✅ Supabase conectado');
 
 export default supabase;

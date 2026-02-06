@@ -1,0 +1,122 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Sidebar: definido em :root (claro) e .dark (escuro). .dark deve vir depois para sobrescrever. */
+:root {
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+@theme {
+  --color-background: hsl(0 0% 100%);
+  --color-foreground: hsl(240 10% 3.9%);
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(240 10% 3.9%);
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(240 10% 3.9%);
+  --color-primary: hsl(240 5.9% 10%);
+  --color-primary-foreground: hsl(0 0% 98%);
+  --color-secondary: hsl(240 4.8% 95.9%);
+  --color-secondary-foreground: hsl(240 5.9% 10%);
+  --color-muted: hsl(240 4.8% 95.9%);
+  --color-muted-foreground: hsl(240 3.8% 46.1%);
+  --color-accent: hsl(240 4.8% 95.9%);
+  --color-accent-foreground: hsl(240 5.9% 10%);
+  --color-destructive: hsl(0 84.2% 60.2%);
+  --color-destructive-foreground: hsl(0 0% 98%);
+  --color-border: hsl(240 5.9% 90%);
+  --color-input: hsl(240 5.9% 90%);
+  --color-ring: hsl(240 5.9% 10%);
+  --color-chart-1: hsl(12 76% 61%);
+  --color-chart-2: hsl(173 58% 39%);
+  --color-chart-3: hsl(197 37% 24%);
+  --color-chart-4: hsl(43 74% 66%);
+  --color-chart-5: hsl(27 87% 67%);
+  --radius: 0.625rem;
+  --sidebar-width: 16rem;
+  --sidebar-width-icon: 3rem;
+}
+
+/* Modo escuro: tom suave (charcoal azulado), padrão único de saturação/lightness.
+   Hue 230; sat 8–14%; lightness em escala: fundo 14% → card 18% → secundário 22% → borda 26%. */
+.dark {
+  --color-background: hsl(230 12% 14%);
+  --color-foreground: hsl(0 0% 95%);
+  --color-card: hsl(230 11% 18%);
+  --color-card-foreground: hsl(0 0% 95%);
+  --color-popover: hsl(230 11% 18%);
+  --color-popover-foreground: hsl(0 0% 95%);
+  --color-primary: hsl(0 0% 95%);
+  --color-primary-foreground: hsl(230 12% 14%);
+  --color-secondary: hsl(230 10% 22%);
+  --color-secondary-foreground: hsl(0 0% 95%);
+  --color-muted: hsl(230 10% 22%);
+  --color-muted-foreground: hsl(230 6% 65%);
+  --color-accent: hsl(230 10% 22%);
+  --color-accent-foreground: hsl(0 0% 95%);
+  --color-destructive: hsl(0 55% 45%);
+  --color-destructive-foreground: hsl(0 0% 98%);
+  --color-border: hsl(230 9% 26%);
+  --color-input: hsl(230 9% 26%);
+  --color-ring: hsl(230 8% 75%);
+  --color-chart-1: hsl(220 65% 55%);
+  --color-chart-2: hsl(165 55% 48%);
+  --color-chart-3: hsl(35 75% 58%);
+  --color-chart-4: hsl(275 60% 62%);
+  --color-chart-5: hsl(340 65% 58%);
+  /* Sidebar: mesmo padrão (hue 230), um degrau acima do card para hierarquia */
+  --color-sidebar: hsl(230 12% 16%);
+  --color-sidebar-foreground: hsl(230 6% 88%);
+  --color-sidebar-primary: hsl(224 70% 55%);
+  --color-sidebar-primary-foreground: hsl(0 0% 100%);
+  --color-sidebar-accent: hsl(230 10% 24%);
+  --color-sidebar-accent-foreground: hsl(0 0% 95%);
+  --color-sidebar-border: hsl(230 9% 26%);
+  --color-sidebar-ring: hsl(224 70% 55%);
+  --sidebar: hsl(230 12% 16%);
+  --sidebar-foreground: hsl(230 6% 88%);
+  --sidebar-primary: hsl(224 70% 55%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(230 10% 24%);
+  --sidebar-accent-foreground: hsl(0 0% 95%);
+  --sidebar-border: hsl(230 9% 26%);
+  --sidebar-ring: hsl(224 70% 55%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+}
+
+@theme inline {
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

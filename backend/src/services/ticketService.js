@@ -1,88 +1,220 @@
-import { Ticket } from '../models/Ticket.js';
+import supabase from '../config/supabase.js';
 
-// Armazenamento em memória (será substituído por Supabase no futuro)
-let tickets = [];
-let nextId = 1;
+function generateProtocol() {
+  const now = new Date();
+  const y = now.getFullYear().toString().slice(-2);
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
+  return `PDC-${y}${m}${d}-${rand}`;
+}
 
 export const ticketService = {
-  // Criar novo chamado
-  createTicket(ticketData) {
-    const ticket = new Ticket(ticketData);
-    tickets.push(ticket);
-    return ticket.toJSON();
-  },
-
-  // Buscar todos os chamados
-  getAllTickets() {
-    return tickets.map(t => t.toJSON());
-  },
-
-  // Buscar chamado por ID
-  getTicketById(id) {
-    const ticket = tickets.find(t => t.id === id);
-    return ticket ? ticket.toJSON() : null;
-  },
-
-  // Buscar chamados por email (para "Meus Chamados")
-  getTicketsByEmail(email) {
-    return tickets.filter(t => t.email === email).map(t => t.toJSON());
-  },
-
-  // Buscar chamados recebidos (para Painel Administrativo)
-  // Por enquanto, retorna todos os chamados não concluídos
-  getReceivedTickets() {
-    return tickets.filter(t => t.status !== 'Concluído').map(t => t.toJSON());
-  },
-
-  // Atualizar status do chamado
-  updateTicketStatus(id, status) {
-    const ticket = tickets.find(t => t.id === id);
-    if (ticket) {
-      ticket.status = status;
-      ticket.dataAtualizacao = new Date().toISOString();
-      return ticket.toJSON();
+  async createTicket(data) {
+    // Buscar user pelo email ou criar referência
+    let solicitanteId = null;
+    if (data.email) {
+      const { data: user } = await supabase
+        .from('PDC_users')
+        .select('id')
+        .eq('email', data.email)
+        .single();
+      solicitanteId = user?.id;
     }
-    return null;
+
+    // Se não encontrou user, criar um temporário
+    if (!solicitanteId) {
+      const { data: roles } = await supabase
+        .from('PDC_roles')
+        .select('id')
+        .eq('nome', 'usuario')
+        .single();
+
+      const { data: newUser, error: userErr } = await supabase
+        .from('PDC_users')
+        .upsert({
+          nome: data.nome || 'Usuário',
+          email: data.email,
+          setor: data.setor || 'Administrativo',
+          departamento: data.area || 'TI',
+          ramal: data.ramal || null,
+          role_id: roles?.id,
+        }, { onConflict: 'email' })
+        .select('id')
+        .single();
+
+      if (userErr) throw new Error(`Erro ao criar usuário: ${userErr.message}`);
+      solicitanteId = newUser.id;
+    }
+
+    const ticket = {
+      numero_protocolo: generateProtocol(),
+      solicitante_id: solicitanteId,
+      area_destino: data.area || data.area_destino,
+      setor: data.setor,
+      assunto: data.assunto,
+      mensagem: data.mensagem,
+      tipo_suporte: data.tipoSuporte || data.tipo_suporte || null,
+      dados_extras: data.dadosExtras || data.dados_extras || {},
+      status: 'Aberto',
+      prioridade: data.prioridade || 'Normal',
+    };
+
+    const { data: created, error } = await supabase
+      .from('PDC_tickets')
+      .insert(ticket)
+      .select('*')
+      .single();
+
+    if (error) throw new Error(`Erro ao criar ticket: ${error.message}`);
+    return created;
   },
 
-  // Adicionar resposta ao chamado
-  addResponse(id, responseData) {
-    const ticket = tickets.find(t => t.id === id);
-    if (ticket) {
-      const response = {
-        id: `RES-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  async getAllTickets() {
+    const { data, error } = await supabase
+      .from('PDC_tickets')
+      .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return (data || []).map(t => ({
+      ...t,
+      solicitante_nome: t.solicitante?.nome,
+      solicitante_email: t.solicitante?.email,
+    }));
+  },
+
+  async getTicketById(id) {
+    const { data: ticket, error } = await supabase
+      .from('PDC_tickets')
+      .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
+      .eq('id', id)
+      .single();
+
+    if (error) return null;
+
+    // Buscar respostas
+    const { data: respostas } = await supabase
+      .from('PDC_ticket_responses')
+      .select(`*, autor:PDC_users!autor_id(nome)`)
+      .eq('ticket_id', id)
+      .order('created_at', { ascending: true });
+
+    return {
+      ...ticket,
+      solicitante_nome: ticket.solicitante?.nome,
+      solicitante_email: ticket.solicitante?.email,
+      respostas: (respostas || []).map(r => ({
+        ...r,
+        autor_nome: r.autor?.nome || 'Administrador',
+      })),
+    };
+  },
+
+  async getTicketsByEmail(email) {
+    const { data: user } = await supabase
+      .from('PDC_users')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from('PDC_tickets')
+      .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
+      .eq('solicitante_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return (data || []).map(t => ({
+      ...t,
+      solicitante_nome: t.solicitante?.nome,
+      solicitante_email: t.solicitante?.email,
+    }));
+  },
+
+  async getReceivedTickets() {
+    const { data, error } = await supabase
+      .from('PDC_tickets')
+      .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
+      .neq('status', 'Concluído')
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return (data || []).map(t => ({
+      ...t,
+      solicitante_nome: t.solicitante?.nome,
+      solicitante_email: t.solicitante?.email,
+    }));
+  },
+
+  async updateTicketStatus(id, status) {
+    const updates = {
+      status,
+      updated_at: new Date().toISOString(),
+    };
+    if (status === 'Concluído') {
+      updates.closed_at = new Date().toISOString();
+    }
+    const { data, error } = await supabase
+      .from('PDC_tickets')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) return null;
+    return data;
+  },
+
+  async addResponse(ticketId, responseData) {
+    // Buscar admin user ID
+    let autorId = responseData.autor_id;
+    if (!autorId || autorId === 'admin') {
+      const { data: admin } = await supabase
+        .from('PDC_users')
+        .select('id')
+        .eq('email', 'admin@portal.com')
+        .single();
+      autorId = admin?.id;
+    }
+
+    const { error: respErr } = await supabase
+      .from('PDC_ticket_responses')
+      .insert({
+        ticket_id: ticketId,
+        autor_id: autorId,
         mensagem: responseData.mensagem,
-        autor: responseData.autor || 'Administrador',
-        dataCriacao: new Date().toISOString()
-      };
-      ticket.respostas.push(response);
-      ticket.dataAtualizacao = new Date().toISOString();
-      // Atualiza status para "Em Andamento" se ainda estiver pendente
-      if (ticket.status === 'Pendente') {
-        ticket.status = 'Em Andamento';
-      }
-      return ticket.toJSON();
-    }
-    return null;
+      });
+
+    if (respErr) throw new Error(respErr.message);
+
+    // Atualizar status se ainda estiver Aberto
+    await supabase
+      .from('PDC_tickets')
+      .update({
+        status: 'Em Andamento',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', ticketId)
+      .eq('status', 'Aberto');
+
+    return this.getTicketById(ticketId);
   },
 
-  // Deletar chamado (opcional)
-  deleteTicket(id) {
-    const index = tickets.findIndex(t => t.id === id);
-    if (index !== -1) {
-      tickets.splice(index, 1);
-      return true;
-    }
-    return false;
-  },
+  async getTicketsByArea(area) {
+    const { data, error } = await supabase
+      .from('PDC_tickets')
+      .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
+      .eq('area_destino', area)
+      .order('created_at', { ascending: false });
 
-  // Buscar chamados por área
-  getTicketsByArea(area) {
-    return tickets.filter(t => t.area === area).map(t => t.toJSON());
+    if (error) throw new Error(error.message);
+    return (data || []).map(t => ({
+      ...t,
+      solicitante_nome: t.solicitante?.nome,
+      solicitante_email: t.solicitante?.email,
+    }));
   },
-
-  // Buscar chamados por status
-  getTicketsByStatus(status) {
-    return tickets.filter(t => t.status === status).map(t => t.toJSON());
-  }
 };
