@@ -8,14 +8,14 @@
     "backend"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:watch": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && npm run dev",
-    "build:frontend": "cd frontend && npm run build",
-    "start": "npm run build:frontend && cd backend && npm start",
-    "kill-port": "cd backend && npm run kill-port",
-    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+    "dev": "concurrently -n frontend,backend \"npm run dev -w frontend\" \"npm run dev -w backend\"",
+    "dev:watch": "concurrently -n frontend,backend \"npm run dev -w frontend\" \"npm run dev -w backend\"",
+    "dev:frontend": "npm run dev -w frontend",
+    "dev:backend": "npm run dev -w backend",
+    "build:frontend": "npm run build -w frontend",
+    "start": "npm run build:frontend && npm start -w backend",
+    "kill-port": "npm run kill-port -w backend",
+    "install:all": "npm install && npm install -w frontend && npm install -w backend"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

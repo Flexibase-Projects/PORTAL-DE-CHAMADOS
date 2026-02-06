@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Container,
@@ -18,8 +18,6 @@ import {
   Divider,
   Grid,
   Paper,
-  Tabs,
-  Tab,
   FormControl,
   InputLabel,
   Select,
@@ -29,16 +27,38 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   CheckCircle as CheckIcon,
   Reply as ReplyIcon,
   ArrowBack as BackIcon,
 } from '@mui/icons-material';
-import { ticketAPI } from '../services/api';
+import { ticketAPI, templateAPI } from '../services/api';
 import TicketCard from '../components/Tickets/TicketCard';
 import TemplateEditor from '../components/Templates/TemplateEditor';
 import { getAllDepartamentos } from '../constants/departamentos';
+
+class TemplatesTabErrorBoundary extends Component {
+  state = { hasError: false, error: null };
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('Templates tab error:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          Erro ao exibir templates. {this.state.error?.message || ''}
+        </Alert>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const AdminPanel = () => {
   const location = useLocation();
@@ -52,7 +72,27 @@ const AdminPanel = () => {
   const [responseText, setResponseText] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [templateFieldsMap, setTemplateFieldsMap] = useState({});
   const departamentos = getAllDepartamentos();
+
+  useEffect(() => {
+    if (selectedTicket?.area) {
+      templateAPI.getTemplate(selectedTicket.area).then((res) => {
+        if (res.success && res.template && Array.isArray(res.template.fields)) {
+          const map = {};
+          res.template.fields.forEach((f) => {
+            const id = f.id ?? f.key;
+            if (id) map[id] = { label: f.label || id };
+          });
+          setTemplateFieldsMap(map);
+        } else {
+          setTemplateFieldsMap({});
+        }
+      }).catch(() => setTemplateFieldsMap({}));
+    } else {
+      setTemplateFieldsMap({});
+    }
+  }, [selectedTicket?.area]);
 
   useEffect(() => {
     loadTickets();
@@ -210,7 +250,7 @@ const AdminPanel = () => {
       )}
 
       {tabValue === 1 && (
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: 4, minHeight: 200, bgcolor: 'grey.50', p: 2, borderRadius: 1 }}>
           <FormControl sx={{ minWidth: 280, mb: 2 }}>
             <InputLabel>Departamento</InputLabel>
             <Select
@@ -228,7 +268,9 @@ const AdminPanel = () => {
               ))}
             </Select>
           </FormControl>
-          <TemplateEditor departamento={templateDepartamento} />
+          <TemplatesTabErrorBoundary>
+            <TemplateEditor departamento={templateDepartamento} />
+          </TemplatesTabErrorBoundary>
         </Box>
       )}
 
@@ -354,12 +396,14 @@ const AdminPanel = () => {
                       Dados adicionais
                     </Typography>
                     <Box sx={{ mb: 2 }}>
-                      {Object.entries(selectedTicket.dadosExtras).map(([key, value]) => (
+                      {Object.entries(selectedTicket.dadosExtras).map(([key, value]) => {
+                        const label = templateFieldsMap[key]?.label ?? key;
+                        return (
                         <Box key={key} sx={{ mb: 1 }}>
                           {Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && !Array.isArray(value[0]) ? (
                             <Paper variant="outlined" sx={{ p: 1, overflow: 'auto' }}>
                               <Typography variant="caption" color="text.secondary">
-                                {key}
+                                {label}
                               </Typography>
                               <Table size="small">
                                 <TableHead>
@@ -383,7 +427,7 @@ const AdminPanel = () => {
                           ) : (
                             <>
                               <Typography variant="body2" color="text.secondary">
-                                {key}
+                                {label}
                               </Typography>
                               <Typography variant="body1">
                                 {Array.isArray(value) ? value.join(', ') : String(value)}
@@ -391,7 +435,8 @@ const AdminPanel = () => {
                             </>
                           )}
                         </Box>
-                      ))}
+                        );
+                      })}
                     </Box>
                   </>
                 )}

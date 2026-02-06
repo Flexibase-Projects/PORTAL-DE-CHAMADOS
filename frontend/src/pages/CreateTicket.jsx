@@ -21,6 +21,23 @@ import { validateForm } from '../utils/validation';
 import { SETORES, DEPARTAMENTOS_POR_SETOR } from '../constants/departamentos';
 import TemplateFieldRenderer from '../components/Templates/TemplateFieldRenderer';
 
+const TIPOS_SUPORTE_TI = [
+  'Camera CRTV',
+  'E-mail',
+  'Equip. Reunião',
+  'Hardware',
+  'Impressora',
+  'Internet',
+  'Lib. De Acesso',
+  'Manut. T.I',
+  'Rede',
+  'Sites de integração',
+  'Sistema ERP',
+  'Software',
+  'Telefonia',
+  'Windows/Office',
+].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
 const CreateTicket = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -32,6 +49,7 @@ const CreateTicket = () => {
     setor: '',
     area: '',
     ramal: '',
+    tipoSuporte: '',
     assunto: '',
     mensagem: '',
   });
@@ -65,6 +83,9 @@ const CreateTicket = () => {
       if (name === 'setor') {
         next.area = '';
       }
+      if (name === 'area' && value !== 'TI') {
+        next.tipoSuporte = '';
+      }
       return next;
     });
     if (errors[name]) {
@@ -84,9 +105,12 @@ const CreateTicket = () => {
     templateFields.forEach((field) => {
       if (field.type === 'info') return;
       if (!field.required) return;
-      const val = dadosExtras[field.key];
-      if (val === undefined || val === null || val === '') {
-        dynamicErrors[field.key] = `${field.label || field.key} é obrigatório`;
+      const fieldId = field.id ?? field.key;
+      const val = dadosExtras[fieldId];
+      const isEmpty = val === undefined || val === null || val === '' ||
+        (Array.isArray(val) && val.length === 0);
+      if (isEmpty) {
+        dynamicErrors[fieldId] = `${field.label || fieldId} é obrigatório`;
       }
     });
     return dynamicErrors;
@@ -276,18 +300,55 @@ const CreateTicket = () => {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Ramal"
-                  name="ramal"
-                  type="number"
-                  value={formData.ramal}
-                  onChange={handleChange}
-                  error={!!errors.ramal}
-                  helperText={errors.ramal}
-                />
-              </Grid>
+              {formData.area === 'TI' ? (
+                <>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Ramal"
+                      name="ramal"
+                      type="number"
+                      value={formData.ramal}
+                      onChange={handleChange}
+                      error={!!errors.ramal}
+                      helperText={errors.ramal}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>Tipo de suporte</InputLabel>
+                      <Select
+                        name="tipoSuporte"
+                        value={formData.tipoSuporte}
+                        onChange={handleChange}
+                        label="Tipo de suporte"
+                      >
+                        <MenuItem value="">
+                          <em>Selecione</em>
+                        </MenuItem>
+                        {TIPOS_SUPORTE_TI.map((opcao) => (
+                          <MenuItem key={opcao} value={opcao}>
+                            {opcao}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </>
+              ) : (
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Ramal"
+                    name="ramal"
+                    type="number"
+                    value={formData.ramal}
+                    onChange={handleChange}
+                    error={!!errors.ramal}
+                    helperText={errors.ramal}
+                  />
+                </Grid>
+              )}
 
               <Grid item xs={12}>
                 <TextField
@@ -317,78 +378,24 @@ const CreateTicket = () => {
                 />
               </Grid>
 
-              <Grid item xs={12}>
-                <Box
-                  sx={{
-                    position: 'relative',
-                    width: '100%',
-                    minHeight: 500,
-                    bgcolor: 'grey.50',
-                    borderRadius: 1,
-                    overflow: 'hidden',
-                  }}
-                >
-                  {templateFields.map((field, index) => {
-                    const key = field.key;
-                    const value = dadosExtras[key];
-                    const err = errors[key];
-                    let xPct = field.x;
-                    let yPct = field.y;
-                    let widthPct = field.widthPct;
-                    let heightPct = field.heightPct;
-                    if (xPct == null || yPct == null || widthPct == null || heightPct == null) {
-                      if (field.widthPx != null && field.heightPx != null && field.widthPx <= 100 && field.heightPx <= 100) {
-                        xPct = field.x ?? 0;
-                        yPct = field.y ?? 0;
-                        widthPct = field.widthPx;
-                        heightPct = field.heightPx;
-                      } else if (field.widthPx != null && field.heightPx != null) {
-                        xPct = ((field.x ?? 0) / 1920) * 100;
-                        yPct = ((field.y ?? 0) / 1080) * 100;
-                        widthPct = ((field.widthPx ?? 400) / 1920) * 100;
-                        heightPct = ((field.heightPx ?? 120) / 1080) * 100;
-                      } else {
-                        const col = field.col ?? 0;
-                        const row = field.row ?? field.order ?? index;
-                        const colSpan = Math.min(12, Math.max(1, field.colSpan ?? field.width ?? (field.size === 'half' ? 6 : 12)));
-                        const rowSpan = Math.max(1, field.rowSpan ?? 1);
-                        xPct = (col / 12) * 100;
-                        yPct = row * 8;
-                        widthPct = (colSpan / 12) * 100;
-                        heightPct = rowSpan * 8;
-                      }
-                    }
-                    const x = Math.max(0, Math.min(100 - (widthPct ?? 50), xPct ?? 0));
-                    const y = Math.max(0, Math.min(100 - (heightPct ?? 15), yPct ?? 0));
-                    const w = Math.min(100, Math.max(5, widthPct ?? 50));
-                    const h = Math.min(100, Math.max(3, heightPct ?? 15));
-                    return (
-                      <Box
-                        key={field.id}
-                        sx={{
-                          position: 'absolute',
-                          left: `${x}%`,
-                          top: `${y}%`,
-                          width: `${w}%`,
-                          height: `${h}%`,
-                          minWidth: 0,
-                          boxSizing: 'border-box',
-                          overflow: 'auto',
-                          p: 1,
-                        }}
-                      >
-                        <TemplateFieldRenderer
-                          field={field}
-                          value={value}
-                          onChange={(v) => handleDynamicChange(key, v)}
-                          error={err}
-                          preview={false}
-                        />
-                      </Box>
-                    );
-                  })}
-                </Box>
-              </Grid>
+              {templateFields.map((field) => {
+                const fieldId = field.id ?? field.key;
+                const value = dadosExtras[fieldId];
+                const err = errors[fieldId];
+                return (
+                  <Grid item xs={12} key={field.id ?? fieldId}>
+                    <Box sx={{ width: '100%' }}>
+                      <TemplateFieldRenderer
+                        field={field}
+                        value={value}
+                        onChange={(v) => handleDynamicChange(fieldId, v)}
+                        error={err}
+                        preview={false}
+                      />
+                    </Box>
+                  </Grid>
+                );
+              })}
 
               <Grid item xs={12}>
                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>

@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, mkdirSync, appendFileSync } from 'fs';
 import ticketRoutes from './routes/tickets.js';
 import templateRoutes from './routes/templates.js';
 
@@ -58,9 +58,14 @@ if (existsSync(frontendPath)) {
   });
 }
 
-// Error handling middleware
+// Error handling middleware (escreve em .ndjson para não ser ignorado por *.log)
+const errorLogPath = join(__dirname, '..', '..', '.cursor', 'error-500.ndjson');
 app.use((err, req, res, next) => {
   console.error(err.stack);
+  try {
+    mkdirSync(join(__dirname, '..', '..', '.cursor'), { recursive: true });
+    appendFileSync(errorLogPath, JSON.stringify({ location: 'server.js:errorHandler', message: err.message, stack: err.stack, path: req.path, timestamp: Date.now() }) + '\n');
+  } catch (_) {}
   res.status(500).json({ error: 'Algo deu errado!' });
 });
 

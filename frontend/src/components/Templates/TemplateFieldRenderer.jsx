@@ -16,20 +16,17 @@ import {
 
 /**
  * Renders a single template field. Used in:
- * - TemplateEditor canvas (preview=true): same look as form, disabled/placeholder.
+ * - TemplateEditor list (preview=true): same look as form, disabled, empty value.
  * - CreateTicket form (preview=false): real value/onChange/error.
- * Caller is responsible for Grid item and width (field.width).
  */
 const TemplateFieldRenderer = ({ field, value, onChange, error, preview = false }) => {
-  const key = field?.key;
   const label = field?.label ?? '';
-  const placeholder = field?.placeholder ?? '';
   const required = !!field?.required;
   const options = Array.isArray(field?.options) ? field.options : [];
   const rows = field?.rows ?? 1;
   const type = field?.type ?? 'text';
 
-  const displayValue = preview ? (placeholder || '') : (value ?? '');
+  const displayValue = preview ? '' : (value ?? '');
   const handleChange = preview ? () => {} : onChange;
 
   if (type === 'info') {
@@ -96,6 +93,42 @@ const TemplateFieldRenderer = ({ field, value, onChange, error, preview = false 
   }
 
   if (type === 'checkbox') {
+    const selectedValues = Array.isArray(value) ? value : (value != null && value !== '' ? [value] : []);
+    if (options.length > 0) {
+      return (
+        <Box>
+          <Typography variant="body2" sx={{ mb: 1 }} required={required}>
+            {label}
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {options.map((opt) => (
+              <FormControlLabel
+                key={opt}
+                control={
+                  <Checkbox
+                    checked={preview ? false : selectedValues.includes(opt)}
+                    onChange={(e) => {
+                      if (preview) return;
+                      const next = e.target.checked
+                        ? [...selectedValues, opt]
+                        : selectedValues.filter((v) => v !== opt);
+                      handleChange(next);
+                    }}
+                    disabled={preview}
+                  />
+                }
+                label={opt}
+              />
+            ))}
+          </Box>
+          {error && !preview && (
+            <Typography variant="caption" color="error" display="block">
+              {error}
+            </Typography>
+          )}
+        </Box>
+      );
+    }
     return (
       <Box>
         <FormControlLabel
@@ -119,7 +152,6 @@ const TemplateFieldRenderer = ({ field, value, onChange, error, preview = false 
         fullWidth
         type="number"
         label={label}
-        placeholder={placeholder}
         value={displayValue}
         onChange={(e) => handleChange(e.target.value)}
         error={!!error && !preview}
@@ -164,13 +196,11 @@ const TemplateFieldRenderer = ({ field, value, onChange, error, preview = false 
     );
   }
 
-  // text or default: uma linha ou multiline conforme rows
   const textRows = Math.max(1, Math.min(20, rows ?? 1));
   return (
     <TextField
       fullWidth
       label={label}
-      placeholder={placeholder}
       value={displayValue}
       onChange={(e) => handleChange(e.target.value)}
       multiline={textRows > 1}
