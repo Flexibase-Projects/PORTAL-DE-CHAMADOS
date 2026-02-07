@@ -11,11 +11,12 @@ dotenv.config({ path: join(__dirname, '..', '..', '..', '.env.local') });
 dotenv.config({ path: join(__dirname, '..', '..', '.env') });
 dotenv.config();
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
+// Suporta SUPABASE_* ou VITE_SUPABASE_* (quando .env.local usa nomes do frontend)
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ SUPABASE_URL e SUPABASE_KEY são obrigatórios no .env.local');
+  console.error('❌ SUPABASE_URL/SUPABASE_KEY ou VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY são obrigatórios no .env.local');
   process.exit(1);
 }
 

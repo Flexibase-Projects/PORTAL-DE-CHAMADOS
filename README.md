@@ -83,6 +83,9 @@ PORTAL-DE-CHAMADOS/
 ```env
 SUPABASE_URL=https://seu-projeto.supabase.co
 SUPABASE_KEY=sua-chave-anon
+
+# Opcional: usar localStorage em vez da API (para Supabase offline)
+VITE_USE_LOCAL_STORAGE=true
 ```
 
 ## Instalação
@@ -107,9 +110,8 @@ npm start
 
 ## Portas
 
-- **Frontend (dev):** http://localhost:5173
-- **Backend API:** http://localhost:3001
-- O Vite faz proxy de `/api` para o backend automaticamente
+- **Desenvolvimento:** acesse http://localhost:3001 (única porta – frontend e API)
+- O Vite faz proxy de `/api` para o backend internamente
 
 ## Roles e Permissões
 

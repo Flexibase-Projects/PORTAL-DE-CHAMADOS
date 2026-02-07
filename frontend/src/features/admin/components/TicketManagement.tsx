@@ -16,9 +16,11 @@ import {
 } from "@/components/ui/dialog";
 import { Reply, CheckCircle2, ArrowLeft, Loader2 } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
+import { templateService } from "@/services/templateService";
 import { TicketCard } from "@/features/tickets/components/TicketCard";
 import { formatDate } from "@/lib/utils";
 import type { Ticket } from "@/types/ticket";
+import type { TemplateField } from "@/types/template";
 
 interface Props {
   initialTicketId?: string;
@@ -46,10 +48,26 @@ export function TicketManagement({ initialTicketId }: Props) {
   const [responseText, setResponseText] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [templateFields, setTemplateFields] = useState<TemplateField[]>([]);
 
   useEffect(() => {
     loadTickets();
   }, []);
+
+  useEffect(() => {
+    if (selected?.area_destino) {
+      templateService
+        .getTemplate(selected.area_destino)
+        .then((res) =>
+          setTemplateFields(
+            Array.isArray(res.template?.fields) ? res.template.fields : []
+          )
+        )
+        .catch(() => setTemplateFields([]));
+    } else {
+      setTemplateFields([]);
+    }
+  }, [selected?.area_destino]);
 
   useEffect(() => {
     if (initialTicketId && tickets.length > 0) {
@@ -226,6 +244,46 @@ export function TicketManagement({ initialTicketId }: Props) {
                     {selected.mensagem}
                   </p>
                 </div>
+
+                {selected.dados_extras &&
+                  Object.keys(selected.dados_extras).length > 0 && (
+                    <>
+                      <Separator />
+                      <div>
+                        <p className="text-sm font-semibold mb-2">
+                          Campos adicionais
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          {Object.entries(selected.dados_extras).map(
+                            ([key, value]) => {
+                              const field = templateFields.find(
+                                (f) => f.id === key || f.key === key
+                              );
+                              const label =
+                                field?.label ||
+                                key.replace(/_/g, " ").replace(/^field\s*/i, "");
+                              const displayValue =
+                                value == null
+                                  ? "-"
+                                  : Array.isArray(value)
+                                    ? value.join(", ")
+                                    : String(value);
+                              return (
+                                <div key={key}>
+                                  <span className="text-muted-foreground">
+                                    {label}
+                                  </span>
+                                  <p className="whitespace-pre-wrap break-words">
+                                    {displayValue}
+                                  </p>
+                                </div>
+                              );
+                            }
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                 {selected.respostas && selected.respostas.length > 0 && (
                   <>

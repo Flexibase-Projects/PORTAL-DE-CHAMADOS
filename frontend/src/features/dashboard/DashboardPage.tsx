@@ -5,6 +5,14 @@ import { RecentTickets } from "./components/RecentTickets";
 import { TicketsAreaChart, DepartmentBarChart } from "./components/Charts";
 import { ticketService, type DashboardStats } from "@/services/ticketService";
 
+const DBG = (msg: string, data: Record<string, unknown>, hypothesisId: string) => {
+  fetch("http://127.0.0.1:7242/ingest/176f700b-f851-4563-bfe2-b8f27d41c301", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ location: "DashboardPage.tsx", message: msg, data: data || {}, hypothesisId, timestamp: Date.now() }),
+  }).catch(() => {});
+};
+
 const emptyStats: DashboardStats = {
   total: 0,
   abertos: 0,
@@ -20,15 +28,30 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // #region agent log
+    DBG("useEffect start", {}, "H5");
+    const t0 = Date.now();
+    // #endregion
     ticketService
       .getDashboardStats()
       .then((res) => {
+        // #region agent log
+        DBG("API success", { success: res.success, elapsed: Date.now() - t0 }, "H5");
+        // #endregion
         if (res.success) setStats(res.stats);
       })
-      .catch(() => {
+      .catch((err) => {
+        // #region agent log
+        DBG("API catch", { elapsed: Date.now() - t0, status: err?.response?.status, message: err?.message }, "H1,H5");
+        // #endregion
         // silently fail - dashboard will show zeros
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        // #region agent log
+        DBG("API finally", { totalElapsed: Date.now() - t0 }, "H5");
+        // #endregion
+        setLoading(false);
+      });
   }, []);
 
   if (loading) {

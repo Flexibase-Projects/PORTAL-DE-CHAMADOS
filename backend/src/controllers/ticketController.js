@@ -29,16 +29,14 @@ export const ticketController = {
     }
   },
 
-  async getTicketsByEmail(req, res) {
+  async getTicketsByNome(req, res) {
     try {
-      const { email } = req.query;
-      if (!email) return res.status(400).json({ success: false, error: 'Email é obrigatório' });
+      const { nome } = req.query;
+      const nomeTrim = (nome || '').trim();
+      if (!nomeTrim) return res.status(400).json({ success: false, error: 'Nome do usuário é obrigatório' });
 
-      const tickets = await ticketService.getTicketsByEmail(email);
-      const enviados = tickets.filter(t => t.solicitante_email === email);
-      const recebidos = [];
-
-      res.json({ success: true, enviados, recebidos });
+      const tickets = await ticketService.getTicketsByNome(nomeTrim);
+      res.json({ success: true, enviados: tickets, recebidos: [] });
     } catch (error) {
       res.status(500).json({ success: false, error: 'Erro ao buscar chamados', message: error.message });
     }

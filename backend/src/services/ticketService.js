@@ -111,19 +111,22 @@ export const ticketService = {
     };
   },
 
-  async getTicketsByEmail(email) {
-    const { data: user } = await supabase
+  async getTicketsByNome(nome) {
+    const nomeTrim = (nome || '').trim();
+    if (!nomeTrim) return [];
+
+    const { data: users } = await supabase
       .from('PDC_users')
       .select('id')
-      .eq('email', email)
-      .single();
+      .ilike('nome', nomeTrim);
 
-    if (!user) return [];
+    if (!users?.length) return [];
 
+    const ids = users.map(u => u.id);
     const { data, error } = await supabase
       .from('PDC_tickets')
       .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
-      .eq('solicitante_id', user.id)
+      .in('solicitante_id', ids)
       .order('created_at', { ascending: false });
 
     if (error) throw new Error(error.message);

@@ -13,22 +13,22 @@ import type { Ticket } from "@/types/ticket";
 export function MyTicketsPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
+  const [nome, setNome] = useState("");
   const [enviados, setEnviados] = useState<Ticket[]>([]);
   const [recebidos, setRecebidos] = useState<Ticket[]>([]);
   const [error, setError] = useState("");
   const [searched, setSearched] = useState(false);
 
   const handleSearch = async () => {
-    if (!email || !email.includes("@")) {
-      setError("Por favor, insira um email válido");
+    if (!nome?.trim()) {
+      setError("Por favor, insira seu nome");
       return;
     }
 
     setLoading(true);
     setError("");
     try {
-      const response = await ticketService.getByEmail(email);
+      const response = await ticketService.getByName(nome.trim());
       if (response.success) {
         setEnviados(response.enviados || []);
         setRecebidos(response.recebidos || []);
@@ -50,7 +50,7 @@ export function MyTicketsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Meus Chamados</h1>
         <p className="text-muted-foreground">
-          Digite seu email para visualizar seus chamados enviados e recebidos.
+          Digite seu nome para visualizar seus chamados enviados e recebidos.
         </p>
       </div>
 
@@ -59,14 +59,14 @@ export function MyTicketsPage() {
           <div className="flex gap-3 items-start">
             <div className="flex-1">
               <Input
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                placeholder="Seu nome completo"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
             </div>
-            <Button onClick={handleSearch} disabled={loading || !email}>
+            <Button onClick={handleSearch} disabled={loading || !nome?.trim()}>
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -140,7 +140,7 @@ export function MyTicketsPage() {
         !loading && (
           <Alert>
             <AlertDescription>
-              Nenhum chamado encontrado para este email.
+              Nenhum chamado encontrado para este nome.
             </AlertDescription>
           </Alert>
         )

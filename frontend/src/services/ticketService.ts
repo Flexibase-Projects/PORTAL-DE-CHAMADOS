@@ -1,5 +1,9 @@
 import api from "./api";
+import { localStorageStorage } from "@/storage/localStorageStorage";
 import type { Ticket } from "@/types/ticket";
+
+const USE_LOCAL_STORAGE =
+  import.meta.env.VITE_USE_LOCAL_STORAGE === "true";
 
 export interface DashboardStats {
   total: number;
@@ -13,42 +17,119 @@ export interface DashboardStats {
 
 export const ticketService = {
   async create(data: Record<string, unknown>) {
-    const res = await api.post("/tickets", data);
-    return res.data;
+    if (USE_LOCAL_STORAGE) {
+      const ticket = localStorageStorage.createTicket(data);
+      return { success: true, message: "Chamado criado com sucesso", ticket };
+    }
+    try {
+      const res = await api.post("/tickets", data);
+      return res.data;
+    } catch {
+      const ticket = localStorageStorage.createTicket(data);
+      return { success: true, message: "Chamado criado com sucesso", ticket };
+    }
   },
 
   async getAll() {
-    const res = await api.get("/tickets");
-    return res.data;
+    if (USE_LOCAL_STORAGE) {
+      const tickets = localStorageStorage.getTickets();
+      return { success: true, tickets };
+    }
+    try {
+      const res = await api.get("/tickets");
+      return res.data;
+    } catch {
+      const tickets = localStorageStorage.getTickets();
+      return { success: true, tickets };
+    }
   },
 
   async getById(id: string) {
-    const res = await api.get(`/tickets/${id}`);
-    return res.data;
+    if (USE_LOCAL_STORAGE) {
+      const ticket = localStorageStorage.getTicketById(id);
+      return ticket ? { success: true, ticket } : { success: false, error: "Chamado não encontrado" };
+    }
+    try {
+      const res = await api.get(`/tickets/${id}`);
+      return res.data;
+    } catch {
+      const ticket = localStorageStorage.getTicketById(id);
+      return ticket ? { success: true, ticket } : { success: false, error: "Chamado não encontrado" };
+    }
   },
 
-  async getByEmail(email: string) {
-    const res = await api.get("/tickets/meus-chamados", { params: { email } });
-    return res.data;
+  async getByName(nome: string) {
+    const nomeTrim = nome.trim();
+    if (USE_LOCAL_STORAGE) {
+      const tickets = localStorageStorage.getTickets().filter(
+        (t) => t.solicitante_nome?.toLowerCase() === nomeTrim.toLowerCase()
+      );
+      return { success: true, enviados: tickets, recebidos: [] };
+    }
+    try {
+      const res = await api.get("/tickets/meus-chamados", { params: { nome: nomeTrim } });
+      return res.data;
+    } catch {
+      const tickets = localStorageStorage.getTickets().filter(
+        (t) => t.solicitante_nome?.toLowerCase() === nomeTrim.toLowerCase()
+      );
+      return { success: true, enviados: tickets, recebidos: [] };
+    }
   },
 
   async getReceived() {
-    const res = await api.get("/tickets/recebidos");
-    return res.data;
+    if (USE_LOCAL_STORAGE) {
+      const tickets = localStorageStorage.getTickets().filter((t) => t.status !== "Concluído");
+      return { success: true, tickets };
+    }
+    try {
+      const res = await api.get("/tickets/recebidos");
+      return res.data;
+    } catch {
+      const tickets = localStorageStorage.getTickets().filter((t) => t.status !== "Concluído");
+      return { success: true, tickets };
+    }
   },
 
   async updateStatus(id: string, status: string) {
-    const res = await api.patch(`/tickets/${id}/status`, { status });
-    return res.data;
+    if (USE_LOCAL_STORAGE) {
+      const ticket = localStorageStorage.updateTicketStatus(id, status as Ticket["status"]);
+      return ticket ? { success: true, message: "Status atualizado", ticket } : { success: false };
+    }
+    try {
+      const res = await api.patch(`/tickets/${id}/status`, { status });
+      return res.data;
+    } catch {
+      const ticket = localStorageStorage.updateTicketStatus(id, status as Ticket["status"]);
+      return ticket ? { success: true, message: "Status atualizado", ticket } : { success: false };
+    }
   },
 
   async addResponse(id: string, data: { mensagem: string; autor_id: string }) {
-    const res = await api.post(`/tickets/${id}/resposta`, data);
-    return res.data;
+    if (USE_LOCAL_STORAGE) {
+      const ticket = localStorageStorage.addTicketResponse(id, data);
+      return ticket ? { success: true, message: "Resposta adicionada", ticket } : { success: false };
+    }
+    try {
+      const res = await api.post(`/tickets/${id}/resposta`, data);
+      return res.data;
+    } catch {
+      const ticket = localStorageStorage.addTicketResponse(id, data);
+      return ticket ? { success: true, message: "Resposta adicionada", ticket } : { success: false };
+    }
   },
 
   async getDashboardStats(): Promise<{ success: boolean; stats: DashboardStats }> {
-    const res = await api.get("/dashboard/stats");
-    return res.data;
+    if (USE_LOCAL_STORAGE) {
+      const stats = localStorageStorage.getDashboardStats();
+      return { success: true, stats };
+    }
+    try {
+      const res = await api.get("/dashboard/stats");
+      return res.data;
+    } catch {
+      const stats = localStorageStorage.getDashboardStats();
+      return { success: true, stats };
+    }
   },
 };

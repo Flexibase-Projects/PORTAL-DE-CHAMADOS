@@ -60,22 +60,17 @@ npm run dev
 ```
 
 Isso fará:
-1. Build do frontend
-2. Iniciará o backend servindo o frontend
-3. Tudo disponível em: **http://localhost:3001**
+1. Backend na porta 3002 (interna)
+2. Frontend (Vite) na porta 3001 com hot-reload
+3. Acesse tudo em: **http://localhost:3001**
 
 ### Executar com Hot-Reload (Desenvolvimento)
-
-Para desenvolvimento com hot-reload do frontend:
 
 ```bash
 npm run dev:watch
 ```
 
-Isso iniciará:
-- Frontend na porta 5173 (com hot-reload)
-- Backend na porta 3001
-- Acesse o frontend em: http://localhost:5173
+Equivalente a `npm run dev`. Tudo em uma única porta (3001) com hot-reload.
 
 ### Executar Separadamente
 
@@ -95,13 +90,13 @@ cd frontend && npm run dev
 
 ## Acessar a Aplicação
 
+**Modo Desenvolvimento (hot-reload):**
+- Aplicação e API: http://localhost:3001
+- API: http://localhost:3001/api
+
 **Modo Produção (única porta):**
 - Aplicação completa: http://localhost:3001
 - API: http://localhost:3001/api
-
-**Modo Desenvolvimento (hot-reload):**
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3001/api
 
 ## Estrutura de URLs
 
