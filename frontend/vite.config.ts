@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port,
+      host: true,
       proxy: {
         "/api": {
           target: `http://localhost:${backendPort}`,

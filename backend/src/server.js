@@ -60,8 +60,9 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ success: false, error: 'Erro interno do servidor' });
 });
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+  console.log(`   Rede: http://<seu-ip>:${PORT}`);
 });
 
 server.on('error', (err) => {

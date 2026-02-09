@@ -8,8 +8,8 @@
     "backend"
   ],
   "scripts": {
-    "dev": "concurrently -n frontend,backend \"cross-env PORT=3001 BACKEND_PORT=3002 npm run dev -w frontend\" \"cross-env PORT=3002 npm run dev -w backend\"",
-    "dev:watch": "concurrently -n frontend,backend \"cross-env PORT=3001 BACKEND_PORT=3002 npm run dev -w frontend\" \"cross-env PORT=3002 npm run dev -w backend\"",
+    "dev": "concurrently -n frontend,backend \"npx cross-env PORT=3001 BACKEND_PORT=3002 npm run dev -w frontend\" \"npx cross-env PORT=3002 npm run dev -w backend\"",
+    "dev:watch": "concurrently -n frontend,backend \"npx cross-env PORT=3001 BACKEND_PORT=3002 npm run dev -w frontend\" \"npx cross-env PORT=3002 npm run dev -w backend\"",
     "dev:frontend": "npm run dev -w frontend",
     "dev:backend": "npm run dev -w backend",
     "build:frontend": "npm run build -w frontend",
