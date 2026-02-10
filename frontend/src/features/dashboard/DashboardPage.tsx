@@ -80,45 +80,38 @@ export function DashboardPage() {
 
   if (loading) {
     return (
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 2, md: 2.5 } }}>
         <Box>
-          <Typography variant="h4" fontWeight={700} gutterBottom>
-            Dashboard
-          </Typography>
-          <Typography color="text.secondary">
-            Visão geral do Portal de Chamados.
-          </Typography>
+          <Skeleton variant="text" width={180} height={36} />
+          <Skeleton variant="text" width={260} height={20} />
         </Box>
-        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" } }}>
+        <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" } }}>
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} variant="rounded" height={96} />
+            <Skeleton key={i} variant="rounded" height={88} />
           ))}
         </Box>
-        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" } }}>
-          <Skeleton variant="rounded" height={280} />
-          <Skeleton variant="rounded" height={280} />
+        <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" } }}>
+          <Skeleton variant="rounded" height={260} />
+          <Skeleton variant="rounded" height={260} />
         </Box>
-        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" } }}>
-          <Skeleton variant="rounded" height={300} />
-          <Skeleton variant="rounded" height={300} />
-        </Box>
-        <Skeleton variant="rounded" height={300} />
+        <Skeleton variant="rounded" height={280} />
+        <Skeleton variant="rounded" height={240} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-      <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 2 }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 2, md: 2.5 } }}>
+      <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.5 }}>
         <Box sx={{ flex: "1 1 auto" }}>
-          <Typography variant="h4" fontWeight={700} gutterBottom>
+          <Typography variant="h5" gutterBottom sx={{ mb: 0.25 }}>
             Dashboard
           </Typography>
-          <Typography color="text.secondary">
-            Visão geral do Portal de Chamados.
+          <Typography variant="body2" color="text.secondary">
+            Visao geral do Portal de Chamados.
           </Typography>
         </Box>
-        <FormControl size="small" sx={{ minWidth: 160 }}>
+        <FormControl sx={{ minWidth: 150 }}>
           <InputLabel>Filtrar por setor</InputLabel>
           <Select
             value={filterSetorGlobal ?? ""}
@@ -139,11 +132,10 @@ export function DashboardPage() {
         concluidos={stats.concluidos}
       />
 
-      {/* Chamados por período (dia/mês) + Chamados por Setor */}
       <Box
         sx={{
           display: "grid",
-          gap: 2,
+          gap: 1.5,
           gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
         }}
       >
@@ -185,13 +177,11 @@ export function DashboardPage() {
         <TicketsBySetorDonut data={stats.por_setor} />
       </Box>
 
-      <Box>
-        <DepartmentBarChart
-          data={stats.por_departamento}
-          filterSetor={filterSetorGlobal}
-          getSetor={getSetorByDepartamento}
-        />
-      </Box>
+      <DepartmentBarChart
+        data={stats.por_departamento}
+        filterSetor={filterSetorGlobal}
+        getSetor={getSetorByDepartamento}
+      />
 
       <RecentTickets tickets={stats.recentes} />
     </Box>

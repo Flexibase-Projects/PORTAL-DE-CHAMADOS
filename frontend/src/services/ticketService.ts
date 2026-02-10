@@ -23,6 +23,14 @@ export interface DashboardStats {
   por_setor: { setor: string; count: number }[];
 }
 
+const DASHBOARD_CACHE_TTL_MS = 60 * 1000;
+let dashboardCache: { key: string; result: { success: boolean; stats: DashboardStats }; expiresAt: number } | null = null;
+
+function getDashboardCacheKey(options?: { dateFrom?: string; dateTo?: string }): string {
+  if (!options?.dateFrom || !options?.dateTo || options.dateFrom > options.dateTo) return "default";
+  return `range:${options.dateFrom}:${options.dateTo}`;
+}
+
 export const ticketService = {
   async create(data: Record<string, unknown>) {
     if (USE_LOCAL_STORAGE) {
@@ -63,6 +71,24 @@ export const ticketService = {
     } catch {
       const ticket = localStorageStorage.getTicketById(id);
       return ticket ? { success: true, ticket } : { success: false, error: "Chamado não encontrado" };
+    }
+  },
+
+  /** Meus chamados por usuário autenticado (requer header x-auth-user-id). */
+  async getMeusChamadosByAuth(): Promise<{
+    success: boolean;
+    chamadosMeuDepartamento?: Ticket[];
+    chamadosQueAbriOutros?: Ticket[];
+    permissoesPorDepartamento?: Record<string, "view" | "view_edit">;
+  }> {
+    if (USE_LOCAL_STORAGE) {
+      return { success: true, chamadosMeuDepartamento: [], chamadosQueAbriOutros: [] };
+    }
+    try {
+      const res = await api.get("/tickets/meus-chamados-by-auth");
+      return res.data;
+    } catch {
+      return { success: true, chamadosMeuDepartamento: [], chamadosQueAbriOutros: [] };
     }
   },
 
@@ -132,9 +158,16 @@ export const ticketService = {
       const stats = localStorageStorage.getDashboardStats(options);
       return { success: true, stats };
     }
+    const cacheKey = getDashboardCacheKey(options);
+    const now = Date.now();
+    if (dashboardCache?.key === cacheKey && dashboardCache.expiresAt > now) {
+      return dashboardCache.result;
+    }
     try {
       const res = await api.get("/dashboard/stats", { params: options });
-      return res.data;
+      const result = res.data as { success: boolean; stats: DashboardStats };
+      dashboardCache = { key: cacheKey, result, expiresAt: now + DASHBOARD_CACHE_TTL_MS };
+      return result;
     } catch {
       const stats = localStorageStorage.getDashboardStats(options);
       return { success: true, stats };

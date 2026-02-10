@@ -193,6 +193,21 @@ export const ticketService = {
 
     if (respErr) throw new Error(respErr.message);
 
+    // Notificar o solicitante sobre nova resposta (se tiver auth_user_id)
+    const { data: ticketRow } = await supabase.from('PDC_tickets').select('solicitante_id, numero_protocolo, assunto').eq('id', ticketId).single();
+    if (ticketRow?.solicitante_id) {
+      const { data: pdcUser } = await supabase.from('PDC_users').select('auth_user_id').eq('id', ticketRow.solicitante_id).single();
+      if (pdcUser?.auth_user_id) {
+        await supabase.from('PDC_notifications').insert({
+          auth_user_id: pdcUser.auth_user_id,
+          tipo: 'resposta_chamado',
+          ticket_id: ticketId,
+          titulo: 'Nova resposta no chamado',
+          mensagem: `Chamado ${ticketRow.numero_protocolo}: ${(ticketRow.assunto || '').slice(0, 60)}...`,
+        });
+      }
+    }
+
     // Atualizar status se ainda estiver Aberto
     await supabase
       .from('PDC_tickets')
@@ -219,5 +234,64 @@ export const ticketService = {
       solicitante_nome: t.solicitante?.nome,
       solicitante_email: t.solicitante?.email,
     }));
+  },
+
+  /**
+   * Meus chamados por usuário autenticado (auth_user_id).
+   * Retorna:
+   * - chamadosMeuDepartamento: chamados das áreas em que o usuário tem permissão (ver/view_edit)
+   * - chamadosQueAbriOutros: chamados que o usuário abriu para áreas em que NÃO tem permissão (só ver + comentar)
+   */
+  async getMeusChamadosByAuthUser(authUserId) {
+    if (!authUserId) return { chamadosMeuDepartamento: [], chamadosQueAbriOutros: [] };
+
+    const { data: perms } = await supabase
+      .from('PDC_user_permissions')
+      .select('departamento')
+      .eq('auth_user_id', authUserId);
+    const permittedDepts = (perms || []).map((p) => p.departamento);
+    const permittedSet = new Set(permittedDepts);
+
+    const { data: pdcUser } = await supabase
+      .from('PDC_users')
+      .select('id')
+      .eq('auth_user_id', authUserId)
+      .single();
+    const solicitanteId = pdcUser?.id || null;
+
+    const formatTicket = (t) => ({
+      ...t,
+      solicitante_nome: t.solicitante?.nome,
+      solicitante_email: t.solicitante?.email,
+    });
+
+    const { data: allTickets, error } = await supabase
+      .from('PDC_tickets')
+      .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    const list = (allTickets || []).map(formatTicket);
+
+    const chamadosMeuDepartamento = list.filter((t) => permittedSet.has(t.area_destino));
+    const chamadosQueAbriOutros = solicitanteId
+      ? list.filter((t) => t.solicitante_id === solicitanteId && !permittedSet.has(t.area_destino))
+      : [];
+
+    return {
+      chamadosMeuDepartamento,
+      chamadosQueAbriOutros,
+      permissoesPorDepartamento: await this._getPermissoesMap(authUserId),
+    };
+  },
+
+  async _getPermissoesMap(authUserId) {
+    const { data } = await supabase
+      .from('PDC_user_permissions')
+      .select('departamento, permissao')
+      .eq('auth_user_id', authUserId);
+    const map = {};
+    (data || []).forEach((r) => { map[r.departamento] = r.permissao; });
+    return map;
   },
 };

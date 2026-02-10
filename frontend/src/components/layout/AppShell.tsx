@@ -2,9 +2,10 @@ import { useState } from "react";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
 import { AppSidebar } from "./AppSidebar";
+import { AppHeader } from "./AppHeader";
 
-const DRAWER_WIDTH = 256;
-const DRAWER_WIDTH_COLLAPSED = 64;
+const DRAWER_WIDTH = 220;
+const DRAWER_WIDTH_COLLAPSED = 52;
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -19,6 +20,7 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
+      {/* Sidebar */}
       <Box
         component="nav"
         sx={{
@@ -26,6 +28,7 @@ export function AppShell({ children }: AppShellProps) {
           flexShrink: { md: 0 },
         }}
       >
+        {/* Mobile drawer */}
         <Drawer
           variant="temporary"
           open={mobileOpen}
@@ -36,19 +39,19 @@ export function AppShell({ children }: AppShellProps) {
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
               width: DRAWER_WIDTH,
-              borderRight: 1,
-              borderColor: "rgba(114, 137, 218, 0.3)",
             },
           }}
         >
           <AppSidebar
             collapsed={false}
             onToggleCollapse={() => {}}
-            isMobile={true}
+            isMobile
             onNavigate={handleDrawerToggle}
             onHeaderClick={handleDrawerToggle}
           />
         </Drawer>
+
+        {/* Desktop drawer */}
         <Drawer
           variant="permanent"
           sx={{
@@ -56,8 +59,6 @@ export function AppShell({ children }: AppShellProps) {
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
               width,
-              borderRight: 1,
-              borderColor: "rgba(114, 137, 218, 0.3)",
               transition: (theme) =>
                 theme.transitions.create("width", {
                   easing: theme.transitions.easing.sharp,
@@ -76,16 +77,28 @@ export function AppShell({ children }: AppShellProps) {
           />
         </Drawer>
       </Box>
+
+      {/* Area principal */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          p: { xs: 2, md: 3 },
-          overflow: "auto",
+          display: "flex",
+          flexDirection: "column",
           minHeight: "100vh",
+          minWidth: 0,
         }}
       >
-        {children}
+        <AppHeader onMobileToggle={handleDrawerToggle} />
+        <Box
+          sx={{
+            flex: 1,
+            overflow: "auto",
+            p: { xs: 1.5, sm: 2, md: 3 },
+          }}
+        >
+          {children}
+        </Box>
       </Box>
     </Box>
   );

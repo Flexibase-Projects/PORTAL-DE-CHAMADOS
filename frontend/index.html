@@ -6,7 +6,32 @@
     <title>Portal de Chamados</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="app-loader-initial" style="
+        position: fixed; inset: 0; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 1.5rem;
+        background: #f6f8fa; color: #2563eb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      ">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/>
+            <path d="M13 5v2"/>
+            <path d="M13 17v2"/>
+            <path d="M13 11v2"/>
+          </svg>
+          <span style="font-size: 1.25rem; font-weight: 700;">Portal de Chamados</span>
+        </div>
+        <div style="width: min(280px, 80%); height: 6px; background: rgba(37,99,235,0.2); border-radius: 3px; overflow: hidden;">
+          <div style="height: 100%; width: 40%; background: #2563eb; border-radius: 3px; animation: pdc-load 1.2s ease-in-out infinite;"></div>
+        </div>
+      </div>
+    </div>
+    <style>
+      @keyframes pdc-load { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+      .dark #app-loader-initial { background: hsl(222, 28%, 14%); color: #60a5fa; }
+      .dark #app-loader-initial div[style*="background: rgba"] { background: rgba(59,130,246,0.25); }
+      .dark #app-loader-initial div[style*="background: #2563eb"] { background: #3b82f6; }
+    </style>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

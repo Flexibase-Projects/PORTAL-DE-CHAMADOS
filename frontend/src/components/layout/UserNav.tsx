@@ -1,124 +1,55 @@
-import { useState } from "react";
-import { ChevronsUpDown, LogOut, User } from "lucide-react";
-import Avatar from "@mui/material/Avatar";
-import Box from "@mui/material/Box";
+import { useNavigate } from "react-router-dom";
+import { LogOut } from "lucide-react";
+import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
-import MenuList from "@mui/material/MenuList";
-import ListItemButton from "@mui/material/ListItemButton";
-import Typography from "@mui/material/Typography";
-import Divider from "@mui/material/Divider";
+import Tooltip from "@mui/material/Tooltip";
+import { useAuth } from "@/contexts/AuthContext";
+
+const ICON_SIZE = 16;
 
 interface UserNavProps {
   collapsed?: boolean;
-  /** Cor do avatar (ex.: #7289da para combinar com a sidebar). */
-  sidebarAccent?: string;
 }
 
-export function UserNav({ collapsed, sidebarAccent = "#7289da" }: UserNavProps) {
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
+export function UserNav({ collapsed }: UserNavProps) {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
 
-  const user = {
-    nome: "Administrador",
-    email: "admin@portal.com",
-    role: "Administrador",
-  };
-
-  const initials = user.nome
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
+  const handleSair = async () => {
+    await signOut();
+    navigate("/login", { replace: true });
   };
 
   return (
-    <>
+    <Tooltip title="Sair" placement="right">
       <ListItemButton
-        onClick={handleClick}
+        onClick={handleSair}
         sx={{
           borderRadius: 1,
+          py: 0.375,
+          minHeight: 32,
           justifyContent: collapsed ? "center" : "flex-start",
-          px: 1.5,
-          py: 1.5,
-          color: "inherit",
+          px: collapsed ? 1 : 1.25,
+          "&:hover": { bgcolor: "rgba(37, 99, 235, 0.1)" },
         }}
-        aria-controls={open ? "user-menu" : undefined}
-        aria-haspopup="true"
-        aria-expanded={open ? "true" : undefined}
+        aria-label="Sair"
       >
-        <Avatar
+        <ListItemIcon
           sx={{
-            width: 32,
-            height: 32,
-            borderRadius: 1,
-            bgcolor: sidebarAccent,
-            color: "#fff",
-            fontSize: "0.75rem",
+            minWidth: collapsed ? "auto" : 28,
+            "& .MuiSvgIcon-root": { fontSize: ICON_SIZE },
           }}
         >
-          {initials}
-        </Avatar>
+          <LogOut style={{ width: ICON_SIZE, height: ICON_SIZE }} />
+        </ListItemIcon>
         {!collapsed && (
-          <Box sx={{ flex: 1, minWidth: 0, ml: 1.5, textAlign: "left" }}>
-            <Typography variant="body2" fontWeight={600} noWrap sx={{ color: "inherit" }}>
-              {user.nome}
-            </Typography>
-            <Typography variant="caption" noWrap display="block" color="text.secondary">
-              {user.role}
-            </Typography>
-          </Box>
-        )}
-        {!collapsed && (
-          <ChevronsUpDown style={{ width: 16, height: 16, marginLeft: 4 }} />
+          <ListItemText
+            primary="Sair"
+            primaryTypographyProps={{ sx: { fontSize: "0.75rem" } }}
+          />
         )}
       </ListItemButton>
-      <Menu
-        id="user-menu"
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleClose}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-        transformOrigin={{ vertical: "bottom", horizontal: "left" }}
-        slotProps={{ paper: { sx: { minWidth: 220 } } }}
-      >
-        <Box sx={{ px: 2, py: 1.5 }}>
-          <Typography variant="body2" fontWeight={600}>
-            {user.nome}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {user.email}
-          </Typography>
-        </Box>
-        <Divider />
-        <MenuList dense disablePadding>
-          <MenuItem onClick={handleClose}>
-            <ListItemIcon>
-              <User style={{ width: 18, height: 18 }} />
-            </ListItemIcon>
-            <ListItemText>Perfil</ListItemText>
-          </MenuItem>
-        </MenuList>
-        <Divider />
-        <MenuList dense disablePadding>
-          <MenuItem onClick={handleClose}>
-            <ListItemIcon>
-              <LogOut style={{ width: 18, height: 18 }} />
-            </ListItemIcon>
-            <ListItemText>Sair</ListItemText>
-          </MenuItem>
-        </MenuList>
-      </Menu>
-    </>
+    </Tooltip>
   );
 }

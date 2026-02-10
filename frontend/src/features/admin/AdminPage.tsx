@@ -21,27 +21,34 @@ export function AdminPage() {
   const departamentos = getAllDepartamentos();
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 2, md: 2.5 } }}>
       <Box>
-        <Typography variant="h4" fontWeight={700} gutterBottom>
+        <Typography variant="h5" gutterBottom sx={{ mb: 0.25 }}>
           Painel Administrativo
         </Typography>
-        <Typography color="text.secondary">
-          Gerencie chamados, templates e usuários.
+        <Typography variant="body2" color="text.secondary">
+          Gerencie chamados, templates e usuarios.
         </Typography>
       </Box>
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: "divider" }}>
+      <Tabs
+        value={tab}
+        onChange={(_, v) => setTab(v)}
+        sx={{ borderBottom: 1, borderColor: "divider" }}
+        variant="scrollable"
+        scrollButtons="auto"
+        allowScrollButtonsMobile
+      >
         <Tab label="Chamados" />
         <Tab label="Templates" />
-        <Tab label="Usuários" />
+        <Tab label="Usuarios" />
       </Tabs>
 
       {tab === 0 && <TicketManagement initialTicketId={initialTicketId} />}
 
       {tab === 1 && (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <FormControl sx={{ minWidth: 220 }} size="small">
+          <FormControl sx={{ minWidth: 200, maxWidth: { xs: "100%", sm: 280 } }}>
             <InputLabel>Departamento</InputLabel>
             <Select
               value={templateDepartamento}
@@ -49,9 +56,7 @@ export function AdminPage() {
               onChange={(e) => setTemplateDepartamento(e.target.value)}
             >
               {departamentos.map((d) => (
-                <MenuItem key={d} value={d}>
-                  {d}
-                </MenuItem>
+                <MenuItem key={d} value={d}>{d}</MenuItem>
               ))}
             </Select>
           </FormControl>

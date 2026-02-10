@@ -5,14 +5,14 @@
 
 /* Sidebar: definido em :root (claro) e .dark (escuro). .dark deve vir depois para sobrescrever. */
 :root {
-  --sidebar: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(240 5.3% 26.1%);
-  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar: hsl(214 32% 98%);
+  --sidebar-foreground: hsl(222 47% 25%);
+  --sidebar-primary: #2563eb;
   --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --sidebar-accent: hsl(214 32% 95%);
+  --sidebar-accent-foreground: hsl(222 47% 20%);
+  --sidebar-border: hsl(214 32% 90%);
+  --sidebar-ring: #2563eb;
 }
 
 @theme {
@@ -22,7 +22,7 @@
   --color-card-foreground: hsl(240 10% 3.9%);
   --color-popover: hsl(0 0% 100%);
   --color-popover-foreground: hsl(240 10% 3.9%);
-  --color-primary: hsl(240 5.9% 10%);
+  --color-primary: #2563eb;
   --color-primary-foreground: hsl(0 0% 98%);
   --color-secondary: hsl(240 4.8% 95.9%);
   --color-secondary-foreground: hsl(240 5.9% 10%);
@@ -73,22 +73,22 @@
   --color-chart-4: hsl(275 60% 62%);
   --color-chart-5: hsl(340 65% 58%);
   /* Sidebar: mesmo padrão (hue 230), um degrau acima do card para hierarquia */
-  --color-sidebar: hsl(230 12% 16%);
-  --color-sidebar-foreground: hsl(230 6% 88%);
-  --color-sidebar-primary: hsl(224 70% 55%);
+  --color-sidebar: hsl(222 28% 16%);
+  --color-sidebar-foreground: hsl(214 32% 88%);
+  --color-sidebar-primary: #3b82f6;
   --color-sidebar-primary-foreground: hsl(0 0% 100%);
-  --color-sidebar-accent: hsl(230 10% 24%);
+  --color-sidebar-accent: hsl(222 28% 24%);
   --color-sidebar-accent-foreground: hsl(0 0% 95%);
-  --color-sidebar-border: hsl(230 9% 26%);
-  --color-sidebar-ring: hsl(224 70% 55%);
-  --sidebar: hsl(230 12% 16%);
-  --sidebar-foreground: hsl(230 6% 88%);
-  --sidebar-primary: hsl(224 70% 55%);
+  --color-sidebar-border: hsl(222 20% 26%);
+  --color-sidebar-ring: #3b82f6;
+  --sidebar: hsl(222 28% 16%);
+  --sidebar-foreground: hsl(214 32% 88%);
+  --sidebar-primary: #3b82f6;
   --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(230 10% 24%);
+  --sidebar-accent: hsl(222 28% 24%);
   --sidebar-accent-foreground: hsl(0 0% 95%);
-  --sidebar-border: hsl(230 9% 26%);
-  --sidebar-ring: hsl(224 70% 55%);
+  --sidebar-border: hsl(222 20% 26%);
+  --sidebar-ring: #3b82f6;
 }
 
 @layer base {

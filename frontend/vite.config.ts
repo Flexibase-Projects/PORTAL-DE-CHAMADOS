@@ -31,6 +31,21 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: "dist",
       emptyOutDir: true,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes("node_modules")) {
+              if (id.includes("react") || id.includes("react-dom") || id.includes("scheduler")) return "vendor-react";
+              if (id.includes("react-router")) return "vendor-router";
+              if (id.includes("@mui")) return "vendor-mui";
+              if (id.includes("recharts")) return "vendor-recharts";
+              if (id.includes("lucide-react")) return "vendor-lucide";
+              if (id.includes("axios")) return "vendor-axios";
+              return "vendor";
+            }
+          },
+        },
+      },
     },
   };
 });

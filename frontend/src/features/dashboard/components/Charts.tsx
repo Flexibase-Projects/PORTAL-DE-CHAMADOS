@@ -17,7 +17,6 @@ import {
   Legend,
 } from "recharts";
 import { useTheme } from "@mui/material/styles";
-import { alpha } from "@mui/material/styles";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import CardHeader from "@mui/material/CardHeader";
@@ -47,8 +46,7 @@ interface ChamadosPorPeriodoChartProps {
   onCustomRangeChange: (dateFrom: string, dateTo: string) => void;
 }
 
-const PERIODO_COLORS = { dia: "#4caf50", mes: "#1976d2" };
-const CARDS_BORDER = "#7289d9";
+const PERIODO_COLORS = { dia: "#0ea5e9", mes: "#2563eb" };
 
 const todayStr = () => new Date().toISOString().split("T")[0];
 
@@ -90,17 +88,8 @@ export function ChamadosPorPeriodoChart({
   const chartDataDia =
     periodo === "custom" ? (dataDiaCustom ?? []) : periodo === "dia" ? dataDia : [];
 
-  const cardHoverSx = {
-    borderColor: CARDS_BORDER,
-    transition: "box-shadow 0.25s ease, transform 0.25s ease",
-    "&:hover": {
-      boxShadow: `0 8px 24px ${alpha(CARDS_BORDER, 0.18)}`,
-      transform: "translateY(-2px)",
-    },
-  };
-
   return (
-    <Card variant="outlined" sx={cardHoverSx}>
+    <Card>
       <CardHeader
         title={
           <Typography variant="subtitle1" fontWeight={600}>
@@ -116,7 +105,7 @@ export function ChamadosPorPeriodoChart({
                   variant="outlined"
                   startIcon={<Calendar size={18} />}
                   onClick={openPopover}
-                  sx={{ borderColor: CARDS_BORDER, color: CARDS_BORDER }}
+                  sx={{ color: "primary.main" }}
                 >
                   {dateFrom && dateTo ? `${dateFrom} → ${dateTo}` : "Selecionar datas"}
                 </Button>
@@ -273,17 +262,8 @@ export function DepartmentBarChart({ data, filterSetor, getSetor }: BarChartProp
     ? data.filter((row) => getSetor(row.area) === filterSetor)
     : data;
 
-  const cardHoverSx = {
-    borderColor: CARDS_BORDER,
-    transition: "box-shadow 0.25s ease, transform 0.25s ease",
-    "&:hover": {
-      boxShadow: `0 8px 24px ${alpha(CARDS_BORDER, 0.18)}`,
-      transform: "translateY(-2px)",
-    },
-  };
-
   return (
-    <Card variant="outlined" sx={cardHoverSx}>
+    <Card>
       <CardHeader
         title={
           <Typography variant="subtitle1" fontWeight={600}>
@@ -329,10 +309,11 @@ interface PorSetorProps {
   data: { setor: string; count: number }[];
 }
 
-/** Cores por setor: Administrativo = verde, Industrial = roxo (alinhado à legenda). */
+/** Cores por setor em tons de azul. */
 const SETOR_COLOR_MAP: Record<string, string> = {
-  Administrativo: "#81c784",
-  Industrial: "#ba68c8",
+  Administrativo: "#2563eb",
+  Industrial: "#0ea5e9",
+  Comercial: "#3b82f6",
 };
 
 /** Apenas Indústria e Administrativo (Comercial ignorado). */
@@ -342,17 +323,8 @@ export function TicketsBySetorDonut({ data }: PorSetorProps) {
   const theme = useTheme();
   const filtered = data.filter((d) => SETORES_DONUT.includes(d.setor));
 
-  const cardHoverSx = {
-    borderColor: CARDS_BORDER,
-    transition: "box-shadow 0.25s ease, transform 0.25s ease",
-    "&:hover": {
-      boxShadow: `0 8px 24px ${alpha(CARDS_BORDER, 0.18)}`,
-      transform: "translateY(-2px)",
-    },
-  };
-
   return (
-    <Card variant="outlined" sx={cardHoverSx}>
+    <Card>
       <CardHeader
         title={
           <Typography variant="subtitle1" fontWeight={600}>

@@ -150,8 +150,8 @@ export function TicketManagement({ initialTicketId }: Props) {
         </Alert>
       )}
 
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: selected ? "1fr 2fr" : "1fr" }, gap: 2 }}>
-        <Box sx={{ maxHeight: { lg: "calc(100vh - 16rem)" }, overflow: "auto", pr: 1 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: selected ? "320px 1fr" : "1fr" }, gap: 2 }}>
+        <Box sx={{ maxHeight: { lg: "calc(100vh - 16rem)" }, overflow: "auto", pr: { lg: 0.5 } }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             Chamados Recebidos ({tickets.length})
           </Typography>
@@ -175,8 +175,8 @@ export function TicketManagement({ initialTicketId }: Props) {
         </Box>
 
         {selected && (
-          <Card variant="outlined">
-            <CardContent sx={{ p: 3 }}>
+          <Card>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, mb: 2 }}>
                 <Box>
                   <Typography variant="h6" fontWeight={600}>
@@ -316,7 +316,9 @@ export function TicketManagement({ initialTicketId }: Props) {
         )}
       </Box>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth
+        sx={{ "& .MuiDialog-paper": { mx: { xs: 1 } } }}
+      >
         <DialogTitle>Responder Chamado</DialogTitle>
         <DialogContent>
           <TextField

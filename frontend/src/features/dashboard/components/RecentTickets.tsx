@@ -1,4 +1,3 @@
-import { alpha } from "@mui/material/styles";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import CardHeader from "@mui/material/CardHeader";
@@ -19,7 +18,7 @@ interface RecentTicketsProps {
 
 function statusColor(status: string): "default" | "primary" | "warning" | "success" {
   switch (status) {
-    case "Concluído":
+    case "Concluido":
       return "success";
     case "Em Andamento":
       return "warning";
@@ -28,39 +27,22 @@ function statusColor(status: string): "default" | "primary" | "warning" | "succe
   }
 }
 
-const CARDS_BORDER = "#7289d9";
-
-const cardHoverSx = {
-  borderColor: CARDS_BORDER,
-  transition: "box-shadow 0.25s ease, transform 0.25s ease",
-  "&:hover": {
-    boxShadow: `0 8px 24px ${alpha(CARDS_BORDER, 0.18)}`,
-    transform: "translateY(-2px)",
-  },
-};
-
 export function RecentTickets({ tickets }: RecentTicketsProps) {
   return (
-    <Card variant="outlined" sx={cardHoverSx}>
-      <CardHeader
-        title={
-          <Typography variant="subtitle1" fontWeight={600}>
-            Chamados Recentes
-          </Typography>
-        }
-      />
+    <Card>
+      <CardHeader title="Chamados Recentes" />
       <CardContent sx={{ pt: 0 }}>
         {tickets.length === 0 ? (
-          <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
+          <Typography variant="body2" color="text.secondary" textAlign="center" py={3}>
             Nenhum chamado encontrado.
           </Typography>
         ) : (
-          <Box sx={{ overflowX: "auto" }}>
-            <Table size="small">
+          <Box sx={{ overflowX: "auto", mx: -2 }}>
+            <Table size="small" sx={{ minWidth: 420 }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Protocolo</TableCell>
-                  <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Assunto</TableCell>
+                  <TableCell>Assunto</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>Departamento</TableCell>
                   <TableCell sx={{ display: { xs: "none", lg: "table-cell" } }}>Data</TableCell>
@@ -68,25 +50,20 @@ export function RecentTickets({ tickets }: RecentTicketsProps) {
               </TableHead>
               <TableBody>
                 {tickets.slice(0, 10).map((ticket) => (
-                  <TableRow key={ticket.id}>
-                    <TableCell sx={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
+                  <TableRow key={ticket.id} hover>
+                    <TableCell sx={{ fontFamily: "monospace", fontSize: "0.75rem", whiteSpace: "nowrap" }}>
                       {ticket.numero_protocolo}
                     </TableCell>
-                    <TableCell sx={{ display: { xs: "none", sm: "table-cell" }, maxWidth: 200 }} className="truncate">
+                    <TableCell sx={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {ticket.assunto}
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={ticket.status}
-                        color={statusColor(ticket.status)}
-                        size="small"
-                        variant="outlined"
-                      />
+                      <Chip label={ticket.status} color={statusColor(ticket.status)} size="small" variant="outlined" />
                     </TableCell>
                     <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
                       {ticket.area_destino}
                     </TableCell>
-                    <TableCell sx={{ display: { xs: "none", lg: "table-cell" }, fontSize: "0.75rem" }} color="text.secondary">
+                    <TableCell sx={{ display: { xs: "none", lg: "table-cell" }, whiteSpace: "nowrap" }}>
                       {formatDate(ticket.created_at)}
                     </TableCell>
                   </TableRow>

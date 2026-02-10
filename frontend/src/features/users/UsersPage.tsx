@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import FormControl from "@mui/material/FormControl";
@@ -170,8 +171,9 @@ export function UsersPage() {
         </Button>
       </Box>
 
-      <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "auto" }}>
-        <Table size="small">
+      <Card sx={{ overflow: "hidden" }}>
+        <Box sx={{ overflow: "auto" }}>
+        <Table size="small" sx={{ minWidth: 480 }}>
           <TableHead>
             <TableRow>
               <TableCell>Nome</TableCell>
@@ -226,6 +228,7 @@ export function UsersPage() {
           </TableBody>
         </Table>
       </Box>
+      </Card>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{editingUser ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>

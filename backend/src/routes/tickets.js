@@ -10,7 +10,9 @@ router.post('/', validateTicket, ticketController.createTicket);
 // Listar todos os chamados
 router.get('/', ticketController.getAllTickets);
 
-// Buscar chamados por nome do usuário (para "Meus Chamados")
+// Meus chamados por usuário autenticado (prioridade quando logado)
+router.get('/meus-chamados-by-auth', ticketController.getMeusChamadosByAuthUser);
+// Buscar chamados por nome do usuário (para "Meus Chamados" sem login)
 router.get('/meus-chamados', ticketController.getTicketsByNome);
 
 // Buscar chamados recebidos (Painel Administrativo)

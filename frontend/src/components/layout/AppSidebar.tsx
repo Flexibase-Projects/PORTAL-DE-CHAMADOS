@@ -8,6 +8,13 @@ import {
   Moon,
   Sun,
   TicketCheck,
+  ChevronLeft,
+  Menu,
+  HelpCircle,
+  FolderOpen,
+  FileEdit,
+  Users,
+  Shield,
 } from "lucide-react";
 import Box from "@mui/material/Box";
 import List from "@mui/material/List";
@@ -17,6 +24,7 @@ import ListItemText from "@mui/material/ListItemText";
 import Divider from "@mui/material/Divider";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
 import { useTheme } from "@/hooks/useTheme";
 import { UserNav } from "./UserNav";
 
@@ -41,11 +49,10 @@ const navCategories: { label: string; items: NavItem[] }[] = [
   {
     label: "Administração",
     items: [
-      {
-        title: "Painel Administrativo",
-        icon: Settings,
-        path: "/painel-administrativo",
-      },
+      { title: "Gestão de Chamados", icon: TicketCheck, path: "/admin/chamados" },
+      { title: "Templates", icon: FileEdit, path: "/admin/templates" },
+      { title: "Usuários", icon: Users, path: "/admin/usuarios" },
+      { title: "Permissões", icon: Shield, path: "/admin/permissoes" },
     ],
   },
   {
@@ -65,9 +72,13 @@ interface AppSidebarProps {
   onToggleCollapse: () => void;
   isMobile: boolean;
   onNavigate?: () => void;
-  /** Clique no header (ícone) para expandir/retrair menu. Em mobile pode alternar o drawer. */
+  /** No mobile: fecha o drawer ao clicar no botão de toggle. */
   onHeaderClick?: () => void;
 }
+
+const SIDEBAR_ACCENT = "#2563eb";
+const ICON_SIZE = 18;
+const LOGO_SIZE = 28;
 
 export function AppSidebar({
   collapsed,
@@ -80,79 +91,224 @@ export function AppSidebar({
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
+  const handleToggle = () => {
+    if (isMobile) onHeaderClick?.();
+    else onToggleCollapse();
+  };
+
   const handleNav = (path: string) => {
     navigate(path);
     onNavigate?.();
   };
 
-  const sidebarAccent = "#7289da";
+  const toggleLabel = isMobile
+    ? "Fechar menu"
+    : collapsed
+      ? "Expandir menu"
+      : "Retrair menu";
+  const ToggleIcon = isMobile || !collapsed ? ChevronLeft : Menu;
 
   return (
-    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", py: 1 }}>
-      {/* Header: ícone de chamados, clicável para expandir/retrair menu */}
-      <Box sx={{ px: 1.5, py: 2, display: "flex", alignItems: "center", gap: 1 }}>
-        <Tooltip title={collapsed ? "Expandir menu" : "Retrair menu"} placement="right">
+    <Box
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        py: 0.75,
+        minHeight: 0,
+      }}
+    >
+      {/* --- Expandido: Logo + Título à esquerda, botão retrair à direita --- */}
+      {!collapsed && (
+        <>
           <Box
-            component="button"
-            type="button"
-            onClick={onHeaderClick ?? onToggleCollapse}
-            aria-label={collapsed ? "Expandir menu" : "Retrair menu"}
             sx={{
-              width: 32,
-              height: 32,
-              borderRadius: 1,
-              bgcolor: sidebarAccent,
-              color: "#fff",
+              px: 1.25,
+              py: 1.25,
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              border: "none",
-              cursor: "pointer",
-              "&:hover": { opacity: 0.9 },
+              gap: 1,
+              minHeight: 0,
             }}
           >
-            <TicketCheck style={{ width: 20, height: 20 }} />
+            <Box
+              sx={{
+                width: LOGO_SIZE,
+                height: LOGO_SIZE,
+                borderRadius: 1,
+                bgcolor: SIDEBAR_ACCENT,
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+              aria-hidden
+            >
+              <TicketCheck style={{ width: 16, height: 16 }} />
+            </Box>
+            <Typography
+              variant="body2"
+              fontWeight={600}
+              noWrap
+              sx={{ flex: 1, minWidth: 0, fontSize: "0.8125rem" }}
+            >
+              Portal de Chamados
+            </Typography>
+            <Tooltip title={toggleLabel} placement="right">
+              <IconButton
+                size="small"
+                onClick={handleToggle}
+                aria-label={toggleLabel}
+                sx={{
+                  color: "text.secondary",
+                  "&:hover": { bgcolor: "action.hover", color: "text.primary" },
+                }}
+              >
+                <ToggleIcon style={{ width: ICON_SIZE, height: ICON_SIZE }} />
+              </IconButton>
+            </Tooltip>
           </Box>
-        </Tooltip>
-        {!collapsed && (
-          <Typography variant="body2" fontWeight={600} noWrap sx={{ flex: 1, minWidth: 0 }}>
-            Portal de Chamados
-          </Typography>
-        )}
-      </Box>
-      <Divider />
-      {/* Nav */}
-      <List sx={{ flex: 1, py: 0, px: 1 }}>
+          <Divider sx={{ my: 0.25, borderBottomWidth: 0.5 }} />
+        </>
+      )}
+
+      {/* --- Retraído: Logo, Divider, Botão expandir, Divider --- */}
+      {collapsed && (
+        <>
+          <Box
+            sx={{
+              px: 0,
+              py: 1.25,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 0,
+            }}
+          >
+            <Box
+              sx={{
+                width: LOGO_SIZE,
+                height: LOGO_SIZE,
+                borderRadius: 1,
+                bgcolor: SIDEBAR_ACCENT,
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+              aria-hidden
+            >
+              <TicketCheck style={{ width: 16, height: 16 }} />
+            </Box>
+          </Box>
+          <Divider sx={{ my: 0.25, borderBottomWidth: 0.5 }} />
+          <Box sx={{ display: "flex", justifyContent: "center", py: 0.5 }}>
+            <Tooltip title={toggleLabel} placement="right">
+              <IconButton
+                size="small"
+                onClick={handleToggle}
+                aria-label={toggleLabel}
+                sx={{
+                  color: "text.secondary",
+                  "&:hover": { bgcolor: "action.hover", color: "text.primary" },
+                }}
+              >
+                <Menu style={{ width: ICON_SIZE, height: ICON_SIZE }} />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          <Divider sx={{ my: 0.25, borderBottomWidth: 0.5 }} />
+        </>
+      )}
+
+      {/* Navegação */}
+      <List sx={{ flex: 1, py: 0, px: 0.75, minHeight: 0 }} dense>
         {navCategories.map((category) => (
           <Box key={category.label}>
             {!collapsed && (
               <Typography
                 variant="caption"
-                sx={{ px: 1.5, py: 0.5, display: "block", color: "text.secondary" }}
+                sx={{
+                  px: 1.25,
+                  py: 0.375,
+                  display: "block",
+                  color: "text.secondary",
+                  fontSize: "0.6875rem",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                }}
               >
                 {category.label}
               </Typography>
             )}
             {category.items.map((item) => {
               const isActive = location.pathname === item.path;
-              const icon = <item.icon style={{ width: 20, height: 20 }} />;
+              const icon = <item.icon style={{ width: ICON_SIZE, height: ICON_SIZE }} />;
               return (
                 <Tooltip key={item.path} title={collapsed ? item.title : ""} placement="right">
                   <ListItemButton
                     selected={isActive}
                     onClick={() => handleNav(item.path)}
                     sx={{
+                      position: "relative",
                       borderRadius: 1,
-                      mb: 0.25,
+                      mb: 0.125,
+                      py: 0.5,
+                      minHeight: 36,
                       justifyContent: collapsed ? "center" : "flex-start",
-                      px: collapsed ? 1.5 : 1.5,
-                      "&:hover": { bgcolor: "rgba(114, 137, 218, 0.12)" },
-                      "&.Mui-selected": { bgcolor: "rgba(114, 137, 218, 0.2)", color: sidebarAccent },
+                      px: collapsed ? 1 : 1.25,
+                      "&:hover": { bgcolor: "rgba(37, 99, 235, 0.1)" },
+                      "&.Mui-selected": {
+                        backgroundColor: "rgba(37, 99, 235, 0.14)",
+                        color: SIDEBAR_ACCENT,
+                        opacity: 1,
+                        "&:hover": {
+                          backgroundColor: "rgba(37, 99, 235, 0.2)",
+                          color: SIDEBAR_ACCENT,
+                          opacity: 1,
+                        },
+                        "& .MuiListItemIcon-root": { color: SIDEBAR_ACCENT, opacity: 1 },
+                        "& .MuiListItemText-primary": { color: SIDEBAR_ACCENT, opacity: 1 },
+                      },
                     }}
                   >
-                    <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 40 }}>{icon}</ListItemIcon>
-                    {!collapsed && <ListItemText primary={item.title} primaryTypographyProps={{ variant: "body2" }} />}
+                    <ListItemIcon
+                      sx={{
+                        minWidth: collapsed ? "auto" : 32,
+                        color: "inherit",
+                        "& .MuiSvgIcon-root": { fontSize: ICON_SIZE },
+                      }}
+                    >
+                      {icon}
+                    </ListItemIcon>
+                    {!collapsed && (
+                      <ListItemText
+                        primary={item.title}
+                        primaryTypographyProps={{
+                          variant: "body2",
+                          sx: { fontSize: "0.8125rem" },
+                        }}
+                      />
+                    )}
+                    {isActive && !collapsed && (
+                      <Box
+                        className="sidebar-dot"
+                        sx={{
+                          position: "absolute",
+                          right: 8,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          bgcolor: "#fff",
+                          boxShadow: "0 0 0 1px rgba(0,0,0,0.08)",
+                        }}
+                      />
+                    )}
                   </ListItemButton>
                 </Tooltip>
               );
@@ -160,29 +316,71 @@ export function AppSidebar({
           </Box>
         ))}
       </List>
-      <Divider />
-      <List sx={{ py: 0, px: 1 }}>
-        <Tooltip title={theme === "light" ? "Modo escuro" : "Modo claro"} placement="right">
+
+      <Divider sx={{ my: 0.25, borderBottomWidth: 0.5 }} />
+
+      <List sx={{ py: 0, px: 0.75 }} dense disablePadding>
+        <Tooltip title={theme === "light" ? "Alternar para escuro" : "Alternar para claro"} placement="right">
           <ListItemButton
             onClick={toggleTheme}
             sx={{
               borderRadius: 1,
+              py: 0.375,
+              minHeight: 32,
               justifyContent: collapsed ? "center" : "flex-start",
-              px: 1.5,
-              "&:hover": { bgcolor: "rgba(114, 137, 218, 0.12)" },
+              px: collapsed ? 1 : 1.25,
+              "&:hover": { bgcolor: "rgba(37, 99, 235, 0.1)" },
             }}
           >
-            <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 40 }}>
+            <ListItemIcon
+              sx={{
+                minWidth: collapsed ? "auto" : 28,
+                "& .MuiSvgIcon-root": { fontSize: ICON_SIZE },
+              }}
+            >
               {theme === "light" ? (
-                <Moon style={{ width: 20, height: 20 }} />
+                <Moon style={{ width: ICON_SIZE, height: ICON_SIZE }} />
               ) : (
-                <Sun style={{ width: 20, height: 20 }} />
+                <Sun style={{ width: ICON_SIZE, height: ICON_SIZE }} />
               )}
             </ListItemIcon>
-            {!collapsed && <ListItemText primary="Alternar tema" primaryTypographyProps={{ variant: "body2" }} />}
+            {!collapsed && (
+              <ListItemText
+                primary={theme === "light" ? "Escuro" : "Claro"}
+                primaryTypographyProps={{ sx: { fontSize: "0.75rem" } }}
+              />
+            )}
           </ListItemButton>
         </Tooltip>
-        <UserNav collapsed={collapsed} sidebarAccent={sidebarAccent} />
+        <Tooltip title="Ajuda" placement="right">
+          <ListItemButton
+            onClick={() => handleNav("/base-conhecimento")}
+            sx={{
+              borderRadius: 1,
+              py: 0.375,
+              minHeight: 32,
+              justifyContent: collapsed ? "center" : "flex-start",
+              px: collapsed ? 1 : 1.25,
+              "&:hover": { bgcolor: "rgba(37, 99, 235, 0.1)" },
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: collapsed ? "auto" : 28,
+                "& .MuiSvgIcon-root": { fontSize: ICON_SIZE },
+              }}
+            >
+              <HelpCircle style={{ width: ICON_SIZE, height: ICON_SIZE }} />
+            </ListItemIcon>
+            {!collapsed && (
+              <ListItemText
+                primary="Ajuda"
+                primaryTypographyProps={{ sx: { fontSize: "0.75rem" } }}
+              />
+            )}
+          </ListItemButton>
+        </Tooltip>
+        <UserNav collapsed={collapsed} />
       </List>
     </Box>
   );

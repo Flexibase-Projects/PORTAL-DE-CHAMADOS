@@ -84,4 +84,40 @@ export const userService = {
     if (error) throw new Error(error.message);
     return data || [];
   },
+
+  /**
+   * Vincula auth_user_id ao PDC_users pelo email (para "meus chamados" funcionar).
+   */
+  async syncAuthUser(authUserId, email, nome) {
+    if (!authUserId || !email) return null;
+    const { data: existing } = await supabase
+      .from('PDC_users')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (existing) {
+      const { data: updated } = await supabase
+        .from('PDC_users')
+        .update({ auth_user_id: authUserId, nome: nome || existing.nome, updated_at: new Date().toISOString() })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      return updated;
+    }
+    const { data: roles } = await supabase.from('PDC_roles').select('id').eq('nome', 'usuario').single();
+    const { data: created } = await supabase
+      .from('PDC_users')
+      .insert({
+        nome: nome || email.split('@')[0],
+        email,
+        auth_user_id: authUserId,
+        setor: 'Administrativo',
+        departamento: '',
+        role_id: roles?.id,
+      })
+      .select()
+      .single();
+    return created;
+  },
 };

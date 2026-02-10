@@ -55,4 +55,15 @@ export const userController = {
       res.status(500).json({ success: false, error: 'Erro ao buscar perfis', message: error.message });
     }
   },
+
+  async syncAuth(req, res) {
+    try {
+      const { auth_user_id, email, nome } = req.body || {};
+      if (!auth_user_id || !email) return res.status(400).json({ success: false, error: 'auth_user_id e email são obrigatórios' });
+      const user = await userService.syncAuthUser(auth_user_id, email, nome);
+      res.json({ success: true, user });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
 };

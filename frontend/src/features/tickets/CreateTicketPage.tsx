@@ -12,6 +12,8 @@ import MenuItem from "@mui/material/MenuItem";
 import Alert from "@mui/material/Alert";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTheme } from "@mui/material/styles";
 import { CheckCircle2 } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
 import { templateService } from "@/services/templateService";
@@ -26,6 +28,8 @@ import type { TemplateField } from "@/types/template";
 
 export function CreateTicketPage() {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [ticketId, setTicketId] = useState<string | null>(null);
@@ -98,7 +102,7 @@ export function CreateTicketPage() {
         val === null ||
         val === "" ||
         (Array.isArray(val) && val.length === 0);
-      if (isEmpty) dynErrors[fieldId] = `${field.label || fieldId} é obrigatório`;
+      if (isEmpty) dynErrors[fieldId] = `${field.label || fieldId} e obrigatorio`;
     });
     if (Object.keys(dynErrors).length > 0) {
       setErrors((prev) => ({ ...prev, ...dynErrors }));
@@ -121,37 +125,29 @@ export function CreateTicketPage() {
 
   if (success && ticketId) {
     return (
-      <Box sx={{ maxWidth: 672, mx: "auto" }}>
-        <Card variant="outlined">
-          <CardContent sx={{ py: 6, textAlign: "center" }}>
-            <CheckCircle2 style={{ width: 64, height: 64, color: "var(--mui-palette-success-main)", margin: "0 auto 16px" }} />
-            <Typography variant="h5" fontWeight={700} gutterBottom>
-              Chamado Criado com Sucesso!
+      <Box sx={{ maxWidth: 560, mx: "auto", width: "100%" }}>
+        <Card>
+          <CardContent sx={{ py: { xs: 4, sm: 5 }, textAlign: "center" }}>
+            <CheckCircle2 style={{ width: 56, height: 56, color: "var(--mui-palette-success-main)", margin: "0 auto 12px" }} />
+            <Typography variant="h5" gutterBottom>
+              Chamado Criado!
             </Typography>
-            <Typography component="p" fontFamily="monospace" fontSize="1.125rem" gutterBottom>
+            <Typography component="p" fontFamily="monospace" fontSize="1rem" gutterBottom>
               {ticketId}
             </Typography>
-            <Typography color="text.secondary" sx={{ mb: 3 }}>
-              Anote este protocolo para consultar seu chamado posteriormente.
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Anote este protocolo para consultar seu chamado.
             </Typography>
-            <Box sx={{ display: "flex", gap: 2, justifyContent: "center", flexWrap: "wrap" }}>
-              <Button variant="contained" onClick={() => navigate("/meus-chamados")}>
+            <Box sx={{ display: "flex", gap: 1.5, justifyContent: "center", flexWrap: "wrap" }}>
+              <Button variant="contained" size={isMobile ? "small" : "medium"} onClick={() => navigate("/meus-chamados")}>
                 Ver Meus Chamados
               </Button>
               <Button
                 variant="outlined"
+                size={isMobile ? "small" : "medium"}
                 onClick={() => {
                   setSuccess(false);
-                  setFormData({
-                    nome: "",
-                    email: "",
-                    setor: "",
-                    area: "",
-                    ramal: "",
-                    tipoSuporte: "",
-                    assunto: "",
-                    mensagem: "",
-                  });
+                  setFormData({ nome: "", email: "", setor: "", area: "", ramal: "", tipoSuporte: "", assunto: "", mensagem: "" });
                   setDadosExtras({});
                   setTemplateFields([]);
                 }}
@@ -166,12 +162,12 @@ export function CreateTicketPage() {
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 2, md: 2.5 }, maxWidth: 720, mx: "auto", width: "100%" }}>
       <Box>
-        <Typography variant="h4" fontWeight={700} gutterBottom>
+        <Typography variant="h5" gutterBottom sx={{ mb: 0.25 }}>
           Enviar um Chamado
         </Typography>
-        <Typography color="text.secondary">
+        <Typography variant="body2" color="text.secondary">
           Preencha os dados abaixo para criar um novo chamado.
         </Typography>
       </Box>
@@ -182,13 +178,12 @@ export function CreateTicketPage() {
         </Alert>
       )}
 
-      <Card variant="outlined">
-        <CardContent sx={{ pt: 3 }}>
+      <Card>
+        <CardContent>
           <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
               <TextField
                 label="Nome *"
-                id="nome"
                 value={formData.nome}
                 onChange={(e) => handleChange("nome", e.target.value)}
                 error={Boolean(errors.nome)}
@@ -197,7 +192,6 @@ export function CreateTicketPage() {
               />
               <TextField
                 label="Email *"
-                id="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleChange("email", e.target.value)}
@@ -205,7 +199,6 @@ export function CreateTicketPage() {
                 helperText={errors.email}
                 fullWidth
               />
-
               <FormControl fullWidth error={Boolean(errors.setor)}>
                 <InputLabel>Setor *</InputLabel>
                 <Select
@@ -214,14 +207,11 @@ export function CreateTicketPage() {
                   onChange={(e) => handleChange("setor", e.target.value)}
                 >
                   {SETORES_CHAMADO.map((setor) => (
-                    <MenuItem key={setor} value={setor}>
-                      {setor}
-                    </MenuItem>
+                    <MenuItem key={setor} value={setor}>{setor}</MenuItem>
                   ))}
                 </Select>
                 {errors.setor && <Typography variant="caption" color="error">{errors.setor}</Typography>}
               </FormControl>
-
               <FormControl fullWidth disabled={!formData.setor} error={Boolean(errors.area)}>
                 <InputLabel>Departamento *</InputLabel>
                 <Select
@@ -230,17 +220,13 @@ export function CreateTicketPage() {
                   onChange={(e) => handleChange("area", e.target.value)}
                 >
                   {(DEPARTAMENTOS_POR_SETOR[formData.setor] || []).map((dept) => (
-                    <MenuItem key={dept} value={dept}>
-                      {dept}
-                    </MenuItem>
+                    <MenuItem key={dept} value={dept}>{dept}</MenuItem>
                   ))}
                 </Select>
                 {errors.area && <Typography variant="caption" color="error">{errors.area}</Typography>}
               </FormControl>
-
               <TextField
                 label="Ramal"
-                id="ramal"
                 type="number"
                 value={formData.ramal}
                 onChange={(e) => handleChange("ramal", e.target.value)}
@@ -248,7 +234,6 @@ export function CreateTicketPage() {
                 helperText={errors.ramal}
                 fullWidth
               />
-
               {formData.area === "TI" && (
                 <FormControl fullWidth>
                   <InputLabel>Tipo de Suporte</InputLabel>
@@ -258,9 +243,7 @@ export function CreateTicketPage() {
                     onChange={(e) => handleChange("tipoSuporte", e.target.value)}
                   >
                     {TIPOS_SUPORTE_TI.map((opt) => (
-                      <MenuItem key={opt} value={opt}>
-                        {opt}
-                      </MenuItem>
+                      <MenuItem key={opt} value={opt}>{opt}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -269,19 +252,16 @@ export function CreateTicketPage() {
 
             <TextField
               label="Assunto *"
-              id="assunto"
               value={formData.assunto}
               onChange={(e) => handleChange("assunto", e.target.value)}
               error={Boolean(errors.assunto)}
               helperText={errors.assunto}
               fullWidth
             />
-
             <TextField
               label="Mensagem *"
-              id="mensagem"
               multiline
-              rows={5}
+              rows={isMobile ? 4 : 5}
               value={formData.mensagem}
               onChange={(e) => handleChange("mensagem", e.target.value)}
               error={Boolean(errors.mensagem)}
@@ -302,12 +282,12 @@ export function CreateTicketPage() {
               );
             })}
 
-            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2, pt: 2 }}>
-              <Button type="button" variant="outlined" onClick={() => navigate("/")} disabled={loading}>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, pt: 1 }}>
+              <Button variant="outlined" onClick={() => navigate("/")} disabled={loading}>
                 Cancelar
               </Button>
               <Button type="submit" variant="contained" disabled={loading}>
-                {loading && <CircularProgress size={20} sx={{ mr: 1 }} />}
+                {loading && <CircularProgress size={18} sx={{ mr: 1 }} />}
                 {loading ? "Enviando..." : "Enviar Chamado"}
               </Button>
             </Box>

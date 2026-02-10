@@ -205,11 +205,11 @@ export function KnowledgeBasePage() {
 
   if (selectedArticle) {
     return (
-      <Box sx={{ maxWidth: 672, mx: "auto" }}>
-        <Button startIcon={<ArrowLeft style={{ width: 18, height: 18 }} />} onClick={() => setSelectedArticle(null)} sx={{ mb: 2 }}>
+      <Box sx={{ maxWidth: 672, mx: "auto", width: "100%" }}>
+        <Button startIcon={<ArrowLeft style={{ width: 16, height: 16 }} />} onClick={() => setSelectedArticle(null)} sx={{ mb: 2 }}>
           Voltar
         </Button>
-        <Typography variant="h4" fontWeight={700} gutterBottom>
+        <Typography variant="h5" gutterBottom>
           {selectedArticle.titulo}
         </Typography>
         <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
@@ -226,17 +226,17 @@ export function KnowledgeBasePage() {
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 2, md: 2.5 } }}>
       {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
       {success && <Alert severity="success" onClose={() => setSuccess("")}>{success}</Alert>}
 
-      <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: "flex-start", gap: 2 }}>
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: "flex-start", gap: 1.5 }}>
         <Box>
-          <Typography variant="h4" fontWeight={700} gutterBottom>
+          <Typography variant="h5" gutterBottom sx={{ mb: 0.25 }}>
             Base de Conhecimento
           </Typography>
-          <Typography color="text.secondary">
-            Artigos, tutoriais e documentação por área.
+          <Typography variant="body2" color="text.secondary">
+            Artigos, tutoriais e documentacao por area.
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>

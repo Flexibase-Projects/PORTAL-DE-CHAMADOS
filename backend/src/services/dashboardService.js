@@ -74,19 +74,43 @@ const DBG = (msg, data, hypothesisId) => {
   }).catch(() => {});
 };
 
+/** Cache em memória para getStats: TTL 60s. Chave por opções (default vs dateFrom/dateTo). */
+const STATS_CACHE_TTL_MS = 60 * 1000;
+const statsCache = { key: null, value: null, expiresAt: 0 };
+
+function getStatsCacheKey(options) {
+  const dateFrom = options.dateFrom ? String(options.dateFrom).slice(0, 10) : null;
+  const dateTo = options.dateTo ? String(options.dateTo).slice(0, 10) : null;
+  if (dateFrom && dateTo && dateFrom <= dateTo) return `range:${dateFrom}:${dateTo}`;
+  return 'default';
+}
+
 export const dashboardService = {
   async getStats(options = {}) {
+    const cacheKey = getStatsCacheKey(options);
+    const now = Date.now();
+    if (statsCache.key === cacheKey && statsCache.expiresAt > now) {
+      return statsCache.value;
+    }
+
     // #region agent log
     DBG('getStats entry', {}, 'H1');
     // #endregion
-    // Total por status
-    const { data: tickets, error } = await supabase
-      .from('PDC_tickets')
-      .select('id, status, area_destino, created_at');
 
-    // #region agent log
-    DBG('first query done', { error: error?.message, ticketsLen: (tickets || []).length, sampleCreatedAt: tickets?.[0]?.created_at, sampleCreatedAtType: typeof tickets?.[0]?.created_at }, 'H1,H2,H3,H4');
-    // #endregion
+    const dateFrom = options.dateFrom ? String(options.dateFrom).slice(0, 10) : null;
+    const dateTo = options.dateTo ? String(options.dateTo).slice(0, 10) : null;
+    const useCustomRange = dateFrom && dateTo && dateFrom <= dateTo;
+
+    const [ticketsResult, recentesResult] = await Promise.all([
+      supabase.from('PDC_tickets').select('id, status, area_destino, created_at'),
+      supabase.from('PDC_tickets').select(`*, solicitante:PDC_users!solicitante_id(nome, email)`).order('created_at', { ascending: false }).limit(10),
+    ]);
+
+    const { data: tickets, error } = ticketsResult;
+    const { data: recentes, error: recentesError } = recentesResult;
+
+    DBG('queries done', { error: error?.message, ticketsLen: (tickets || []).length, recentesError: recentesError?.message, recentesLen: (recentes || []).length }, 'H1,H2,H3,H4');
+
     if (error) throw new Error(error.message);
 
     const all = tickets || [];
@@ -95,7 +119,6 @@ export const dashboardService = {
     const em_andamento = all.filter(t => t.status === 'Em Andamento').length;
     const concluidos = all.filter(t => t.status === 'Concluído').length;
 
-    // Por departamento
     const deptCounts = {};
     all.forEach(t => {
       deptCounts[t.area_destino] = (deptCounts[t.area_destino] || 0) + 1;
@@ -103,11 +126,6 @@ export const dashboardService = {
     const por_departamento = Object.entries(deptCounts)
       .map(([area, count]) => ({ area, count }))
       .sort((a, b) => b.count - a.count);
-
-    // Por dia: últimos 7 dias OU intervalo customizado (dateFrom, dateTo)
-    const dateFrom = options.dateFrom ? String(options.dateFrom).slice(0, 10) : null;
-    const dateTo = options.dateTo ? String(options.dateTo).slice(0, 10) : null;
-    const useCustomRange = dateFrom && dateTo && dateFrom <= dateTo;
 
     const buildPorDia = (list, filterSetor = null) => {
       const out = [];
@@ -147,20 +165,6 @@ export const dashboardService = {
     const por_dia_industria = buildPorDia(all, 'Industrial');
     const por_dia_administrativo = buildPorDia(all, 'Administrativo');
 
-    // Recentes
-    // #region agent log
-    DBG('before recentes query', {}, 'H2');
-    // #endregion
-    const { data: recentes, error: recentesError } = await supabase
-      .from('PDC_tickets')
-      .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    // #region agent log
-    DBG('recentes query done', { recentesError: recentesError?.message, recentesLen: (recentes || []).length }, 'H2');
-    // #endregion
-
     const por_mes_geral = aggregateByMonth(all);
     const por_mes_industria = aggregateByMonth(all, 'Industrial');
     const por_mes_administrativo = aggregateByMonth(all, 'Administrativo');
@@ -190,6 +194,10 @@ export const dashboardService = {
       out.por_mes_industria_range = aggregateByMonthInRange(all, 'Industrial', dateFrom, dateTo);
       out.por_mes_administrativo_range = aggregateByMonthInRange(all, 'Administrativo', dateFrom, dateTo);
     }
+
+    statsCache.key = cacheKey;
+    statsCache.value = out;
+    statsCache.expiresAt = Date.now() + STATS_CACHE_TTL_MS;
     return out;
   },
 };

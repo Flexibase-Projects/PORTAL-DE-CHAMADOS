@@ -42,6 +42,18 @@ export const ticketController = {
     }
   },
 
+  async getMeusChamadosByAuthUser(req, res) {
+    try {
+      const authUserId = req.query.auth_user_id || req.headers['x-auth-user-id'];
+      if (!authUserId) return res.status(400).json({ success: false, error: 'auth_user_id é obrigatório (query ou header x-auth-user-id)' });
+
+      const result = await ticketService.getMeusChamadosByAuthUser(authUserId);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+
   async getReceivedTickets(req, res) {
     try {
       const tickets = await ticketService.getReceivedTickets();

@@ -14,6 +14,8 @@ import userRoutes from './routes/users.js';
 import roleRoutes from './routes/roles.js';
 import kbRoutes from './routes/knowledge-base.js';
 import dashboardRoutes from './routes/dashboard.js';
+import permissionRoutes from './routes/permissions.js';
+import notificationRoutes from './routes/notifications.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -33,6 +35,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/kb', kbRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/admin/permissions', permissionRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

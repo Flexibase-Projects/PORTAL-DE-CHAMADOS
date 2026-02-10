@@ -2,7 +2,6 @@ import { useTheme } from "@mui/material/styles";
 import { alpha } from "@mui/material/styles";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
-import CardHeader from "@mui/material/CardHeader";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import {
@@ -19,127 +18,59 @@ interface StatsCardsProps {
   concluidos: number;
 }
 
-const TOTAL_BLUE = "#63B8F3";
+const ICON_SIZE = 18;
 
 const stats = [
-  {
-    key: "total",
-    label: "Total de Chamados",
-    icon: TicketCheck,
-    color: TOTAL_BLUE,
-    bg: alpha(TOTAL_BLUE, 0.2),
-    borderColor: TOTAL_BLUE,
-  },
-  {
-    key: "abertos",
-    label: "Abertos",
-    icon: AlertCircle,
-    color: "error.main",
-    bg: "error.light",
-    borderColor: "error.main",
-  },
-  {
-    key: "emAndamento",
-    label: "Em Andamento",
-    icon: Clock,
-    color: "warning.main",
-    bg: "warning.light",
-    borderColor: "warning.main",
-  },
-  {
-    key: "concluidos",
-    label: "Concluídos",
-    icon: CheckCircle2,
-    color: "success.main",
-    bg: "success.light",
-    borderColor: "success.main",
-  },
+  { key: "total", label: "Total", icon: TicketCheck, colorKey: "primary" as const },
+  { key: "abertos", label: "Abertos", icon: AlertCircle, colorKey: "error" as const },
+  { key: "emAndamento", label: "Em Andamento", icon: Clock, colorKey: "warning" as const },
+  { key: "concluidos", label: "Concluidos", icon: CheckCircle2, colorKey: "success" as const },
 ] as const;
 
-export function StatsCards({
-  total,
-  abertos,
-  emAndamento,
-  concluidos,
-}: StatsCardsProps) {
+export function StatsCards({ total, abertos, emAndamento, concluidos }: StatsCardsProps) {
   const theme = useTheme();
-  const values: Record<string, number> = {
-    total,
-    abertos,
-    emAndamento,
-    concluidos,
-  };
-
-  const getShadowColor = (borderColorKey: string) => {
-    if (borderColorKey.startsWith("#")) return alpha(borderColorKey, 0.18);
-    const color =
-      borderColorKey === "error.main"
-        ? theme.palette.error.main
-        : borderColorKey === "warning.main"
-          ? theme.palette.warning.main
-          : borderColorKey === "success.main"
-            ? theme.palette.success.main
-            : theme.palette.primary.main;
-    return alpha(color, 0.18);
-  };
+  const values: Record<string, number> = { total, abertos, emAndamento, concluidos };
 
   return (
     <Box
       sx={{
         display: "grid",
-        gap: 2,
-        gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" },
+        gap: 1.5,
+        gridTemplateColumns: { xs: "1fr 1fr", lg: "repeat(4, 1fr)" },
       }}
     >
-      {stats.map((s) => (
-        <Card
-          key={s.key}
-          variant="outlined"
-          sx={{
-            border: "1px solid",
-            borderColor: s.borderColor,
-            transition: "box-shadow 0.25s ease, transform 0.25s ease",
-            "&:hover": {
-              boxShadow: `0 8px 24px ${getShadowColor(s.borderColor)}`,
-              transform: "translateY(-2px)",
-            },
-          }}
-        >
-          <CardHeader
-            sx={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              pb: 0,
-            }}
-            title={
-              <Typography variant="body2" color="text.secondary">
-                {s.label}
-              </Typography>
-            }
-            action={
+      {stats.map((s) => {
+        const color = theme.palette[s.colorKey].main;
+        return (
+          <Card key={s.key} sx={{ borderLeft: `3px solid ${color}` }}>
+            <CardContent sx={{ display: "flex", alignItems: "center", gap: 1.5, py: "12px !important" }}>
               <Box
                 sx={{
-                  borderRadius: 1,
-                  p: 1,
-                  bgcolor: s.bg,
-                  color: s.color,
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  bgcolor: alpha(color, 0.1),
+                  color,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  flexShrink: 0,
                 }}
               >
-                <s.icon style={{ width: 20, height: 20 }} />
+                <s.icon style={{ width: ICON_SIZE, height: ICON_SIZE }} />
               </Box>
-            }
-          />
-          <CardContent sx={{ pt: 0 }}>
-            <Typography variant="h4" fontWeight={700}>
-              {values[s.key]}
-            </Typography>
-          </CardContent>
-        </Card>
-      ))}
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="caption" color="text.secondary" noWrap>
+                  {s.label}
+                </Typography>
+                <Typography variant="h5" fontWeight={700} lineHeight={1.2}>
+                  {values[s.key]}
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        );
+      })}
     </Box>
   );
 }
