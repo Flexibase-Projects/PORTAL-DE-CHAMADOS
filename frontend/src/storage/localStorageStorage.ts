@@ -4,6 +4,7 @@
  */
 
 import { generateProtocol } from "@/lib/utils";
+import { getSetorByDepartamento } from "@/constants/departamentos";
 import type { Ticket } from "@/types/ticket";
 import type { User, Role } from "@/types/user";
 import type { KBCategory, KBArticle } from "@/types/knowledge-base";
@@ -44,6 +45,12 @@ const INITIAL_ROLES: Role[] = [
   { id: "2", nome: "gestor_area", descricao: "Gestor de Área", nivel: 3 },
   { id: "3", nome: "tecnico", descricao: "Técnico/Suporte", nivel: 2 },
   { id: "4", nome: "usuario", descricao: "Usuário", nivel: 1 },
+];
+
+const DEFAULT_KB_CATEGORIES: Omit<KBCategory, "article_count">[] = [
+  { id: "kb-cat-comercial", nome: "Comercial", descricao: "Artigos da área comercial", icone: "briefcase", ordem: 1, created_at: now() },
+  { id: "kb-cat-administrativo", nome: "Administrativo", descricao: "Artigos da área administrativa", icone: "building", ordem: 2, created_at: now() },
+  { id: "kb-cat-industrial", nome: "Industrial", descricao: "Artigos da área industrial", icone: "factory", ordem: 3, created_at: now() },
 ];
 
 export const localStorageStorage = {
@@ -218,7 +225,11 @@ export const localStorageStorage = {
 
   // KB Categories
   getCategories(): KBCategory[] {
-    const cats = get<KBCategory[]>(KEYS.KB_CATEGORIES, []);
+    let cats = get<KBCategory[]>(KEYS.KB_CATEGORIES, []);
+    if (cats.length === 0) {
+      cats = [...DEFAULT_KB_CATEGORIES];
+      set(KEYS.KB_CATEGORIES, cats);
+    }
     const articlesRaw = get<KBArticle[]>(KEYS.KB_ARTICLES, []);
     return cats.map((c) => ({
       ...c,
@@ -301,10 +312,9 @@ export const localStorageStorage = {
     return true;
   },
 
-  // Dashboard stats
-  getDashboardStats() {
+  // Dashboard stats (opcional: dateFrom e dateTo para intervalo customizado em por_dia)
+  getDashboardStats(options?: { dateFrom?: string; dateTo?: string }) {
     const tickets = this.getTickets();
-    const today = new Date().toISOString().split("T")[0];
     const abertos = tickets.filter((t) => t.status === "Aberto").length;
     const em_andamento = tickets.filter((t) => t.status === "Em Andamento").length;
     const concluidos = tickets.filter((t) => t.status === "Concluído").length;
@@ -314,30 +324,126 @@ export const localStorageStorage = {
       deptCounts[area] = (deptCounts[area] || 0) + 1;
     });
     const por_departamento = Object.entries(deptCounts).map(([area, count]) => ({ area, count }));
-    const por_dia: { date: string; count: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split("T")[0];
-      const count = tickets.filter((t) =>
-        (t.created_at ?? "").toString().startsWith(dateStr)
-      ).length;
-      por_dia.push({
-        date: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-        count,
-      });
-    }
+
+    const dateFrom = options?.dateFrom ? String(options.dateFrom).slice(0, 10) : null;
+    const dateTo = options?.dateTo ? String(options.dateTo).slice(0, 10) : null;
+    const useCustomRange = Boolean(dateFrom && dateTo && dateFrom <= dateTo);
+
+    const buildPorDia = (
+      list: Ticket[],
+      filterSetor: string | null = null
+    ): { date: string; count: number }[] => {
+      const out: { date: string; count: number }[] = [];
+      if (useCustomRange && dateFrom && dateTo) {
+        const start = new Date(dateFrom);
+        const end = new Date(dateTo);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const dateStr = d.toISOString().split("T")[0];
+          const filtered =
+            filterSetor === null
+              ? list
+              : list.filter((t) => getSetorByDepartamento(t.area_destino ?? "") === filterSetor);
+          const count = filtered.filter((t) =>
+            (t.created_at ?? "").toString().startsWith(dateStr)
+          ).length;
+          out.push({
+            date: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+            count,
+          });
+        }
+      } else {
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const dateStr = d.toISOString().split("T")[0];
+          const filtered =
+            filterSetor === null
+              ? list
+              : list.filter((t) => getSetorByDepartamento(t.area_destino ?? "") === filterSetor);
+          const count = filtered.filter((t) =>
+            (t.created_at ?? "").toString().startsWith(dateStr)
+          ).length;
+          out.push({
+            date: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+            count,
+          });
+        }
+      }
+      return out;
+    };
+    const por_dia = buildPorDia(tickets);
+    const por_dia_industria = buildPorDia(tickets, "Industrial");
+    const por_dia_administrativo = buildPorDia(tickets, "Administrativo");
     const recentes = [...tickets]
       .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
       .slice(0, 10);
-    return {
+
+    const mesNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const aggregateByMonth = (
+      list: Ticket[],
+      filterSetor: string | null = null
+    ): { mes: string; count: number }[] => {
+      const byMonth: Record<string, number> = {};
+      list.forEach((t) => {
+        const setor = getSetorByDepartamento(t.area_destino ?? "");
+        if (filterSetor !== null && setor !== filterSetor) return;
+        const created = (t.created_at ?? "").toString().slice(0, 7);
+        if (!created) return;
+        byMonth[created] = (byMonth[created] ?? 0) + 1;
+      });
+      return Object.keys(byMonth)
+        .sort()
+        .map((ym) => {
+          const [y, m] = ym.split("-").map(Number);
+          return { mes: `${mesNames[m - 1]}/${String(y).slice(-2)}`, count: byMonth[ym] };
+        });
+    };
+    const aggregateByMonthInRange = (
+      list: Ticket[],
+      filterSetor: string | null,
+      rangeFrom: string,
+      rangeTo: string
+    ): { mes: string; count: number }[] => {
+      const filtered = list.filter((t) => {
+        const created = (t.created_at ?? "").toString().slice(0, 10);
+        return created >= rangeFrom && created <= rangeTo;
+      });
+      return aggregateByMonth(filtered, filterSetor);
+    };
+    const aggregateBySetor = (): { setor: string; count: number }[] => {
+      const counts: Record<string, number> = { Comercial: 0, Administrativo: 0, Industrial: 0 };
+      tickets.forEach((t) => {
+        const setor = getSetorByDepartamento(t.area_destino ?? "");
+        if (setor && setor in counts) counts[setor]++;
+      });
+      return (["Comercial", "Administrativo", "Industrial"] as const)
+        .map((setor) => ({ setor, count: counts[setor] }))
+        .filter((x) => x.count > 0);
+    };
+
+    const base = {
       total: tickets.length,
       abertos,
       em_andamento,
       concluidos,
       por_departamento,
       por_dia,
+      por_dia_industria,
+      por_dia_administrativo,
       recentes,
+      por_mes_geral: aggregateByMonth(tickets),
+      por_mes_industria: aggregateByMonth(tickets, "Industrial"),
+      por_mes_administrativo: aggregateByMonth(tickets, "Administrativo"),
+      por_setor: aggregateBySetor(),
     };
+    if (useCustomRange && dateFrom && dateTo) {
+      return {
+        ...base,
+        por_mes_geral_range: aggregateByMonthInRange(tickets, null, dateFrom, dateTo),
+        por_mes_industria_range: aggregateByMonthInRange(tickets, "Industrial", dateFrom, dateTo),
+        por_mes_administrativo_range: aggregateByMonthInRange(tickets, "Administrativo", dateFrom, dateTo),
+      };
+    }
+    return base;
   },
 };

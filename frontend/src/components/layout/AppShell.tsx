@@ -1,33 +1,92 @@
-import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { useState } from "react";
+import Box from "@mui/material/Box";
+import Drawer from "@mui/material/Drawer";
 import { AppSidebar } from "./AppSidebar";
+
+const DRAWER_WIDTH = 256;
+const DRAWER_WIDTH_COLLAPSED = 64;
 
 interface AppShellProps {
   children: React.ReactNode;
 }
 
-function MobileMenuTrigger() {
-  const { isMobile } = useSidebar();
-  if (!isMobile) return null;
-  return (
-    <div className="sticky top-0 z-10 flex h-12 items-center border-b bg-background px-4 md:hidden">
-      <SidebarTrigger className="-ml-1" aria-label="Abrir menu" />
-    </div>
-  );
-}
-
 export function AppShell({ children }: AppShellProps) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const width = collapsed ? DRAWER_WIDTH_COLLAPSED : DRAWER_WIDTH;
+
+  const handleDrawerToggle = () => setMobileOpen((v) => !v);
+
   return (
-    <TooltipProvider delayDuration={0}>
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
-          <MobileMenuTrigger />
-          <main className="flex-1 overflow-auto p-4 md:p-6">
-            {children}
-          </main>
-        </SidebarInset>
-      </SidebarProvider>
-    </TooltipProvider>
+    <Box sx={{ display: "flex", minHeight: "100vh" }}>
+      <Box
+        component="nav"
+        sx={{
+          width: { md: width },
+          flexShrink: { md: 0 },
+        }}
+      >
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{ keepMounted: true }}
+          sx={{
+            display: { xs: "block", md: "none" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
+              width: DRAWER_WIDTH,
+              borderRight: 1,
+              borderColor: "rgba(114, 137, 218, 0.3)",
+            },
+          }}
+        >
+          <AppSidebar
+            collapsed={false}
+            onToggleCollapse={() => {}}
+            isMobile={true}
+            onNavigate={handleDrawerToggle}
+            onHeaderClick={handleDrawerToggle}
+          />
+        </Drawer>
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: "none", md: "block" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
+              width,
+              borderRight: 1,
+              borderColor: "rgba(114, 137, 218, 0.3)",
+              transition: (theme) =>
+                theme.transitions.create("width", {
+                  easing: theme.transitions.easing.sharp,
+                  duration: theme.transitions.duration.enteringScreen,
+                }),
+              overflowX: "hidden",
+            },
+          }}
+          open
+        >
+          <AppSidebar
+            collapsed={collapsed}
+            onToggleCollapse={() => setCollapsed((c) => !c)}
+            isMobile={false}
+            onHeaderClick={() => setCollapsed((c) => !c)}
+          />
+        </Drawer>
+      </Box>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          p: { xs: 2, md: 3 },
+          overflow: "auto",
+          minHeight: "100vh",
+        }}
+      >
+        {children}
+      </Box>
+    </Box>
   );
 }

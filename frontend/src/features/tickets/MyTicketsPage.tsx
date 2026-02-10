@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Search } from "lucide-react";
+import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
+import Alert from "@mui/material/Alert";
+import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
+import { Search } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
 import { TicketCard } from "./components/TicketCard";
 import type { Ticket } from "@/types/ticket";
@@ -18,13 +23,13 @@ export function MyTicketsPage() {
   const [recebidos, setRecebidos] = useState<Ticket[]>([]);
   const [error, setError] = useState("");
   const [searched, setSearched] = useState(false);
+  const [tab, setTab] = useState(0);
 
   const handleSearch = async () => {
     if (!nome?.trim()) {
       setError("Por favor, insira seu nome");
       return;
     }
-
     setLoading(true);
     setError("");
     try {
@@ -46,105 +51,82 @@ export function MyTicketsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Meus Chamados</h1>
-        <p className="text-muted-foreground">
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Box>
+        <Typography variant="h4" fontWeight={700} gutterBottom>
+          Meus Chamados
+        </Typography>
+        <Typography color="text.secondary">
           Digite seu nome para visualizar seus chamados enviados e recebidos.
-        </p>
-      </div>
+        </Typography>
+      </Box>
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-3 items-start">
-            <div className="flex-1">
-              <Input
-                type="text"
-                placeholder="Seu nome completo"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              />
-            </div>
-            <Button onClick={handleSearch} disabled={loading || !nome?.trim()}>
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4 mr-2" />
-              )}
-              {!loading && "Buscar"}
+      <Card variant="outlined">
+        <CardContent sx={{ pt: 2 }}>
+          <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <TextField
+              placeholder="Seu nome completo"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              sx={{ flex: 1, minWidth: 200 }}
+              size="small"
+            />
+            <Button
+              variant="contained"
+              onClick={handleSearch}
+              disabled={loading || !nome?.trim()}
+              startIcon={loading ? <CircularProgress size={18} /> : <Search style={{ width: 18, height: 18 }} />}
+            >
+              {loading ? "Buscando..." : "Buscar"}
             </Button>
-          </div>
+          </Box>
         </CardContent>
       </Card>
 
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+        <Alert severity="error" onClose={() => setError("")}>
+          {error}
         </Alert>
       )}
 
       {searched && (enviados.length > 0 || recebidos.length > 0) ? (
-        <Tabs defaultValue="enviados">
-          <TabsList>
-            <TabsTrigger value="enviados">
-              Enviados ({enviados.length})
-            </TabsTrigger>
-            <TabsTrigger value="recebidos">
-              Recebidos ({recebidos.length})
-            </TabsTrigger>
-          </TabsList>
+        <Box>
+          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+            <Tab label={`Enviados (${enviados.length})`} />
+            <Tab label={`Recebidos (${recebidos.length})`} />
+          </Tabs>
 
-          <TabsContent value="enviados" className="mt-4">
-            {enviados.length === 0 ? (
-              <Alert>
-                <AlertDescription>
-                  Você não possui chamados enviados.
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {enviados.map((ticket) => (
-                  <TicketCard
-                    key={ticket.id}
-                    ticket={ticket}
-                    onView={handleViewTicket}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
+          {tab === 0 && (
+            <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" } }}>
+              {enviados.length === 0 ? (
+                <Alert severity="info">Você não possui chamados enviados.</Alert>
+              ) : (
+                enviados.map((ticket) => (
+                  <TicketCard key={ticket.id} ticket={ticket} onView={handleViewTicket} />
+                ))
+              )}
+            </Box>
+          )}
 
-          <TabsContent value="recebidos" className="mt-4">
-            {recebidos.length === 0 ? (
-              <Alert>
-                <AlertDescription>
-                  Você não possui chamados recebidos.
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {recebidos.map((ticket) => (
-                  <TicketCard
-                    key={ticket.id}
-                    ticket={ticket}
-                    onView={handleViewTicket}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+          {tab === 1 && (
+            <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" } }}>
+              {recebidos.length === 0 ? (
+                <Alert severity="info">Você não possui chamados recebidos.</Alert>
+              ) : (
+                recebidos.map((ticket) => (
+                  <TicketCard key={ticket.id} ticket={ticket} onView={handleViewTicket} />
+                ))
+              )}
+            </Box>
+          )}
+        </Box>
       ) : (
         searched &&
         !loading && (
-          <Alert>
-            <AlertDescription>
-              Nenhum chamado encontrado para este nome.
-            </AlertDescription>
-          </Alert>
+          <Alert severity="info">Nenhum chamado encontrado para este nome.</Alert>
         )
       )}
-    </div>
+    </Box>
   );
 }

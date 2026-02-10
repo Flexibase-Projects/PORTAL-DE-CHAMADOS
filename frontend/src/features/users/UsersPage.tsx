@@ -1,36 +1,30 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Pencil, UserX, UserCheck, Loader2 } from "lucide-react";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import IconButton from "@mui/material/IconButton";
+import Chip from "@mui/material/Chip";
+import Alert from "@mui/material/Alert";
+import Skeleton from "@mui/material/Skeleton";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
+import { Plus, Pencil, UserX, UserCheck } from "lucide-react";
 import { userService } from "@/services/userService";
 import { SETORES, DEPARTAMENTOS_POR_SETOR } from "@/constants/departamentos";
-import { ROLE_LABELS, ROLE_COLORS } from "@/constants/roles";
+import { ROLE_LABELS } from "@/constants/roles";
 import type { User, Role } from "@/types/user";
 
 export function UsersPage() {
@@ -131,9 +125,7 @@ export function UsersPage() {
     try {
       const res = await userService.toggleActive(user.id);
       if (res.success) {
-        setSuccess(
-          `Usuário ${res.user.ativo ? "ativado" : "desativado"} com sucesso!`
-        );
+        setSuccess(`Usuário ${res.user.ativo ? "ativado" : "desativado"} com sucesso!`);
         await loadData();
       }
     } catch {
@@ -146,227 +138,174 @@ export function UsersPage() {
     return role ? ROLE_LABELS[role.nome] || role.nome : "—";
   };
 
-  const getRoleColor = (roleId: string) => {
-    const role = roles.find((r) => r.id === roleId);
-    return role ? ROLE_COLORS[role.nome] || "" : "";
-  };
-
   if (loading) {
     return (
-      <div className="space-y-3">
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-12 rounded-md" />
+          <Skeleton key={i} variant="rounded" height={48} />
         ))}
-      </div>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+        <Alert severity="error" onClose={() => setError("")}>
+          {error}
         </Alert>
       )}
       {success && (
-        <Alert>
-          <AlertDescription>{success}</AlertDescription>
+        <Alert severity="success" onClose={() => setSuccess("")}>
+          {success}
         </Alert>
       )}
 
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
+        <Typography variant="body2" color="text.secondary">
           {users.length} usuário(s) cadastrado(s)
-        </p>
-        <Button onClick={handleOpenCreate}>
-          <Plus className="h-4 w-4 mr-2" />
+        </Typography>
+        <Button variant="contained" startIcon={<Plus style={{ width: 18, height: 18 }} />} onClick={handleOpenCreate}>
           Novo Usuário
         </Button>
-      </div>
+      </Box>
 
-      <div className="rounded-lg border overflow-x-auto">
-        <Table>
-          <TableHeader>
+      <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "auto" }}>
+        <Table size="small">
+          <TableHead>
             <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead className="hidden sm:table-cell">Email</TableHead>
-              <TableHead className="hidden md:table-cell">Departamento</TableHead>
-              <TableHead>Perfil</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-24">Ações</TableHead>
+              <TableCell>Nome</TableCell>
+              <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Email</TableCell>
+              <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>Departamento</TableCell>
+              <TableCell>Perfil</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell align="right" sx={{ width: 100 }}>Ações</TableCell>
             </TableRow>
-          </TableHeader>
+          </TableHead>
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} align="center" sx={{ py: 4 }} color="text.secondary">
                   Nenhum usuário cadastrado.
                 </TableCell>
               </TableRow>
             ) : (
               users.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.nome}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">
+                  <TableCell fontWeight={500}>{user.nome}</TableCell>
+                  <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }} color="text.secondary">
                     {user.email}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {user.departamento}
+                  <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{user.departamento}</TableCell>
+                  <TableCell>
+                    <Chip label={getRoleName(user.role_id)} size="small" variant="outlined" />
                   </TableCell>
                   <TableCell>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getRoleColor(user.role_id)}`}
-                    >
-                      {getRoleName(user.role_id)}
-                    </span>
+                    <Chip
+                      label={user.ativo ? "Ativo" : "Inativo"}
+                      size="small"
+                      color={user.ativo ? "success" : "default"}
+                      variant="outlined"
+                    />
                   </TableCell>
-                  <TableCell>
-                    <Badge variant={user.ativo ? "default" : "secondary"}>
-                      {user.ativo ? "Ativo" : "Inativo"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleOpenEdit(user)}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleToggleActive(user)}
-                      >
-                        {user.ativo ? (
-                          <UserX className="h-3 w-3 text-destructive" />
-                        ) : (
-                          <UserCheck className="h-3 w-3 text-green-600" />
-                        )}
-                      </Button>
-                    </div>
+                  <TableCell align="right">
+                    <IconButton size="small" onClick={() => handleOpenEdit(user)}>
+                      <Pencil style={{ width: 16, height: 16 }} />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => handleToggleActive(user)}>
+                      {user.ativo ? (
+                        <UserX style={{ width: 16, height: 16 }} color="inherit" />
+                      ) : (
+                        <UserCheck style={{ width: 16, height: 16 }} color="success" />
+                      )}
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
-      </div>
+      </Box>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{editingUser ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingUser ? "Editar Usuário" : "Novo Usuário"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nome *</Label>
-                <Input
-                  value={form.nome}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, nome: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email *</Label>
-                <Input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, email: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Setor *</Label>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+              <TextField
+                label="Nome *"
+                size="small"
+                value={form.nome}
+                onChange={(e) => setForm((p) => ({ ...p, nome: e.target.value }))}
+                fullWidth
+              />
+              <TextField
+                label="Email *"
+                type="email"
+                size="small"
+                value={form.email}
+                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                fullWidth
+              />
+              <FormControl fullWidth size="small">
+                <InputLabel>Setor *</InputLabel>
                 <Select
                   value={form.setor}
-                  onValueChange={(v) =>
-                    setForm((p) => ({ ...p, setor: v, departamento: "" }))
-                  }
+                  label="Setor *"
+                  onChange={(e) => setForm((p) => ({ ...p, setor: e.target.value, departamento: "" }))}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SETORES.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  {SETORES.map((s) => (
+                    <MenuItem key={s} value={s}>
+                      {s}
+                    </MenuItem>
+                  ))}
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Departamento *</Label>
+              </FormControl>
+              <FormControl fullWidth size="small" disabled={!form.setor}>
+                <InputLabel>Departamento *</InputLabel>
                 <Select
                   value={form.departamento}
-                  onValueChange={(v) =>
-                    setForm((p) => ({ ...p, departamento: v }))
-                  }
-                  disabled={!form.setor}
+                  label="Departamento *"
+                  onChange={(e) => setForm((p) => ({ ...p, departamento: e.target.value }))}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(DEPARTAMENTOS_POR_SETOR[form.setor] || []).map((d) => (
-                      <SelectItem key={d} value={d}>
-                        {d}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  {(DEPARTAMENTOS_POR_SETOR[form.setor] || []).map((d) => (
+                    <MenuItem key={d} value={d}>
+                      {d}
+                    </MenuItem>
+                  ))}
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Ramal</Label>
-                <Input
-                  value={form.ramal}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, ramal: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Perfil *</Label>
+              </FormControl>
+              <TextField
+                label="Ramal"
+                size="small"
+                value={form.ramal}
+                onChange={(e) => setForm((p) => ({ ...p, ramal: e.target.value }))}
+                fullWidth
+              />
+              <FormControl fullWidth size="small">
+                <InputLabel>Perfil *</InputLabel>
                 <Select
                   value={form.role_id}
-                  onValueChange={(v) =>
-                    setForm((p) => ({ ...p, role_id: v }))
-                  }
+                  label="Perfil *"
+                  onChange={(e) => setForm((p) => ({ ...p, role_id: e.target.value }))}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {ROLE_LABELS[r.nome] || r.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  {roles.map((r) => (
+                    <MenuItem key={r.id} value={r.id}>
+                      {ROLE_LABELS[r.nome] || r.nome}
+                    </MenuItem>
+                  ))}
                 </Select>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {editingUser ? "Salvar" : "Criar"}
-            </Button>
-          </DialogFooter>
+              </FormControl>
+            </Box>
+          </Box>
         </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={handleSave} disabled={saving} startIcon={saving ? <CircularProgress size={18} /> : null}>
+            {saving ? "Salvando..." : editingUser ? "Salvar" : "Criar"}
+          </Button>
+        </DialogActions>
       </Dialog>
-    </div>
+    </Box>
   );
 }

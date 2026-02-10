@@ -1,6 +1,9 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
+import Button from "@mui/material/Button";
+import Box from "@mui/material/Box";
 import { Mail, Building2, Clock } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import type { Ticket } from "@/types/ticket";
@@ -11,16 +14,14 @@ interface TicketCardProps {
   showActions?: boolean;
 }
 
-function statusVariant(
-  status: string
-): "default" | "secondary" | "destructive" | "outline" {
+function statusColor(status: string): "default" | "primary" | "warning" | "success" {
   switch (status) {
     case "Concluído":
-      return "default";
+      return "success";
     case "Em Andamento":
-      return "secondary";
+      return "warning";
     default:
-      return "destructive";
+      return "default";
   }
 }
 
@@ -30,56 +31,71 @@ export function TicketCard({
   showActions = true,
 }: TicketCardProps) {
   return (
-    <Card className="transition-all hover:shadow-md">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-sm truncate">{ticket.assunto}</h3>
-            <p className="text-xs text-muted-foreground font-mono">
+    <Card variant="outlined" sx={{ transition: "box-shadow 0.2s", "&:hover": { boxShadow: 2 } }}>
+      <CardContent sx={{ p: 2 }}>
+        <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1, mb: 1.5 }}>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography variant="subtitle2" fontWeight={600} noWrap>
+              {ticket.assunto}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" fontFamily="monospace">
               {ticket.numero_protocolo}
-            </p>
-          </div>
-          <Badge variant={statusVariant(ticket.status)} className="shrink-0">
-            {ticket.status}
-          </Badge>
-        </div>
+            </Typography>
+          </Box>
+          <Chip
+            label={ticket.status}
+            color={statusColor(ticket.status)}
+            size="small"
+            variant="outlined"
+            sx={{ flexShrink: 0 }}
+          />
+        </Box>
 
-        <div className="space-y-1 mb-3">
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mb: 1.5 }}>
           {ticket.solicitante_email && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Mail className="h-3 w-3" />
-              <span className="truncate">{ticket.solicitante_email}</span>
-            </div>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+              <Mail style={{ width: 12, height: 12, opacity: 0.7 }} />
+              <Typography variant="caption" color="text.secondary" noWrap>
+                {ticket.solicitante_email}
+              </Typography>
+            </Box>
           )}
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Building2 className="h-3 w-3" />
-            <span>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+            <Building2 style={{ width: 12, height: 12, opacity: 0.7 }} />
+            <Typography variant="caption" color="text.secondary">
               {ticket.area_destino} - {ticket.setor}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>{formatDate(ticket.created_at)}</span>
-          </div>
-        </div>
+            </Typography>
+          </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+            <Clock style={{ width: 12, height: 12, opacity: 0.7 }} />
+            <Typography variant="caption" color="text.secondary">
+              {formatDate(ticket.created_at)}
+            </Typography>
+          </Box>
+        </Box>
 
-        <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+            mb: 1.5,
+          }}
+        >
           {ticket.mensagem}
-        </p>
+        </Typography>
 
         {ticket.respostas && ticket.respostas.length > 0 && (
-          <p className="text-xs text-primary mb-3">
+          <Typography variant="caption" color="primary" sx={{ mb: 1.5, display: "block" }}>
             {ticket.respostas.length} resposta(s)
-          </p>
+          </Typography>
         )}
 
         {showActions && onView && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={() => onView(ticket)}
-          >
+          <Button variant="outlined" size="small" fullWidth onClick={() => onView(ticket)}>
             Ver Detalhes
           </Button>
         )}

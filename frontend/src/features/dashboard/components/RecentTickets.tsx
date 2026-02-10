@@ -1,13 +1,15 @@
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { alpha } from "@mui/material/styles";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import CardHeader from "@mui/material/CardHeader";
+import Typography from "@mui/material/Typography";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Chip from "@mui/material/Chip";
+import Box from "@mui/material/Box";
 import { formatDate } from "@/lib/utils";
 import type { Ticket } from "@/types/ticket";
 
@@ -15,67 +17,83 @@ interface RecentTicketsProps {
   tickets: Ticket[];
 }
 
-function statusVariant(
-  status: string
-): "default" | "secondary" | "destructive" | "outline" {
+function statusColor(status: string): "default" | "primary" | "warning" | "success" {
   switch (status) {
     case "Concluído":
-      return "default";
+      return "success";
     case "Em Andamento":
-      return "secondary";
+      return "warning";
     default:
-      return "destructive";
+      return "default";
   }
 }
 
+const CARDS_BORDER = "#7289d9";
+
+const cardHoverSx = {
+  borderColor: CARDS_BORDER,
+  transition: "box-shadow 0.25s ease, transform 0.25s ease",
+  "&:hover": {
+    boxShadow: `0 8px 24px ${alpha(CARDS_BORDER, 0.18)}`,
+    transform: "translateY(-2px)",
+  },
+};
+
 export function RecentTickets({ tickets }: RecentTicketsProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Chamados Recentes</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Card variant="outlined" sx={cardHoverSx}>
+      <CardHeader
+        title={
+          <Typography variant="subtitle1" fontWeight={600}>
+            Chamados Recentes
+          </Typography>
+        }
+      />
+      <CardContent sx={{ pt: 0 }}>
         {tickets.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
+          <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
             Nenhum chamado encontrado.
-          </p>
+          </Typography>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
+          <Box sx={{ overflowX: "auto" }}>
+            <Table size="small">
+              <TableHead>
                 <TableRow>
-                  <TableHead>Protocolo</TableHead>
-                  <TableHead className="hidden sm:table-cell">Assunto</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Departamento</TableHead>
-                  <TableHead className="hidden lg:table-cell">Data</TableHead>
+                  <TableCell>Protocolo</TableCell>
+                  <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Assunto</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>Departamento</TableCell>
+                  <TableCell sx={{ display: { xs: "none", lg: "table-cell" } }}>Data</TableCell>
                 </TableRow>
-              </TableHeader>
+              </TableHead>
               <TableBody>
                 {tickets.slice(0, 10).map((ticket) => (
                   <TableRow key={ticket.id}>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell sx={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
                       {ticket.numero_protocolo}
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell max-w-[200px] truncate">
+                    <TableCell sx={{ display: { xs: "none", sm: "table-cell" }, maxWidth: 200 }} className="truncate">
                       {ticket.assunto}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusVariant(ticket.status)}>
-                        {ticket.status}
-                      </Badge>
+                      <Chip
+                        label={ticket.status}
+                        color={statusColor(ticket.status)}
+                        size="small"
+                        variant="outlined"
+                      />
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">
+                    <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
                       {ticket.area_destino}
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
+                    <TableCell sx={{ display: { xs: "none", lg: "table-cell" }, fontSize: "0.75rem" }} color="text.secondary">
                       {formatDate(ticket.created_at)}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </Box>
         )}
       </CardContent>
     </Card>

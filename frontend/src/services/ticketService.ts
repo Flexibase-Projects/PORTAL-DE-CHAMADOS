@@ -13,6 +13,14 @@ export interface DashboardStats {
   recentes: Ticket[];
   por_departamento: { area: string; count: number }[];
   por_dia: { date: string; count: number }[];
+  por_dia_industria: { date: string; count: number }[];
+  por_dia_administrativo: { date: string; count: number }[];
+  /** Chamados por mês (geral / industria / administrativo - filtro no card) */
+  por_mes_geral: { mes: string; count: number }[];
+  por_mes_industria: { mes: string; count: number }[];
+  por_mes_administrativo: { mes: string; count: number }[];
+  /** Chamados por setor (donut: Industria, Administrativo, Comercial) */
+  por_setor: { setor: string; count: number }[];
 }
 
 export const ticketService = {
@@ -119,16 +127,16 @@ export const ticketService = {
     }
   },
 
-  async getDashboardStats(): Promise<{ success: boolean; stats: DashboardStats }> {
+  async getDashboardStats(options?: { dateFrom?: string; dateTo?: string }): Promise<{ success: boolean; stats: DashboardStats }> {
     if (USE_LOCAL_STORAGE) {
-      const stats = localStorageStorage.getDashboardStats();
+      const stats = localStorageStorage.getDashboardStats(options);
       return { success: true, stats };
     }
     try {
-      const res = await api.get("/dashboard/stats");
+      const res = await api.get("/dashboard/stats", { params: options });
       return res.data;
     } catch {
-      const stats = localStorageStorage.getDashboardStats();
+      const stats = localStorageStorage.getDashboardStats(options);
       return { success: true, stats };
     }
   },

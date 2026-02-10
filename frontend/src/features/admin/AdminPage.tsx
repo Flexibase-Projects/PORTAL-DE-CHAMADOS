@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import Box from "@mui/material/Box";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
+import Typography from "@mui/material/Typography";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
 import { TicketManagement } from "./components/TicketManagement";
 import { TemplateEditor } from "./components/TemplateEditor";
 import { UsersPage } from "@/features/users/UsersPage";
@@ -18,56 +17,49 @@ export function AdminPage() {
   const location = useLocation();
   const initialTicketId = (location.state as { ticketId?: string })?.ticketId;
   const [templateDepartamento, setTemplateDepartamento] = useState("");
+  const [tab, setTab] = useState(0);
   const departamentos = getAllDepartamentos();
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Box>
+        <Typography variant="h4" fontWeight={700} gutterBottom>
           Painel Administrativo
-        </h1>
-        <p className="text-muted-foreground">
+        </Typography>
+        <Typography color="text.secondary">
           Gerencie chamados, templates e usuários.
-        </p>
-      </div>
+        </Typography>
+      </Box>
 
-      <Tabs defaultValue="chamados">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="chamados">Chamados</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="usuarios">Usuários</TabsTrigger>
-        </TabsList>
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: "divider" }}>
+        <Tab label="Chamados" />
+        <Tab label="Templates" />
+        <Tab label="Usuários" />
+      </Tabs>
 
-        <TabsContent value="chamados" className="mt-4">
-          <TicketManagement initialTicketId={initialTicketId} />
-        </TabsContent>
+      {tab === 0 && <TicketManagement initialTicketId={initialTicketId} />}
 
-        <TabsContent value="templates" className="mt-4 space-y-4">
-          <div className="max-w-xs space-y-2">
-            <Label>Departamento</Label>
+      {tab === 1 && (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <FormControl sx={{ minWidth: 220 }} size="small">
+            <InputLabel>Departamento</InputLabel>
             <Select
               value={templateDepartamento}
-              onValueChange={setTemplateDepartamento}
+              label="Departamento"
+              onChange={(e) => setTemplateDepartamento(e.target.value)}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um departamento" />
-              </SelectTrigger>
-              <SelectContent>
-                {departamentos.map((d) => (
-                  <SelectItem key={d} value={d}>
-                    {d}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              {departamentos.map((d) => (
+                <MenuItem key={d} value={d}>
+                  {d}
+                </MenuItem>
+              ))}
             </Select>
-          </div>
+          </FormControl>
           <TemplateEditor departamento={templateDepartamento} />
-        </TabsContent>
+        </Box>
+      )}
 
-        <TabsContent value="usuarios" className="mt-4">
-          <UsersPage />
-        </TabsContent>
-      </Tabs>
-    </div>
+      {tab === 2 && <UsersPage />}
+    </Box>
   );
 }

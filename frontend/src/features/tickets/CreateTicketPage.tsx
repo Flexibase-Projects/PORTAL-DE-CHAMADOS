@@ -1,24 +1,23 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import Alert from "@mui/material/Alert";
+import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
+import { CheckCircle2 } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
 import { templateService } from "@/services/templateService";
 import { validateTicketForm, type FormErrors } from "@/utils/validation";
 import {
-  SETORES,
+  SETORES_CHAMADO,
   DEPARTAMENTOS_POR_SETOR,
   TIPOS_SUPORTE_TI,
 } from "@/constants/departamentos";
@@ -49,15 +48,10 @@ export function CreateTicketPage() {
       templateService
         .getTemplate(formData.area)
         .then((res) => {
-          if (
-            res.success &&
-            res.template &&
-            Array.isArray(res.template.fields)
-          ) {
+          if (res.success && res.template && Array.isArray(res.template.fields)) {
             setTemplateFields(
               res.template.fields.sort(
-                (a: TemplateField, b: TemplateField) =>
-                  (a.order ?? 0) - (b.order ?? 0)
+                (a: TemplateField, b: TemplateField) => (a.order ?? 0) - (b.order ?? 0)
               )
             );
           } else {
@@ -94,8 +88,6 @@ export function CreateTicketPage() {
       setErrors(validation.errors);
       return;
     }
-
-    // Validate dynamic fields
     const dynErrors: FormErrors = {};
     templateFields.forEach((field) => {
       if (field.type === "info" || !field.required) return;
@@ -112,7 +104,6 @@ export function CreateTicketPage() {
       setErrors((prev) => ({ ...prev, ...dynErrors }));
       return;
     }
-
     setLoading(true);
     setErrors({});
     try {
@@ -130,21 +121,25 @@ export function CreateTicketPage() {
 
   if (success && ticketId) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardContent className="py-12 text-center space-y-4">
-            <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
-            <h2 className="text-2xl font-bold">Chamado Criado com Sucesso!</h2>
-            <p className="text-lg font-mono">{ticketId}</p>
-            <p className="text-muted-foreground">
+      <Box sx={{ maxWidth: 672, mx: "auto" }}>
+        <Card variant="outlined">
+          <CardContent sx={{ py: 6, textAlign: "center" }}>
+            <CheckCircle2 style={{ width: 64, height: 64, color: "var(--mui-palette-success-main)", margin: "0 auto 16px" }} />
+            <Typography variant="h5" fontWeight={700} gutterBottom>
+              Chamado Criado com Sucesso!
+            </Typography>
+            <Typography component="p" fontFamily="monospace" fontSize="1.125rem" gutterBottom>
+              {ticketId}
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 3 }}>
               Anote este protocolo para consultar seu chamado posteriormente.
-            </p>
-            <div className="flex gap-3 justify-center pt-4">
-              <Button onClick={() => navigate("/meus-chamados")}>
+            </Typography>
+            <Box sx={{ display: "flex", gap: 2, justifyContent: "center", flexWrap: "wrap" }}>
+              <Button variant="contained" onClick={() => navigate("/meus-chamados")}>
                 Ver Meus Chamados
               </Button>
               <Button
-                variant="outline"
+                variant="outlined"
                 onClick={() => {
                   setSuccess(false);
                   setFormData({
@@ -163,184 +158,136 @@ export function CreateTicketPage() {
               >
                 Novo Chamado
               </Button>
-            </div>
+            </Box>
           </CardContent>
         </Card>
-      </div>
+      </Box>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Enviar um Chamado</h1>
-        <p className="text-muted-foreground">
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Box>
+        <Typography variant="h4" fontWeight={700} gutterBottom>
+          Enviar um Chamado
+        </Typography>
+        <Typography color="text.secondary">
           Preencha os dados abaixo para criar um novo chamado.
-        </p>
-      </div>
+        </Typography>
+      </Box>
 
       {errors.submit && (
-        <Alert variant="destructive">
-          <AlertDescription>{errors.submit}</AlertDescription>
+        <Alert severity="error" onClose={() => setErrors((p) => ({ ...p, submit: undefined }))}>
+          {errors.submit}
         </Alert>
       )}
 
-      <Card>
-        <CardContent className="pt-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome">
-                  Nome <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="nome"
-                  value={formData.nome}
-                  onChange={(e) => handleChange("nome", e.target.value)}
-                  className={errors.nome ? "border-destructive" : ""}
-                />
-                {errors.nome && (
-                  <p className="text-xs text-destructive">{errors.nome}</p>
-                )}
-              </div>
+      <Card variant="outlined">
+        <CardContent sx={{ pt: 3 }}>
+          <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+              <TextField
+                label="Nome *"
+                id="nome"
+                value={formData.nome}
+                onChange={(e) => handleChange("nome", e.target.value)}
+                error={Boolean(errors.nome)}
+                helperText={errors.nome}
+                fullWidth
+              />
+              <TextField
+                label="Email *"
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleChange("email", e.target.value)}
+                error={Boolean(errors.email)}
+                helperText={errors.email}
+                fullWidth
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="email">
-                  Email <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleChange("email", e.target.value)}
-                  className={errors.email ? "border-destructive" : ""}
-                />
-                {errors.email && (
-                  <p className="text-xs text-destructive">{errors.email}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>
-                  Setor <span className="text-destructive">*</span>
-                </Label>
+              <FormControl fullWidth error={Boolean(errors.setor)}>
+                <InputLabel>Setor *</InputLabel>
                 <Select
                   value={formData.setor}
-                  onValueChange={(v) => handleChange("setor", v)}
+                  label="Setor *"
+                  onChange={(e) => handleChange("setor", e.target.value)}
                 >
-                  <SelectTrigger
-                    className={errors.setor ? "border-destructive" : ""}
-                  >
-                    <SelectValue placeholder="Selecione um setor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SETORES.map((setor) => (
-                      <SelectItem key={setor} value={setor}>
-                        {setor}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  {SETORES_CHAMADO.map((setor) => (
+                    <MenuItem key={setor} value={setor}>
+                      {setor}
+                    </MenuItem>
+                  ))}
                 </Select>
-                {errors.setor && (
-                  <p className="text-xs text-destructive">{errors.setor}</p>
-                )}
-              </div>
+                {errors.setor && <Typography variant="caption" color="error">{errors.setor}</Typography>}
+              </FormControl>
 
-              <div className="space-y-2">
-                <Label>
-                  Departamento <span className="text-destructive">*</span>
-                </Label>
+              <FormControl fullWidth disabled={!formData.setor} error={Boolean(errors.area)}>
+                <InputLabel>Departamento *</InputLabel>
                 <Select
                   value={formData.area}
-                  onValueChange={(v) => handleChange("area", v)}
-                  disabled={!formData.setor}
+                  label="Departamento *"
+                  onChange={(e) => handleChange("area", e.target.value)}
                 >
-                  <SelectTrigger
-                    className={errors.area ? "border-destructive" : ""}
-                  >
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(DEPARTAMENTOS_POR_SETOR[formData.setor] || []).map(
-                      (dept) => (
-                        <SelectItem key={dept} value={dept}>
-                          {dept}
-                        </SelectItem>
-                      )
-                    )}
-                  </SelectContent>
+                  {(DEPARTAMENTOS_POR_SETOR[formData.setor] || []).map((dept) => (
+                    <MenuItem key={dept} value={dept}>
+                      {dept}
+                    </MenuItem>
+                  ))}
                 </Select>
-                {errors.area && (
-                  <p className="text-xs text-destructive">{errors.area}</p>
-                )}
-              </div>
+                {errors.area && <Typography variant="caption" color="error">{errors.area}</Typography>}
+              </FormControl>
 
-              <div className="space-y-2">
-                <Label htmlFor="ramal">Ramal</Label>
-                <Input
-                  id="ramal"
-                  type="number"
-                  value={formData.ramal}
-                  onChange={(e) => handleChange("ramal", e.target.value)}
-                  className={errors.ramal ? "border-destructive" : ""}
-                />
-                {errors.ramal && (
-                  <p className="text-xs text-destructive">{errors.ramal}</p>
-                )}
-              </div>
+              <TextField
+                label="Ramal"
+                id="ramal"
+                type="number"
+                value={formData.ramal}
+                onChange={(e) => handleChange("ramal", e.target.value)}
+                error={Boolean(errors.ramal)}
+                helperText={errors.ramal}
+                fullWidth
+              />
 
               {formData.area === "TI" && (
-                <div className="space-y-2">
-                  <Label>Tipo de Suporte</Label>
+                <FormControl fullWidth>
+                  <InputLabel>Tipo de Suporte</InputLabel>
                   <Select
                     value={formData.tipoSuporte}
-                    onValueChange={(v) => handleChange("tipoSuporte", v)}
+                    label="Tipo de Suporte"
+                    onChange={(e) => handleChange("tipoSuporte", e.target.value)}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIPOS_SUPORTE_TI.map((opt) => (
-                        <SelectItem key={opt} value={opt}>
-                          {opt}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                    {TIPOS_SUPORTE_TI.map((opt) => (
+                      <MenuItem key={opt} value={opt}>
+                        {opt}
+                      </MenuItem>
+                    ))}
                   </Select>
-                </div>
+                </FormControl>
               )}
-            </div>
+            </Box>
 
-            <div className="space-y-2">
-              <Label htmlFor="assunto">
-                Assunto <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="assunto"
-                value={formData.assunto}
-                onChange={(e) => handleChange("assunto", e.target.value)}
-                className={errors.assunto ? "border-destructive" : ""}
-              />
-              {errors.assunto && (
-                <p className="text-xs text-destructive">{errors.assunto}</p>
-              )}
-            </div>
+            <TextField
+              label="Assunto *"
+              id="assunto"
+              value={formData.assunto}
+              onChange={(e) => handleChange("assunto", e.target.value)}
+              error={Boolean(errors.assunto)}
+              helperText={errors.assunto}
+              fullWidth
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="mensagem">
-                Mensagem <span className="text-destructive">*</span>
-              </Label>
-              <Textarea
-                id="mensagem"
-                rows={5}
-                value={formData.mensagem}
-                onChange={(e) => handleChange("mensagem", e.target.value)}
-                className={errors.mensagem ? "border-destructive" : ""}
-              />
-              {errors.mensagem && (
-                <p className="text-xs text-destructive">{errors.mensagem}</p>
-              )}
-            </div>
+            <TextField
+              label="Mensagem *"
+              id="mensagem"
+              multiline
+              rows={5}
+              value={formData.mensagem}
+              onChange={(e) => handleChange("mensagem", e.target.value)}
+              error={Boolean(errors.mensagem)}
+              helperText={errors.mensagem}
+              fullWidth
+            />
 
             {templateFields.map((field) => {
               const fieldId = field.id ?? field.key;
@@ -355,23 +302,18 @@ export function CreateTicketPage() {
               );
             })}
 
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate("/")}
-                disabled={loading}
-              >
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2, pt: 2 }}>
+              <Button type="button" variant="outlined" onClick={() => navigate("/")} disabled={loading}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" variant="contained" disabled={loading}>
+                {loading && <CircularProgress size={20} sx={{ mr: 1 }} />}
                 {loading ? "Enviando..." : "Enviar Chamado"}
               </Button>
-            </div>
-          </form>
+            </Box>
+          </Box>
         </CardContent>
       </Card>
-    </div>
+    </Box>
   );
 }

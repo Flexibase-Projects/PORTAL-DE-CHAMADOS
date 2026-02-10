@@ -16,38 +16,31 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Checkbox from "@mui/material/Checkbox";
+import Chip from "@mui/material/Chip";
+import Alert from "@mui/material/Alert";
+import Skeleton from "@mui/material/Skeleton";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Tooltip from "@mui/material/Tooltip";
+import IconButton from "@mui/material/IconButton";
+import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
 import {
   GripVertical,
   Pencil,
   Trash2,
   Save,
-  Loader2,
   Type,
   Hash,
   List,
@@ -106,43 +99,39 @@ function SortableItem({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: field.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
-  const Icon =
-    FIELD_TYPES.find((t) => t.value === field.type)?.Icon || Type;
+  const Icon = FIELD_TYPES.find((t) => t.value === field.type)?.Icon || Type;
 
   return (
-    <div
+    <Box
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2 rounded-md border p-2 ${
-        isDragging ? "bg-accent opacity-80" : "bg-card"
-      }`}
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 1,
+        borderRadius: 1,
+        border: 1,
+        borderColor: "divider",
+        p: 1,
+        bgcolor: isDragging ? "action.hover" : "background.paper",
+        opacity: isDragging ? 0.9 : 1,
+      }}
     >
-      <button
-        {...attributes}
-        {...listeners}
-        className="cursor-grab text-muted-foreground touch-none"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <Icon className="h-4 w-4 text-primary shrink-0" />
-      <span className="flex-1 text-sm truncate">
+      <IconButton size="small" sx={{ cursor: "grab", touchAction: "none" }} {...attributes} {...listeners}>
+        <GripVertical style={{ width: 18, height: 18 }} />
+      </IconButton>
+      <Icon style={{ width: 18, height: 18, color: "var(--mui-palette-primary-main)", flexShrink: 0 }} />
+      <Typography variant="body2" noWrap sx={{ flex: 1, minWidth: 0 }}>
         {field.label || "(sem label)"}
-        {field.required && (
-          <span className="text-destructive ml-1">*</span>
-        )}
-      </span>
-      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(field)}>
-        <Pencil className="h-3 w-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7 text-destructive"
-        onClick={() => onRemove(field.id)}
-      >
-        <Trash2 className="h-3 w-3" />
-      </Button>
-    </div>
+        {field.required && <Typography component="span" color="error"> *</Typography>}
+      </Typography>
+      <IconButton size="small" onClick={() => onEdit(field)}>
+        <Pencil style={{ width: 14, height: 14 }} />
+      </IconButton>
+      <IconButton size="small" color="error" onClick={() => onRemove(field.id)}>
+        <Trash2 style={{ width: 14, height: 14 }} />
+      </IconButton>
+    </Box>
   );
 }
 
@@ -273,85 +262,70 @@ export function TemplateEditor({ departamento }: Props) {
 
   if (!departamento) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <Typography variant="body2" color="text.secondary">
         Selecione um departamento para editar o template.
-      </p>
+      </Typography>
     );
   }
 
   if (loadingTemplate) {
     return (
-      <div className="space-y-2">
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-12 rounded-md" />
+          <Skeleton key={i} variant="rounded" height={48} />
         ))}
-      </div>
+      </Box>
     );
   }
 
   const sorted = [...fields].sort((a, b) => a.order - b.order);
 
   return (
-    <div className="space-y-4">
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+        <Alert severity="error" onClose={() => setError("")}>
+          {error}
         </Alert>
       )}
       {success && (
-        <Alert>
-          <AlertDescription>{success}</AlertDescription>
+        <Alert severity="success" onClose={() => setSuccess("")}>
+          {success}
         </Alert>
       )}
 
-      <div className="flex justify-end">
-        <Button onClick={handleSaveTemplate} disabled={loading}>
-          {loading ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4 mr-2" />
-          )}
-          Salvar Template
+      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+        <Button
+          variant="contained"
+          onClick={handleSaveTemplate}
+          disabled={loading}
+          startIcon={loading ? <CircularProgress size={18} /> : <Save style={{ width: 18, height: 18 }} />}
+        >
+          {loading ? "Salvando..." : "Salvar Template"}
         </Button>
-      </div>
+      </Box>
 
-      <div className="rounded-lg border">
-        <div className="flex flex-wrap gap-1 p-3 bg-muted/50 border-b">
-          <span className="text-xs text-muted-foreground mr-2 self-center">
+      <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden" }}>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, p: 1.5, bgcolor: "action.hover", borderBottom: 1, borderColor: "divider" }}>
+          <Typography variant="caption" color="text.secondary" sx={{ alignSelf: "center", mr: 1 }}>
             Adicionar:
-          </span>
+          </Typography>
           {FIELD_TYPES.map(({ value, label, Icon }) => (
-            <Tooltip key={value}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => handleOpenAdd(value)}
-                >
-                  <Icon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{label}</TooltipContent>
+            <Tooltip key={value} title={label}>
+              <IconButton size="small" onClick={() => handleOpenAdd(value)}>
+                <Icon style={{ width: 18, height: 18 }} />
+              </IconButton>
             </Tooltip>
           ))}
-        </div>
+        </Box>
 
-        <div className="p-3 space-y-2 max-h-[60vh] overflow-auto">
+        <Box sx={{ p: 1.5, maxHeight: "60vh", overflow: "auto", display: "flex", flexDirection: "column", gap: 1 }}>
           {sorted.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
+            <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
               Nenhum campo. Clique em um ícone acima para adicionar.
-            </p>
+            </Typography>
           ) : (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={sorted.map((f) => f.id)}
-                strategy={verticalListSortingStrategy}
-              >
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={sorted.map((f) => f.id)} strategy={verticalListSortingStrategy}>
                 {sorted.map((field) => (
                   <SortableItem
                     key={field.id}
@@ -367,142 +341,121 @@ export function TemplateEditor({ departamento }: Props) {
               </SortableContext>
             </DndContext>
           )}
-        </div>
-      </div>
+        </Box>
+      </Box>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{editingField ? "Editar Campo" : "Adicionar Campo"}</DialogTitle>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingField ? "Editar Campo" : "Adicionar Campo"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Tipo</Label>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Tipo</InputLabel>
               <Select
                 value={formField.type}
-                onValueChange={(v) =>
-                  setFormField((p) => ({ ...p, type: v }))
-                }
+                label="Tipo"
+                onChange={(e) => setFormField((p) => ({ ...p, type: e.target.value }))}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FIELD_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                {FIELD_TYPES.map((t) => (
+                  <MenuItem key={t.value} value={t.value}>
+                    {t.label}
+                  </MenuItem>
+                ))}
               </Select>
-            </div>
+            </FormControl>
 
-            <div className="space-y-2">
-              <Label>Label</Label>
-              <Input
-                value={formField.label}
-                onChange={(e) =>
-                  setFormField((p) => ({ ...p, label: e.target.value }))
-                }
-              />
-            </div>
+            <TextField
+              label="Label"
+              size="small"
+              value={formField.label}
+              onChange={(e) => setFormField((p) => ({ ...p, label: e.target.value }))}
+              fullWidth
+            />
 
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={formField.required}
-                onCheckedChange={(c) =>
-                  setFormField((p) => ({ ...p, required: !!c }))
-                }
-              />
-              Obrigatório
-            </label>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formField.required}
+                  onChange={(_, c) => setFormField((p) => ({ ...p, required: !!c }))}
+                />
+              }
+              label="Obrigatório"
+            />
 
             {formField.type === "text" && (
-              <div className="space-y-2">
-                <Label>Número de linhas</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={formField.rows ?? 1}
-                  onChange={(e) =>
-                    setFormField((p) => ({
-                      ...p,
-                      rows: Math.min(20, Math.max(1, parseInt(e.target.value) || 1)),
-                    }))
-                  }
-                />
-              </div>
+              <TextField
+                label="Número de linhas"
+                type="number"
+                size="small"
+                inputProps={{ min: 1, max: 20 }}
+                value={formField.rows ?? 1}
+                onChange={(e) =>
+                  setFormField((p) => ({
+                    ...p,
+                    rows: Math.min(20, Math.max(1, parseInt(e.target.value) || 1)),
+                  }))
+                }
+                fullWidth
+              />
             )}
 
             {["select", "radio", "checkbox"].includes(formField.type) && (
-              <div className="space-y-2">
-                <Label>Opções</Label>
-                <div className="flex gap-2">
-                  <Input
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1 }}>Opções</Typography>
+                <Box sx={{ display: "flex", gap: 1, mb: 1 }}>
+                  <TextField
                     placeholder="Nova opção"
+                    size="small"
                     value={newOption}
                     onChange={(e) => setNewOption(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
                         if (newOption.trim()) {
-                          setFormField((p) => ({
-                            ...p,
-                            options: [...p.options, newOption.trim()],
-                          }));
+                          setFormField((p) => ({ ...p, options: [...p.options, newOption.trim()] }));
                           setNewOption("");
                         }
                       }
                     }}
+                    sx={{ flex: 1 }}
                   />
                   <Button
-                    variant="outline"
+                    variant="outlined"
                     onClick={() => {
                       if (newOption.trim()) {
-                        setFormField((p) => ({
-                          ...p,
-                          options: [...p.options, newOption.trim()],
-                        }));
+                        setFormField((p) => ({ ...p, options: [...p.options, newOption.trim()] }));
                         setNewOption("");
                       }
                     }}
                   >
                     Add
                   </Button>
-                </div>
-                <div className="flex flex-wrap gap-1">
+                </Box>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                   {formField.options.map((opt, i) => (
-                    <Badge
+                    <Chip
                       key={`${opt}-${i}`}
-                      variant="secondary"
-                      className="cursor-pointer"
-                      onClick={() =>
+                      label={`${opt} ×`}
+                      size="small"
+                      onDelete={() =>
                         setFormField((p) => ({
                           ...p,
                           options: p.options.filter((_, idx) => idx !== i),
                         }))
                       }
-                    >
-                      {opt} ×
-                    </Badge>
+                    />
                   ))}
-                </div>
-              </div>
+                </Box>
+              </Box>
             )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveField}>
-              {editingField ? "Salvar" : "Adicionar"}
-            </Button>
-          </DialogFooter>
+          </Box>
         </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={handleSaveField}>
+            {editingField ? "Salvar" : "Adicionar"}
+          </Button>
+        </DialogActions>
       </Dialog>
-    </div>
+    </Box>
   );
 }

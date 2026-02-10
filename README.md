@@ -6,15 +6,18 @@ Sistema de gerenciamento de chamados (tickets) com dashboard, gestão de usuári
 
 ### Frontend
 - **React 18** + **TypeScript** + **Vite**
-- **Tailwind CSS v4** + **shadcn/ui** (componentes)
+- **Material UI (MUI) v7** + **Emotion** (componentes e tema)
+- **Tailwind CSS v4** (utilitários e integração com Vite)
 - **React Router v6** (navegação SPA)
 - **Recharts** (gráficos do dashboard)
 - **Lucide React** (ícones)
-- **@dnd-kit** (drag-and-drop para templates)
+- **React Hook Form** + **Zod** (formulários e validação)
+- **@dnd-kit** (drag-and-drop para editor de templates)
+- **Axios** (chamadas à API)
 
 ### Backend
 - **Node.js** + **Express**
-- **Supabase** (PostgreSQL como banco de dados)
+- **Supabase** (PostgreSQL e cliente JS)
 
 ### Banco de Dados
 Todas as tabelas usam o prefixo `PDC_`:
@@ -28,73 +31,80 @@ Todas as tabelas usam o prefixo `PDC_`:
 
 ## Funcionalidades
 
-- **Dashboard** com estatísticas, gráficos e chamados recentes
+- **Dashboard** com estatísticas, gráficos (por dia/mês, setor, departamento), intervalo de datas customizado e chamados recentes
 - **Criação de chamados** com formulários dinâmicos por departamento
-- **Meus Chamados** - consulta por email
-- **Painel Administrativo** com gestão de chamados, templates e usuários
+- **Meus Chamados** - consulta por e-mail
+- **Painel Administrativo** (abas: Chamados, Templates, Usuários) com gestão de chamados, templates por departamento e usuários
 - **Base de Conhecimento** com CRUD de categorias e artigos
-- **Sidebar retrátil** que colapsa para ícones
-- **Tema Light/Dark** com toggle
-- **Design 100% responsivo** (mobile, tablet, desktop)
+- **Sidebar retrátil** (colapsa para ícones), fundo branco com destaque em #7289da (hover e item ativo)
+- **Tema claro/escuro** com toggle na sidebar
+- **Layout responsivo** (drawer temporário no mobile, sidebar fixa no desktop)
 
 ## Estrutura do Projeto
 
 ```
 PORTAL-DE-CHAMADOS/
-├── frontend/                     # React + TypeScript + Vite
+├── frontend/
 │   ├── src/
-│   │   ├── app/                  # App.tsx (rotas e providers)
+│   │   ├── app/                    # App.tsx (rotas e providers)
 │   │   ├── components/
-│   │   │   ├── layout/           # AppShell, Sidebar, ThemeToggle
-│   │   │   └── ui/              # Componentes shadcn/ui
+│   │   │   └── layout/              # AppShell, AppSidebar, UserNav, ThemeToggle
+│   │   ├── contexts/               # ThemeContext
 │   │   ├── features/
-│   │   │   ├── dashboard/        # Dashboard com stats e gráficos
-│   │   │   ├── tickets/          # Criar chamado, meus chamados
-│   │   │   ├── admin/            # Painel administrativo
-│   │   │   ├── users/            # Gestão de usuários e permissões
-│   │   │   └── knowledge-base/   # Base de conhecimento
-│   │   ├── hooks/                # useTheme, use-mobile
-│   │   ├── lib/                  # utils (cn, formatDate)
-│   │   ├── services/             # API clients (axios)
-│   │   ├── types/                # TypeScript types
-│   │   ├── constants/            # Departamentos, roles
-│   │   └── utils/                # Validação
-│   └── ...
-├── backend/                      # Express API
+│   │   │   ├── dashboard/          # DashboardPage, StatsCards, Charts, RecentTickets
+│   │   │   ├── tickets/            # CreateTicketPage, MyTicketsPage, TicketCard, TemplateFieldRenderer
+│   │   │   ├── admin/              # AdminPage, TicketManagement, TemplateEditor
+│   │   │   ├── users/              # UsersPage (aba do painel admin)
+│   │   │   └── knowledge-base/     # KnowledgeBasePage
+│   │   ├── hooks/                  # useTheme, use-mobile
+│   │   ├── lib/                    # utils (cn, formatDate)
+│   │   ├── services/               # api (axios), ticketService, templateService, userService, kbService
+│   │   ├── storage/                # localStorageStorage (fallback quando VITE_USE_LOCAL_STORAGE)
+│   │   ├── theme/                  # AppTheme (MUI ThemeProvider + CssBaseline)
+│   │   ├── types/                  # TypeScript (ticket, user, template, knowledge-base)
+│   │   ├── constants/              # departamentos, roles
+│   │   └── utils/                  # validation (validateTicketForm, etc.)
+│   └── vite.config.ts              # proxy /api -> backend
+├── backend/
 │   └── src/
-│       ├── config/               # Supabase client
-│       ├── controllers/          # Route handlers
-│       ├── middleware/            # Validação
-│       ├── routes/               # Express routes
-│       └── services/             # Business logic (Supabase queries)
-└── .env.local                    # Variáveis de ambiente (não versionado)
+│       ├── config/                 # Supabase client
+│       ├── controllers/            # dashboard, tickets, users, templates, kb
+│       ├── middleware/             # validation
+│       ├── routes/                 # Express routes
+│       ├── services/               # Lógica de negócio (Supabase)
+│       └── server.js
+├── supabase/
+│   ├── schema.sql
+│   └── migrations/
+└── package.json                    # workspaces (frontend, backend)
 ```
 
-## Design Pattern
+## Design e Arquitetura
 
-**Feature-Based Architecture** - cada funcionalidade é encapsulada em seu próprio diretório com página e componentes específicos, promovendo separação de responsabilidades e escalabilidade.
+- **Feature-based**: cada funcionalidade em seu diretório (dashboard, tickets, admin, users, knowledge-base), com páginas e componentes específicos.
+- **Tema MUI**: paleta primária/secundária e modo claro/escuro; sidebar com cor de destaque #7289da (hover e item ativo).
 
 ## Pré-requisitos
 
 - Node.js 18+
-- Conta no Supabase com as tabelas PDC_ criadas
-- Arquivo `.env.local` na raiz com:
+- Conta no Supabase com as tabelas PDC_ criadas (ver `supabase/schema.sql`)
+- Arquivo `.env` ou `.env.local` na **raiz do projeto** com:
 
 ```env
 SUPABASE_URL=https://seu-projeto.supabase.co
 SUPABASE_KEY=sua-chave-anon
 
-# Opcional: usar localStorage em vez da API (para Supabase offline)
+# Opcional: frontend usa localStorage em vez da API (para desenvolvimento sem backend)
 VITE_USE_LOCAL_STORAGE=true
 ```
 
 ## Instalação
 
 ```bash
-# Instalar dependências
+# Instalar dependências (raiz + frontend + backend)
 npm run install:all
 
-# Desenvolvimento (frontend + backend)
+# Desenvolvimento (frontend + backend em paralelo)
 npm run dev
 
 # Apenas frontend
@@ -110,34 +120,36 @@ npm start
 
 ## Portas
 
-- **Desenvolvimento:** acesse http://localhost:3001 (única porta – frontend e API)
-- O Vite faz proxy de `/api` para o backend internamente
+- **Frontend:** http://localhost:3001 (acesso principal)
+- **Backend:** http://localhost:3002 (API)
+- O Vite faz proxy de `/api` para o backend; as requisições do frontend usam `/api/...` e são encaminhadas automaticamente.
 
 ## Roles e Permissões
 
-| Role | Nível | Descrição |
-|------|-------|-----------|
-| Admin | 4 | Acesso total ao sistema |
-| Gestor de Área | 3 | Gerencia departamento |
-| Técnico/Suporte | 2 | Atende chamados |
-| Usuário | 1 | Abre chamados |
+| Role             | Nível | Descrição           |
+|------------------|-------|---------------------|
+| Admin            | 4     | Acesso total        |
+| Gestor de Área   | 3     | Gerencia departamento |
+| Técnico/Suporte  | 2     | Atende chamados     |
+| Usuário          | 1     | Abre chamados       |
 
 ## API Endpoints
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| GET | `/api/dashboard/stats` | Estatísticas do dashboard |
+| GET | `/api/health` | Health check |
+| GET | `/api/dashboard/stats` | Estatísticas do dashboard (query: dateFrom, dateTo) |
 | POST | `/api/tickets` | Criar chamado |
 | GET | `/api/tickets` | Listar chamados |
 | GET | `/api/tickets/:id` | Detalhes do chamado |
-| GET | `/api/tickets/meus-chamados` | Chamados por email |
+| GET | `/api/tickets/meus-chamados` | Chamados por e-mail (query: email) |
 | GET | `/api/tickets/recebidos` | Chamados não concluídos |
 | PATCH | `/api/tickets/:id/status` | Atualizar status |
 | POST | `/api/tickets/:id/resposta` | Responder chamado |
 | GET | `/api/users` | Listar usuários |
 | POST | `/api/users` | Criar usuário |
 | PUT | `/api/users/:id` | Atualizar usuário |
-| PATCH | `/api/users/:id/toggle-active` | Ativar/desativar |
+| PATCH | `/api/users/:id/toggle-active` | Ativar/desativar usuário |
 | GET | `/api/roles` | Listar perfis |
 | GET | `/api/templates/:dept` | Template do departamento |
 | PUT | `/api/templates` | Salvar template |
@@ -145,8 +157,7 @@ npm start
 | POST | `/api/kb/categories` | Criar categoria |
 | PUT | `/api/kb/categories/:id` | Atualizar categoria |
 | DELETE | `/api/kb/categories/:id` | Excluir categoria |
-| GET | `/api/kb/articles` | Artigos |
+| GET | `/api/kb/articles` | Listar artigos |
 | POST | `/api/kb/articles` | Criar artigo |
 | PUT | `/api/kb/articles/:id` | Atualizar artigo |
 | DELETE | `/api/kb/articles/:id` | Excluir artigo |
-| GET | `/api/health` | Health check |

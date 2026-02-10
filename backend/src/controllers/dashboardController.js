@@ -25,7 +25,8 @@ export const dashboardController = {
     DBG('getStats entry', {}, 'H1');
     // #endregion
     try {
-      const stats = await dashboardService.getStats();
+      const { dateFrom, dateTo } = req.query || {};
+      const stats = await dashboardService.getStats({ dateFrom, dateTo });
       // #region agent log
       DBG('getStats success', { hasStats: !!stats }, 'H1');
       // #endregion

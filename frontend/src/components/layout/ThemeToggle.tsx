@@ -1,35 +1,20 @@
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
 import { Moon, Sun } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useTheme } from "@/hooks/useTheme";
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleTheme}
-          className="h-8 w-8"
-        >
-          {theme === "light" ? (
-            <Moon className="h-4 w-4" />
-          ) : (
-            <Sun className="h-4 w-4" />
-          )}
-          <span className="sr-only">Alternar tema</span>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="right">
-        {theme === "light" ? "Modo escuro" : "Modo claro"}
-      </TooltipContent>
+    <Tooltip title={theme === "light" ? "Modo escuro" : "Modo claro"}>
+      <IconButton onClick={toggleTheme} size="small" aria-label="Alternar tema">
+        {theme === "light" ? (
+          <Moon style={{ width: 20, height: 20 }} />
+        ) : (
+          <Sun style={{ width: 20, height: 20 }} />
+        )}
+      </IconButton>
     </Tooltip>
   );
 }

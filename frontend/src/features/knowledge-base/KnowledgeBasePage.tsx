@@ -1,55 +1,60 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import CardHeader from "@mui/material/CardHeader";
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+import InputAdornment from "@mui/material/InputAdornment";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import Chip from "@mui/material/Chip";
+import Alert from "@mui/material/Alert";
+import Skeleton from "@mui/material/Skeleton";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
+import CircularProgress from "@mui/material/CircularProgress";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Checkbox from "@mui/material/Checkbox";
 import {
   Plus,
   Pencil,
   Trash2,
   ArrowLeft,
   BookOpen,
-  Loader2,
   Search,
   Monitor,
   Users,
   DollarSign,
   Settings,
   Folder,
+  Briefcase,
+  Building2,
+  Factory,
 } from "lucide-react";
 import { kbService } from "@/services/kbService";
 import type { KBCategory, KBArticle } from "@/types/knowledge-base";
 
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+const ICON_MAP: Record<string, React.ComponentType<{ style?: React.CSSProperties }>> = {
   monitor: Monitor,
   users: Users,
   "dollar-sign": DollarSign,
   settings: Settings,
   folder: Folder,
+  briefcase: Briefcase,
+  building: Building2,
+  factory: Factory,
 };
 
-function CategoryIcon({ name, className }: { name: string; className?: string }) {
+function CategoryIcon({ name }: { name: string }) {
   const Icon = ICON_MAP[name] || Folder;
-  return <Icon className={className} />;
+  return <Icon style={{ width: 24, height: 24 }} />;
 }
 
 export function KnowledgeBasePage() {
@@ -63,7 +68,6 @@ export function KnowledgeBasePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Article dialog
   const [articleDialog, setArticleDialog] = useState(false);
   const [editingArticle, setEditingArticle] = useState<KBArticle | null>(null);
   const [articleForm, setArticleForm] = useState({
@@ -73,7 +77,6 @@ export function KnowledgeBasePage() {
     publicado: true,
   });
 
-  // Category dialog
   const [catDialog, setCatDialog] = useState(false);
   const [editingCat, setEditingCat] = useState<KBCategory | null>(null);
   const [catForm, setCatForm] = useState({ nome: "", descricao: "", icone: "folder" });
@@ -83,11 +86,8 @@ export function KnowledgeBasePage() {
   }, []);
 
   useEffect(() => {
-    if (selectedCat) {
-      loadArticles(selectedCat.id);
-    } else {
-      loadArticles();
-    }
+    if (selectedCat) loadArticles(selectedCat.id);
+    else loadArticles();
   }, [selectedCat]);
 
   const loadCategories = async () => {
@@ -111,7 +111,6 @@ export function KnowledgeBasePage() {
     }
   };
 
-  // Category CRUD
   const handleSaveCategory = async () => {
     if (!catForm.nome.trim()) return;
     setSaving(true);
@@ -144,7 +143,6 @@ export function KnowledgeBasePage() {
     }
   };
 
-  // Article CRUD
   const handleOpenCreateArticle = () => {
     setEditingArticle(null);
     setArticleForm({
@@ -168,16 +166,15 @@ export function KnowledgeBasePage() {
   };
 
   const handleSaveArticle = async () => {
-    if (!articleForm.titulo.trim() || !articleForm.conteudo.trim() || !articleForm.categoria_id)
-      return;
+    if (!articleForm.titulo.trim() || !articleForm.conteudo.trim() || !articleForm.categoria_id) return;
     setSaving(true);
     try {
       if (editingArticle) {
-        const res = await kbService.updateArticle(editingArticle.id, articleForm);
-        if (res.success) setSuccess("Artigo atualizado!");
+        await kbService.updateArticle(editingArticle.id, articleForm);
+        setSuccess("Artigo atualizado!");
       } else {
-        const res = await kbService.createArticle(articleForm);
-        if (res.success) setSuccess("Artigo criado!");
+        await kbService.createArticle(articleForm);
+        setSuccess("Artigo criado!");
       }
       setArticleDialog(false);
       await loadArticles(selectedCat?.id);
@@ -206,358 +203,294 @@ export function KnowledgeBasePage() {
       a.conteudo.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Article view
   if (selectedArticle) {
     return (
-      <div className="space-y-6 max-w-3xl mx-auto">
-        <Button variant="ghost" onClick={() => setSelectedArticle(null)}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
+      <Box sx={{ maxWidth: 672, mx: "auto" }}>
+        <Button startIcon={<ArrowLeft style={{ width: 18, height: 18 }} />} onClick={() => setSelectedArticle(null)} sx={{ mb: 2 }}>
           Voltar
         </Button>
-        <article>
-          <h1 className="text-2xl font-bold mb-2">{selectedArticle.titulo}</h1>
-          <div className="flex gap-2 mb-4">
-            <Badge variant={selectedArticle.publicado ? "default" : "secondary"}>
-              {selectedArticle.publicado ? "Publicado" : "Rascunho"}
-            </Badge>
-            <span className="text-xs text-muted-foreground">
-              {selectedArticle.categoria_nome}
-            </span>
-          </div>
-          <Separator className="mb-4" />
-          <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap text-sm">
-            {selectedArticle.conteudo}
-          </div>
-        </article>
-      </div>
+        <Typography variant="h4" fontWeight={700} gutterBottom>
+          {selectedArticle.titulo}
+        </Typography>
+        <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+          <Chip label={selectedArticle.publicado ? "Publicado" : "Rascunho"} size="small" color={selectedArticle.publicado ? "default" : "default"} variant={selectedArticle.publicado ? "filled" : "outlined"} />
+          {selectedArticle.categoria_nome && (
+            <Chip label={selectedArticle.categoria_nome} size="small" variant="outlined" />
+          )}
+        </Box>
+        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+          {selectedArticle.conteudo}
+        </Typography>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      {success && (
-        <Alert>
-          <AlertDescription>{success}</AlertDescription>
-        </Alert>
-      )}
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
+      {success && <Alert severity="success" onClose={() => setSuccess("")}>{success}</Alert>}
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: "flex-start", gap: 2 }}>
+        <Box>
+          <Typography variant="h4" fontWeight={700} gutterBottom>
             Base de Conhecimento
-          </h1>
-          <p className="text-muted-foreground">
+          </Typography>
+          <Typography color="text.secondary">
             Artigos, tutoriais e documentação por área.
-          </p>
-        </div>
-        <div className="flex gap-2">
+          </Typography>
+        </Box>
+        <Box sx={{ display: "flex", gap: 1 }}>
           <Button
-            variant="outline"
+            variant="outlined"
+            startIcon={<Plus style={{ width: 18, height: 18 }} />}
             onClick={() => {
               setEditingCat(null);
               setCatForm({ nome: "", descricao: "", icone: "folder" });
               setCatDialog(true);
             }}
           >
-            <Plus className="h-4 w-4 mr-2" />
             Categoria
           </Button>
-          <Button onClick={handleOpenCreateArticle}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button variant="contained" startIcon={<Plus style={{ width: 18, height: 18 }} />} onClick={handleOpenCreateArticle}>
             Artigo
           </Button>
-        </div>
-      </div>
+        </Box>
+      </Box>
 
-      {/* Categories */}
-      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+      <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(3, 1fr)", md: "repeat(4, 1fr)", lg: "repeat(5, 1fr)" } }}>
         <Card
-          className={`cursor-pointer transition-all hover:shadow-md ${
-            !selectedCat ? "ring-2 ring-primary" : ""
-          }`}
+          variant="outlined"
+          sx={{
+            cursor: "pointer",
+            borderWidth: !selectedCat ? 2 : 1,
+            borderColor: !selectedCat ? "primary.main" : "divider",
+          }}
           onClick={() => setSelectedCat(null)}
         >
-          <CardContent className="p-4 flex flex-col items-center text-center">
-            <BookOpen className="h-6 w-6 mb-2 text-primary" />
-            <p className="text-sm font-medium">Todos</p>
+          <CardContent sx={{ py: 2, textAlign: "center" }}>
+            <BookOpen style={{ width: 24, height: 24, color: "var(--mui-palette-primary-main)", margin: "0 auto 8px", display: "block" }} />
+            <Typography variant="body2" fontWeight={500}>Todos</Typography>
           </CardContent>
         </Card>
         {categories.map((cat) => (
           <Card
             key={cat.id}
-            className={`cursor-pointer transition-all hover:shadow-md ${
-              selectedCat?.id === cat.id ? "ring-2 ring-primary" : ""
-            }`}
+            variant="outlined"
+            sx={{
+              cursor: "pointer",
+              borderWidth: selectedCat?.id === cat.id ? 2 : 1,
+              borderColor: selectedCat?.id === cat.id ? "primary.main" : "divider",
+              position: "relative",
+            }}
             onClick={() => setSelectedCat(cat)}
           >
-            <CardContent className="p-4 flex flex-col items-center text-center relative">
-              <div className="absolute top-1 right-1 flex gap-0.5">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
+            <CardContent sx={{ py: 2, textAlign: "center" }}>
+              <Box sx={{ position: "absolute", top: 4, right: 4, display: "flex", gap: 0 }}>
+                <IconButton
+                  size="small"
                   onClick={(e) => {
                     e.stopPropagation();
                     setEditingCat(cat);
-                    setCatForm({
-                      nome: cat.nome,
-                      descricao: cat.descricao || "",
-                      icone: cat.icone,
-                    });
+                    setCatForm({ nome: cat.nome, descricao: cat.descricao || "", icone: cat.icone });
                     setCatDialog(true);
                   }}
                 >
-                  <Pencil className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-destructive"
+                  <Pencil style={{ width: 14, height: 14 }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  color="error"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDeleteCategory(cat.id);
                   }}
                 >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-              <CategoryIcon name={cat.icone} className="h-6 w-6 mb-2 text-primary" />
-              <p className="text-sm font-medium">{cat.nome}</p>
+                  <Trash2 style={{ width: 14, height: 14 }} />
+                </IconButton>
+              </Box>
+              <Box sx={{ color: "primary.main", mb: 0.5 }}>
+                <CategoryIcon name={cat.icone} />
+              </Box>
+              <Typography variant="body2" fontWeight={500}>{cat.nome}</Typography>
             </CardContent>
           </Card>
         ))}
-      </div>
+      </Box>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar artigos..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9"
-        />
-      </div>
+      <TextField
+        placeholder="Buscar artigos..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        size="small"
+        sx={{ maxWidth: 320 }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <Search style={{ width: 18, height: 18 }} />
+            </InputAdornment>
+          ),
+        }}
+      />
 
-      {/* Articles */}
       {loading ? (
-        <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" } }}>
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-40 rounded-xl" />
+            <Skeleton key={i} variant="rounded" height={160} />
           ))}
-        </div>
+        </Box>
       ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              {searchTerm
-                ? "Nenhum artigo encontrado para esta busca."
-                : "Nenhum artigo nesta categoria. Crie o primeiro!"}
-            </p>
+        <Card variant="outlined">
+          <CardContent sx={{ py: 6, textAlign: "center" }}>
+            <BookOpen style={{ width: 48, height: 48, opacity: 0.5, margin: "0 auto 16px", display: "block" }} />
+            <Typography color="text.secondary">
+              {searchTerm ? "Nenhum artigo encontrado para esta busca." : "Nenhum artigo nesta categoria. Crie o primeiro!"}
+            </Typography>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" } }}>
           {filtered.map((article) => (
             <Card
               key={article.id}
-              className="cursor-pointer transition-all hover:shadow-md"
+              variant="outlined"
+              sx={{ cursor: "pointer" }}
               onClick={() => setSelectedArticle(article)}
             >
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-sm line-clamp-2">
-                    {article.titulo}
-                  </CardTitle>
-                  <div className="flex gap-0.5 shrink-0 ml-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenEditArticle(article);
-                      }}
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteArticle(article.id);
-                      }}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground line-clamp-3 mb-3">
+              <CardHeader
+                title={article.titulo}
+                titleTypographyProps={{ variant: "subtitle2", sx: { lineClamp: 2, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } }}
+                action={
+                  <Box onClick={(e) => e.stopPropagation()}>
+                    <IconButton size="small" onClick={() => handleOpenEditArticle(article)}>
+                      <Pencil style={{ width: 14, height: 14 }} />
+                    </IconButton>
+                    <IconButton size="small" color="error" onClick={() => handleDeleteArticle(article.id)}>
+                      <Trash2 style={{ width: 14, height: 14 }} />
+                    </IconButton>
+                  </Box>
+                }
+              />
+              <CardContent sx={{ pt: 0 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", mb: 1 }}>
                   {article.conteudo}
-                </p>
-                <div className="flex gap-2">
-                  <Badge variant={article.publicado ? "default" : "secondary"} className="text-xs">
-                    {article.publicado ? "Publicado" : "Rascunho"}
-                  </Badge>
-                  {article.categoria_nome && (
-                    <Badge variant="outline" className="text-xs">
-                      {article.categoria_nome}
-                    </Badge>
-                  )}
-                </div>
+                </Typography>
+                <Box sx={{ display: "flex", gap: 0.5 }}>
+                  <Chip label={article.publicado ? "Publicado" : "Rascunho"} size="small" variant={article.publicado ? "filled" : "outlined"} />
+                  {article.categoria_nome && <Chip label={article.categoria_nome} size="small" variant="outlined" />}
+                </Box>
               </CardContent>
             </Card>
           ))}
-        </div>
+        </Box>
       )}
 
-      {/* Help card */}
-      <Card className="bg-primary text-primary-foreground">
-        <CardContent className="py-6">
-          <h3 className="font-semibold mb-1">Precisa de mais ajuda?</h3>
-          <p className="text-sm opacity-80 mb-3">
+      <Card sx={{ bgcolor: "primary.main", color: "primary.contrastText" }}>
+        <CardContent sx={{ py: 3 }}>
+          <Typography fontWeight={600} gutterBottom>Precisa de mais ajuda?</Typography>
+          <Typography variant="body2" sx={{ opacity: 0.9, mb: 2 }}>
             Se não encontrou o que procurava, crie um novo chamado.
-          </p>
-          <Button variant="secondary" asChild>
-            <a href="/criar-chamado">Criar Novo Chamado</a>
+          </Typography>
+          <Button variant="contained" href="/criar-chamado" sx={{ bgcolor: "background.paper", color: "primary.main" }}>
+            Criar Novo Chamado
           </Button>
         </CardContent>
       </Card>
 
-      {/* Category Dialog */}
-      <Dialog open={catDialog} onOpenChange={setCatDialog}>
+      <Dialog open={catDialog} onClose={() => setCatDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{editingCat ? "Editar Categoria" : "Nova Categoria"}</DialogTitle>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingCat ? "Editar Categoria" : "Nova Categoria"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nome</Label>
-              <Input
-                value={catForm.nome}
-                onChange={(e) =>
-                  setCatForm((p) => ({ ...p, nome: e.target.value }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <Textarea
-                value={catForm.descricao}
-                onChange={(e) =>
-                  setCatForm((p) => ({ ...p, descricao: e.target.value }))
-                }
-                rows={3}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Ícone</Label>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+            <TextField
+              label="Nome"
+              value={catForm.nome}
+              onChange={(e) => setCatForm((p) => ({ ...p, nome: e.target.value }))}
+              fullWidth
+              size="small"
+            />
+            <TextField
+              label="Descrição"
+              multiline
+              rows={3}
+              value={catForm.descricao}
+              onChange={(e) => setCatForm((p) => ({ ...p, descricao: e.target.value }))}
+              fullWidth
+              size="small"
+            />
+            <FormControl fullWidth size="small">
+              <InputLabel>Ícone</InputLabel>
               <Select
                 value={catForm.icone}
-                onValueChange={(v) =>
-                  setCatForm((p) => ({ ...p, icone: v }))
-                }
+                label="Ícone"
+                onChange={(e) => setCatForm((p) => ({ ...p, icone: e.target.value }))}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.keys(ICON_MAP).map((k) => (
-                    <SelectItem key={k} value={k}>
-                      {k}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                {Object.keys(ICON_MAP).map((k) => (
+                  <MenuItem key={k} value={k}>{k}</MenuItem>
+                ))}
               </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCatDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveCategory} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {editingCat ? "Salvar" : "Criar"}
-            </Button>
-          </DialogFooter>
+            </FormControl>
+          </Box>
         </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCatDialog(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={handleSaveCategory} disabled={saving} startIcon={saving ? <CircularProgress size={18} /> : null}>
+            {editingCat ? "Salvar" : "Criar"}
+          </Button>
+        </DialogActions>
       </Dialog>
 
-      {/* Article Dialog */}
-      <Dialog open={articleDialog} onOpenChange={setArticleDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editingArticle ? "Editar Artigo" : "Novo Artigo"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Título *</Label>
-                <Input
-                  value={articleForm.titulo}
-                  onChange={(e) =>
-                    setArticleForm((p) => ({ ...p, titulo: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Categoria *</Label>
+      <Dialog open={articleDialog} onClose={() => setArticleDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>{editingArticle ? "Editar Artigo" : "Novo Artigo"}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+              <TextField
+                label="Título *"
+                value={articleForm.titulo}
+                onChange={(e) => setArticleForm((p) => ({ ...p, titulo: e.target.value }))}
+                fullWidth
+                size="small"
+              />
+              <FormControl fullWidth size="small">
+                <InputLabel>Categoria *</InputLabel>
                 <Select
                   value={articleForm.categoria_id}
-                  onValueChange={(v) =>
-                    setArticleForm((p) => ({ ...p, categoria_id: v }))
-                  }
+                  label="Categoria *"
+                  onChange={(e) => setArticleForm((p) => ({ ...p, categoria_id: e.target.value }))}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  {categories.map((c) => (
+                    <MenuItem key={c.id} value={c.id}>{c.nome}</MenuItem>
+                  ))}
                 </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Conteúdo *</Label>
-              <Textarea
-                value={articleForm.conteudo}
-                onChange={(e) =>
-                  setArticleForm((p) => ({ ...p, conteudo: e.target.value }))
-                }
-                rows={12}
-                placeholder="Escreva o conteúdo do artigo..."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setArticleDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveArticle} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {editingArticle ? "Salvar" : "Criar"}
-            </Button>
-          </DialogFooter>
+              </FormControl>
+            </Box>
+            <TextField
+              label="Conteúdo *"
+              multiline
+              rows={12}
+              value={articleForm.conteudo}
+              onChange={(e) => setArticleForm((p) => ({ ...p, conteudo: e.target.value }))}
+              placeholder="Escreva o conteúdo do artigo..."
+              fullWidth
+              size="small"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={articleForm.publicado}
+                  onChange={(_, c) => setArticleForm((p) => ({ ...p, publicado: c }))}
+                />
+              }
+              label="Publicado"
+            />
+          </Box>
         </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setArticleDialog(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={handleSaveArticle} disabled={saving} startIcon={saving ? <CircularProgress size={18} /> : null}>
+            {editingArticle ? "Salvar" : "Criar"}
+          </Button>
+        </DialogActions>
       </Dialog>
-    </div>
+    </Box>
   );
 }

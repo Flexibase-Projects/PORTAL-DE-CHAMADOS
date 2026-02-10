@@ -1,15 +1,15 @@
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import Box from "@mui/material/Box";
+import TextField from "@mui/material/TextField";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Checkbox from "@mui/material/Checkbox";
+import Radio from "@mui/material/Radio";
+import RadioGroup from "@mui/material/RadioGroup";
+import Button from "@mui/material/Button";
+import Typography from "@mui/material/Typography";
 import type { TemplateField } from "@/types/template";
 
 interface Props {
@@ -35,64 +35,56 @@ export function TemplateFieldRenderer({
 
   if (type === "info") {
     return (
-      <p className="text-sm text-muted-foreground">{label}</p>
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
     );
   }
 
   if (type === "select") {
     return (
-      <div className="space-y-2">
-        <Label>
-          {label} {required && <span className="text-destructive">*</span>}
-        </Label>
+      <FormControl fullWidth error={Boolean(error)} disabled={preview}>
+        <InputLabel>{label} {required && "*"}</InputLabel>
         <Select
           value={(value as string) || ""}
-          onValueChange={(v) => !preview && onChange(v)}
-          disabled={preview}
+          label={`${label} ${required ? "*" : ""}`}
+          onChange={(e) => !preview && onChange(e.target.value)}
         >
-          <SelectTrigger className={error ? "border-destructive" : ""}>
-            <SelectValue placeholder="Selecione" />
-          </SelectTrigger>
-          <SelectContent>
-            {options.map((opt) => (
-              <SelectItem key={opt} value={opt}>
-                {opt}
-              </SelectItem>
-            ))}
-          </SelectContent>
+          {options.map((opt) => (
+            <MenuItem key={opt} value={opt}>
+              {opt}
+            </MenuItem>
+          ))}
         </Select>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-      </div>
+        {error && <Typography variant="caption" color="error">{error}</Typography>}
+      </FormControl>
     );
   }
 
   if (type === "radio") {
     return (
-      <div className="space-y-2">
-        <Label>
-          {label} {required && <span className="text-destructive">*</span>}
-        </Label>
-        <div className="flex flex-wrap gap-3">
+      <Box>
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          {label} {required && "*"}
+        </Typography>
+        <RadioGroup
+          row
+          name={field.id}
+          value={(value as string) || ""}
+          onChange={(e) => !preview && onChange(e.target.value)}
+        >
           {options.map((opt) => (
-            <label
+            <FormControlLabel
               key={opt}
-              className="flex items-center gap-2 cursor-pointer text-sm"
-            >
-              <input
-                type="radio"
-                name={field.id}
-                value={opt}
-                checked={value === opt}
-                onChange={() => !preview && onChange(opt)}
-                disabled={preview}
-                className="accent-primary"
-              />
-              {opt}
-            </label>
+              value={opt}
+              control={<Radio size="small" disabled={preview} />}
+              label={opt}
+              sx={{ mr: 2 }}
+            />
           ))}
-        </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-      </div>
+        </RadioGroup>
+        {error && <Typography variant="caption" color="error">{error}</Typography>}
+      </Box>
     );
   }
 
@@ -104,127 +96,120 @@ export function TemplateFieldRenderer({
         : [];
     if (options.length > 0) {
       return (
-        <div className="space-y-2">
-          <Label>
-            {label} {required && <span className="text-destructive">*</span>}
-          </Label>
-          <div className="flex flex-col gap-2">
+        <Box>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            {label} {required && "*"}
+          </Typography>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
             {options.map((opt) => (
-              <label key={opt} className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={(selected as string[]).includes(opt)}
-                  onCheckedChange={(checked) => {
-                    if (preview) return;
-                    const next = checked
-                      ? [...(selected as string[]), opt]
-                      : (selected as string[]).filter((v) => v !== opt);
-                    onChange(next);
-                  }}
-                  disabled={preview}
-                />
-                {opt}
-              </label>
+              <FormControlLabel
+                key={opt}
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={(selected as string[]).includes(opt)}
+                    onChange={(_, checked) => {
+                      if (preview) return;
+                      const next = checked
+                        ? [...(selected as string[]), opt]
+                        : (selected as string[]).filter((v) => v !== opt);
+                      onChange(next);
+                    }}
+                    disabled={preview}
+                  />
+                }
+                label={opt}
+              />
             ))}
-          </div>
-          {error && <p className="text-xs text-destructive">{error}</p>}
-        </div>
+          </Box>
+          {error && <Typography variant="caption" color="error">{error}</Typography>}
+        </Box>
       );
     }
     return (
-      <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm">
+      <FormControlLabel
+        control={
           <Checkbox
+            size="small"
             checked={!!value}
-            onCheckedChange={(checked) => !preview && onChange(checked)}
+            onChange={(_, checked) => !preview && onChange(checked)}
             disabled={preview}
           />
-          {label}
-        </label>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-      </div>
+        }
+        label={label}
+      />
     );
   }
 
   if (type === "number") {
     return (
-      <div className="space-y-2">
-        <Label>
-          {label} {required && <span className="text-destructive">*</span>}
-        </Label>
-        <Input
-          type="number"
-          value={(value as string) || ""}
-          onChange={(e) => !preview && onChange(e.target.value)}
-          disabled={preview}
-          className={error ? "border-destructive" : ""}
-        />
-        {error && <p className="text-xs text-destructive">{error}</p>}
-      </div>
+      <TextField
+        label={`${label} ${required ? "*" : ""}`}
+        type="number"
+        value={(value as string) || ""}
+        onChange={(e) => !preview && onChange(e.target.value)}
+        disabled={preview}
+        error={Boolean(error)}
+        helperText={error}
+        fullWidth
+      />
     );
   }
 
   if (type === "file" || type === "image") {
     return (
-      <div className="space-y-2">
-        <Label>
-          {label} {required && <span className="text-destructive">*</span>}
-        </Label>
-        <Button variant="outline" asChild disabled={preview}>
-          <label className="cursor-pointer">
-            Escolher arquivo
-            {!preview && (
-              <input
-                type="file"
-                className="hidden"
-                accept={type === "image" ? "image/*" : "*"}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  onChange(file ? file.name : "");
-                }}
-              />
-            )}
-          </label>
+      <Box>
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          {label} {required && "*"}
+        </Typography>
+        <Button variant="outlined" component="label" disabled={preview}>
+          Escolher arquivo
+          <input
+            type="file"
+            hidden
+            accept={type === "image" ? "image/*" : "*"}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              onChange(file ? file.name : "");
+            }}
+          />
         </Button>
         {value != null && value !== "" && !preview && (
-          <p className="text-xs text-muted-foreground">{String(value as string)}</p>
+          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+            {String(value as string)}
+          </Typography>
         )}
-        {error && <p className="text-xs text-destructive">{error}</p>}
-      </div>
+        {error && <Typography variant="caption" color="error">{error}</Typography>}
+      </Box>
     );
   }
 
-  // text / textarea
   const textRows = Math.max(1, Math.min(20, rows));
   if (textRows > 1) {
     return (
-      <div className="space-y-2">
-        <Label>
-          {label} {required && <span className="text-destructive">*</span>}
-        </Label>
-        <Textarea
-          value={(value as string) || ""}
-          onChange={(e) => !preview && onChange(e.target.value)}
-          rows={textRows}
-          disabled={preview}
-          className={error ? "border-destructive" : ""}
-        />
-        {error && <p className="text-xs text-destructive">{error}</p>}
-      </div>
+      <TextField
+        label={`${label} ${required ? "*" : ""}`}
+        multiline
+        rows={textRows}
+        value={(value as string) || ""}
+        onChange={(e) => !preview && onChange(e.target.value)}
+        disabled={preview}
+        error={Boolean(error)}
+        helperText={error}
+        fullWidth
+      />
     );
   }
 
   return (
-    <div className="space-y-2">
-      <Label>
-        {label} {required && <span className="text-destructive">*</span>}
-      </Label>
-      <Input
-        value={(value as string) || ""}
-        onChange={(e) => !preview && onChange(e.target.value)}
-        disabled={preview}
-        className={error ? "border-destructive" : ""}
-      />
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
+    <TextField
+      label={`${label} ${required ? "*" : ""}`}
+      value={(value as string) || ""}
+      onChange={(e) => !preview && onChange(e.target.value)}
+      disabled={preview}
+      error={Boolean(error)}
+      helperText={error}
+      fullWidth
+    />
   );
 }

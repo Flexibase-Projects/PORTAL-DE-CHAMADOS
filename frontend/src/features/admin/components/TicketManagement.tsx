@@ -1,20 +1,20 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Reply, CheckCircle2, ArrowLeft, Loader2 } from "lucide-react";
+import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import TextField from "@mui/material/TextField";
+import Divider from "@mui/material/Divider";
+import Alert from "@mui/material/Alert";
+import Skeleton from "@mui/material/Skeleton";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
+import { Reply, CheckCircle2, ArrowLeft } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
 import { templateService } from "@/services/templateService";
 import { TicketCard } from "@/features/tickets/components/TicketCard";
@@ -26,16 +26,14 @@ interface Props {
   initialTicketId?: string;
 }
 
-function statusVariant(
-  status: string
-): "default" | "secondary" | "destructive" | "outline" {
+function statusColor(status: string): "default" | "primary" | "warning" | "success" {
   switch (status) {
     case "Concluído":
-      return "default";
+      return "success";
     case "Em Andamento":
-      return "secondary";
+      return "warning";
     default:
-      return "destructive";
+      return "default";
   }
 }
 
@@ -59,9 +57,7 @@ export function TicketManagement({ initialTicketId }: Props) {
       templateService
         .getTemplate(selected.area_destino)
         .then((res) =>
-          setTemplateFields(
-            Array.isArray(res.template?.fields) ? res.template.fields : []
-          )
+          setTemplateFields(Array.isArray(res.template?.fields) ? res.template.fields : [])
         )
         .catch(() => setTemplateFields([]));
     } else {
@@ -115,8 +111,7 @@ export function TicketManagement({ initialTicketId }: Props) {
   };
 
   const handleConclude = async () => {
-    if (!selected || !confirm("Tem certeza que deseja concluir este chamado?"))
-      return;
+    if (!selected || !confirm("Tem certeza que deseja concluir este chamado?")) return;
     setActionLoading(true);
     try {
       const res = await ticketService.updateStatus(selected.id, "Concluído");
@@ -134,250 +129,218 @@ export function TicketManagement({ initialTicketId }: Props) {
 
   if (loading) {
     return (
-      <div className="space-y-3">
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-32 rounded-xl" />
+          <Skeleton key={i} variant="rounded" height={120} />
         ))}
-      </div>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+        <Alert severity="error" onClose={() => setError("")}>
+          {error}
         </Alert>
       )}
       {success && (
-        <Alert>
-          <AlertDescription>{success}</AlertDescription>
+        <Alert severity="success" onClose={() => setSuccess("")}>
+          {success}
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* List */}
-        <div className={selected ? "lg:col-span-4" : "lg:col-span-12"}>
-          <ScrollArea className="h-[calc(100vh-16rem)]">
-            <div className="space-y-3 pr-2">
-              <p className="text-sm font-medium text-muted-foreground">
-                Chamados Recebidos ({tickets.length})
-              </p>
-              {tickets.length === 0 ? (
-                <Alert>
-                  <AlertDescription>
-                    Nenhum chamado recebido no momento.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                tickets.map((t) => (
-                  <TicketCard
-                    key={t.id}
-                    ticket={t}
-                    onView={() => {
-                      setSelected(t);
-                      setError("");
-                      setSuccess("");
-                    }}
-                  />
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </div>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: selected ? "1fr 2fr" : "1fr" }, gap: 2 }}>
+        <Box sx={{ maxHeight: { lg: "calc(100vh - 16rem)" }, overflow: "auto", pr: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Chamados Recebidos ({tickets.length})
+          </Typography>
+          {tickets.length === 0 ? (
+            <Alert severity="info">Nenhum chamado recebido no momento.</Alert>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+              {tickets.map((t) => (
+                <TicketCard
+                  key={t.id}
+                  ticket={t}
+                  onView={() => {
+                    setSelected(t);
+                    setError("");
+                    setSuccess("");
+                  }}
+                />
+              ))}
+            </Box>
+          )}
+        </Box>
 
-        {/* Detail */}
         {selected && (
-          <div className="lg:col-span-8">
-            <Card>
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h3 className="text-lg font-semibold">
-                      {selected.assunto}
-                    </h3>
-                    <p className="text-xs text-muted-foreground font-mono">
-                      {selected.numero_protocolo}
-                    </p>
-                  </div>
-                  <Badge variant={statusVariant(selected.status)}>
-                    {selected.status}
-                  </Badge>
-                </div>
+          <Card variant="outlined">
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, mb: 2 }}>
+                <Box>
+                  <Typography variant="h6" fontWeight={600}>
+                    {selected.assunto}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" fontFamily="monospace">
+                    {selected.numero_protocolo}
+                  </Typography>
+                </Box>
+                <Chip label={selected.status} color={statusColor(selected.status)} size="small" variant="outlined" />
+              </Box>
 
-                <Separator />
+              <Divider sx={{ my: 2 }} />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Solicitante</span>
-                    <p>{selected.solicitante_nome || "N/A"}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Email</span>
-                    <p>{selected.solicitante_email || "N/A"}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Setor</span>
-                    <p>{selected.setor}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Departamento</span>
-                    <p>{selected.area_destino}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Data</span>
-                    <p>{formatDate(selected.created_at)}</p>
-                  </div>
-                  {selected.prioridade && (
-                    <div>
-                      <span className="text-muted-foreground">Prioridade</span>
-                      <p>{selected.prioridade}</p>
-                    </div>
-                  )}
-                </div>
-
-                <Separator />
-
-                <div>
-                  <p className="text-sm font-semibold mb-2">Mensagem</p>
-                  <p className="text-sm whitespace-pre-wrap">
-                    {selected.mensagem}
-                  </p>
-                </div>
-
-                {selected.dados_extras &&
-                  Object.keys(selected.dados_extras).length > 0 && (
-                    <>
-                      <Separator />
-                      <div>
-                        <p className="text-sm font-semibold mb-2">
-                          Campos adicionais
-                        </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                          {Object.entries(selected.dados_extras).map(
-                            ([key, value]) => {
-                              const field = templateFields.find(
-                                (f) => f.id === key || f.key === key
-                              );
-                              const label =
-                                field?.label ||
-                                key.replace(/_/g, " ").replace(/^field\s*/i, "");
-                              const displayValue =
-                                value == null
-                                  ? "-"
-                                  : Array.isArray(value)
-                                    ? value.join(", ")
-                                    : String(value);
-                              return (
-                                <div key={key}>
-                                  <span className="text-muted-foreground">
-                                    {label}
-                                  </span>
-                                  <p className="whitespace-pre-wrap break-words">
-                                    {displayValue}
-                                  </p>
-                                </div>
-                              );
-                            }
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                {selected.respostas && selected.respostas.length > 0 && (
-                  <>
-                    <Separator />
-                    <div>
-                      <p className="text-sm font-semibold mb-2">
-                        Respostas ({selected.respostas.length})
-                      </p>
-                      <div className="space-y-2">
-                        {selected.respostas.map((r) => (
-                          <div
-                            key={r.id}
-                            className="rounded-lg border bg-muted/50 p-3"
-                          >
-                            <div className="flex justify-between mb-1">
-                              <span className="text-xs font-semibold">
-                                {r.autor_nome || "Administrador"}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {formatDate(r.created_at)}
-                              </span>
-                            </div>
-                            <p className="text-sm">{r.mensagem}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, mb: 2 }}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Solicitante</Typography>
+                  <Typography variant="body2">{selected.solicitante_nome || "N/A"}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Email</Typography>
+                  <Typography variant="body2">{selected.solicitante_email || "N/A"}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Setor</Typography>
+                  <Typography variant="body2">{selected.setor}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Departamento</Typography>
+                  <Typography variant="body2">{selected.area_destino}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Data</Typography>
+                  <Typography variant="body2">{formatDate(selected.created_at)}</Typography>
+                </Box>
+                {selected.prioridade && (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Prioridade</Typography>
+                    <Typography variant="body2">{selected.prioridade}</Typography>
+                  </Box>
                 )}
+              </Box>
 
-                <Separator />
+              <Divider sx={{ my: 2 }} />
 
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => setDialogOpen(true)}
-                    disabled={
-                      actionLoading || selected.status === "Concluído"
-                    }
-                  >
-                    <Reply className="h-4 w-4 mr-2" />
-                    Responder
-                  </Button>
-                  <Button
-                    variant="default"
-                    className="bg-green-600 hover:bg-green-700"
-                    onClick={handleConclude}
-                    disabled={
-                      actionLoading || selected.status === "Concluído"
-                    }
-                  >
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Concluir
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setSelected(null)}
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Voltar
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Mensagem</Typography>
+              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                {selected.mensagem}
+              </Typography>
+
+              {selected.dados_extras && Object.keys(selected.dados_extras).length > 0 && (
+                <>
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>Campos adicionais</Typography>
+                  <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+                    {Object.entries(selected.dados_extras).map(([key, value]) => {
+                      const field = templateFields.find((f) => f.id === key || f.key === key);
+                      const label = field?.label || key.replace(/_/g, " ").replace(/^field\s*/i, "");
+                      const displayValue =
+                        value == null
+                          ? "-"
+                          : Array.isArray(value)
+                            ? value.join(", ")
+                            : String(value);
+                      return (
+                        <Box key={key}>
+                          <Typography variant="caption" color="text.secondary">{label}</Typography>
+                          <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                            {displayValue}
+                          </Typography>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                </>
+              )}
+
+              {selected.respostas && selected.respostas.length > 0 && (
+                <>
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Respostas ({selected.respostas.length})
+                  </Typography>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                    {selected.respostas.map((r) => (
+                      <Box
+                        key={r.id}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 1,
+                          bgcolor: "action.hover",
+                          border: 1,
+                          borderColor: "divider",
+                        }}
+                      >
+                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                          <Typography variant="caption" fontWeight={600}>
+                            {r.autor_nome || "Administrador"}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {formatDate(r.created_at)}
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2">{r.mensagem}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </>
+              )}
+
+              <Divider sx={{ my: 2 }} />
+
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                <Button
+                  variant="contained"
+                  startIcon={<Reply style={{ width: 18, height: 18 }} />}
+                  onClick={() => setDialogOpen(true)}
+                  disabled={actionLoading || selected.status === "Concluído"}
+                >
+                  Responder
+                </Button>
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<CheckCircle2 style={{ width: 18, height: 18 }} />}
+                  onClick={handleConclude}
+                  disabled={actionLoading || selected.status === "Concluído"}
+                >
+                  Concluir
+                </Button>
+                <Button variant="outlined" startIcon={<ArrowLeft style={{ width: 18, height: 18 }} />} onClick={() => setSelected(null)}>
+                  Voltar
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
         )}
-      </div>
+      </Box>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Responder Chamado</DialogTitle>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Responder Chamado</DialogTitle>
-          </DialogHeader>
-          <Textarea
+          <TextField
+            multiline
             rows={6}
             value={responseText}
             onChange={(e) => setResponseText(e.target.value)}
             placeholder="Digite sua resposta..."
+            fullWidth
+            sx={{ mt: 1 }}
           />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSendResponse}
-              disabled={actionLoading || !responseText.trim()}
-            >
-              {actionLoading && (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              )}
-              Enviar Resposta
-            </Button>
-          </DialogFooter>
         </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
+          <Button
+            variant="contained"
+            onClick={handleSendResponse}
+            disabled={actionLoading || !responseText.trim()}
+            startIcon={actionLoading ? <CircularProgress size={18} /> : null}
+          >
+            {actionLoading ? "Enviando..." : "Enviar Resposta"}
+          </Button>
+        </DialogActions>
       </Dialog>
-    </div>
+    </Box>
   );
 }
