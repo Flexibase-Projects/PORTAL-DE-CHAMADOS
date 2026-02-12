@@ -129,7 +129,9 @@ npm start
 
 O projeto está preparado para deploy via **Docker** (Coolify ou qualquer orquestrador).
 
-1. **Build:** o Coolify deve usar o `Dockerfile` na raiz (build de imagem Docker).
+**Importante:** no Coolify, é necessário escolher o **Build Pack "Dockerfile"** (não use Nixpacks). Veja instruções passo a passo em [COOLIFY.md](./COOLIFY.md).
+
+1. **Build:** no Coolify, selecione o build pack **Dockerfile** (não Nixpacks); o `Dockerfile` na raiz fará o build da imagem.
 2. **Porta:** configurar a porta do serviço como **8095** (ou definir a variável de ambiente `PORT=8095`).
 3. **Variáveis de ambiente:** configurar no Coolify as mesmas variáveis do `.env`/`.env.local`:
    - `SUPABASE_URL`
