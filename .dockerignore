@@ -1,0 +1,28 @@
+# Dependências (serão instaladas no build)
+node_modules
+**/node_modules
+npm-debug.log*
+pnpm-debug.log*
+.yarn/*
+.pnpm-store
+
+# Build do frontend (será gerado no container)
+frontend/dist
+
+# Git e IDE
+.git
+.gitignore
+.cursor
+.vscode
+*.md
+!README.md
+
+# Ambiente local (não subir segredos)
+.env
+.env.*
+!.env.example
+
+# Outros
+*.log
+.DS_Store
+FluxogramaPortalChamados.canvas

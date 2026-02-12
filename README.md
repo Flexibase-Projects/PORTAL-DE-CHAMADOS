@@ -123,6 +123,19 @@ npm start
 - **Frontend:** http://localhost:3001 (acesso principal)
 - **Backend:** http://localhost:3002 (API)
 - O Vite faz proxy de `/api` para o backend; as requisições do frontend usam `/api/...` e são encaminhadas automaticamente.
+- **Produção (Coolify/Docker):** a aplicação expõe a porta **8095** (configurável pela variável `PORT`).
+
+## Deploy no Coolify
+
+O projeto está preparado para deploy via **Docker** (Coolify ou qualquer orquestrador).
+
+1. **Build:** o Coolify deve usar o `Dockerfile` na raiz (build de imagem Docker).
+2. **Porta:** configurar a porta do serviço como **8095** (ou definir a variável de ambiente `PORT=8095`).
+3. **Variáveis de ambiente:** configurar no Coolify as mesmas variáveis do `.env`/`.env.local`:
+   - `SUPABASE_URL`
+   - `SUPABASE_KEY`
+   - Opcional: `VITE_USE_LOCAL_STORAGE`, `PORT`
+4. O backend serve o frontend estático (build do Vite) na mesma porta; não é necessário expor duas portas.
 
 ## Roles e Permissões
 
