@@ -20,21 +20,23 @@ Sistema de gerenciamento de chamados (tickets) com dashboard, gestão de usuári
 - **Supabase** (PostgreSQL e cliente JS)
 
 ### Banco de Dados
-Todas as tabelas usam o prefixo `PDC_`:
-- `PDC_roles` - Perfis de acesso (Admin, Gestor de Área, Técnico, Usuário)
-- `PDC_users` - Usuários do sistema
-- `PDC_tickets` - Chamados
-- `PDC_ticket_responses` - Respostas dos chamados
-- `PDC_templates` - Templates dinâmicos por departamento
-- `PDC_kb_categories` - Categorias da base de conhecimento
-- `PDC_kb_articles` - Artigos da base de conhecimento
+- **Supabase Auth**: login por e-mail/senha; usuários do Auth são usados para acesso ao painel e às permissões por departamento.
+- Tabelas no schema `public` com prefixo `PDC_`:
+  - `PDC_roles` - Perfis de acesso (Admin, Gestor de Área, Técnico, Usuário)
+  - `PDC_users` - Usuários do sistema (portal)
+  - `PDC_user_permissions` - Permissões por departamento para usuários do Auth (`auth_user_id`, `departamento`, `permissao`: `view` ou `view_edit`)
+  - `PDC_tickets` - Chamados
+  - `PDC_ticket_responses` - Respostas dos chamados
+  - `PDC_templates` - Templates dinâmicos por departamento
+  - `PDC_kb_categories` - Categorias da base de conhecimento
+  - `PDC_kb_articles` - Artigos da base de conhecimento
 
 ## Funcionalidades
 
 - **Dashboard** com estatísticas, gráficos (por dia/mês, setor, departamento), intervalo de datas customizado e chamados recentes
 - **Criação de chamados** com formulários dinâmicos por departamento
 - **Meus Chamados** - consulta por e-mail
-- **Painel Administrativo** (abas: Chamados, Templates, Usuários) com gestão de chamados, templates por departamento e usuários
+- **Painel Administrativo** (abas: Chamados, Templates, Usuários) com gestão de chamados, templates por departamento, usuários e **permissões por departamento** (listagem de usuários do Auth e atribuição de permissão Ver / Ver e editar por área, ex.: SGI, TI)
 - **Base de Conhecimento** com CRUD de categorias e artigos
 - **Sidebar retrátil** (colapsa para ícones), fundo branco com destaque em #7289da (hover e item ativo)
 - **Tema claro/escuro** com toggle na sidebar
@@ -54,11 +56,11 @@ PORTAL-DE-CHAMADOS/
 │   │   │   ├── dashboard/          # DashboardPage, StatsCards, Charts, RecentTickets
 │   │   │   ├── tickets/            # CreateTicketPage, MyTicketsPage, TicketCard, TemplateFieldRenderer
 │   │   │   ├── admin/              # AdminPage, TicketManagement, TemplateEditor
-│   │   │   ├── users/              # UsersPage (aba do painel admin)
+│   │   │   ├── users/              # UsersPage (gestão de usuários e permissões por departamento)
 │   │   │   └── knowledge-base/     # KnowledgeBasePage
 │   │   ├── hooks/                  # useTheme, use-mobile
 │   │   ├── lib/                    # utils (cn, formatDate)
-│   │   ├── services/               # api (axios), ticketService, templateService, userService, kbService
+│   │   ├── services/               # api (axios), ticketService, templateService, userService, permissionService, kbService
 │   │   ├── storage/                # localStorageStorage (fallback quando VITE_USE_LOCAL_STORAGE)
 │   │   ├── theme/                  # AppTheme (MUI ThemeProvider + CssBaseline)
 │   │   ├── types/                  # TypeScript (ticket, user, template, knowledge-base)
@@ -66,12 +68,13 @@ PORTAL-DE-CHAMADOS/
 │   │   └── utils/                  # validation (validateTicketForm, etc.)
 │   └── vite.config.ts              # proxy /api -> backend
 ├── backend/
+│   ├── scripts/                    # Scripts utilitários (create-sgi-user.js, kill-port.js)
 │   └── src/
-│       ├── config/                 # Supabase client
-│       ├── controllers/            # dashboard, tickets, users, templates, kb
+│       ├── config/                 # supabase.js, supabaseAdmin.js (Auth admin)
+│       ├── controllers/            # dashboard, tickets, users, templates, kb, permissions
 │       ├── middleware/             # validation
-│       ├── routes/                 # Express routes
-│       ├── services/               # Lógica de negócio (Supabase)
+│       ├── routes/                 # Express routes (incl. /api/admin/permissions)
+│       ├── services/               # Lógica de negócio (Supabase + permissionService)
 │       └── server.js
 ├── supabase/
 │   ├── schema.sql
@@ -87,12 +90,19 @@ PORTAL-DE-CHAMADOS/
 ## Pré-requisitos
 
 - Node.js 18+
-- Conta no Supabase com as tabelas PDC_ criadas (ver `supabase/schema.sql`)
+- Conta no Supabase com as tabelas PDC_ criadas (ver `supabase/schema.sql`) e tabela `PDC_user_permissions` para permissões por departamento
 - Arquivo `.env` ou `.env.local` na **raiz do projeto** com:
 
 ```env
 SUPABASE_URL=https://seu-projeto.supabase.co
 SUPABASE_KEY=sua-chave-anon
+
+# Backend: obrigatório para listar usuários do Auth e salvar permissões (painel admin)
+SUPABASE_SERVICE_ROLE_KEY=sua-service-role-key
+
+# Se SUPABASE_SERVICE_ROLE_KEY for sb_secret_... (Supabase local), defina o JWT secret (supabase status)
+# SUPABASE_JWT_SECRET=seu-jwt-secret
+# SUPABASE_PROJECT_REF=ref-do-projeto
 
 # Opcional: frontend usa localStorage em vez da API (para desenvolvimento sem backend)
 VITE_USE_LOCAL_STORAGE=true
@@ -116,6 +126,10 @@ npm run dev:backend
 # Build para produção
 npm run build:frontend
 npm start
+
+# Scripts do backend (executar na raiz do projeto)
+node backend/scripts/create-sgi-user.js   # Criar usuário no Auth + permissão SGI (ver script para customizar)
+npm run kill-port                         # Encerrar processos nas portas do frontend/backend (Windows)
 ```
 
 ## Portas
@@ -136,10 +150,20 @@ O projeto está preparado para deploy via **Docker** (Coolify ou qualquer orques
 3. **Variáveis de ambiente:** configurar no Coolify as mesmas variáveis do `.env`/`.env.local`:
    - `SUPABASE_URL`
    - `SUPABASE_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` (necessária para listagem de usuários do Auth e permissões no painel admin)
    - Opcional: `VITE_USE_LOCAL_STORAGE`, `PORT`
 4. O backend serve o frontend estático (build do Vite) na mesma porta; não é necessário expor duas portas.
 
-## Roles e Permissões
+## Autenticação e permissões
+
+- **Login**: Supabase Auth (e-mail e senha). Usuários do Auth acessam o painel e a área "Meus Chamados" conforme permissões.
+- **Permissões por departamento** (tabela `PDC_user_permissions`): para cada usuário do Auth é possível definir, por departamento (ex.: SGI, TI), se ele tem **Ver** ou **Ver e editar** os chamados daquela área. Sem permissão para um departamento, o usuário não vê os chamados da área.
+- **Criar usuário no Auth e dar acesso ao SGI**: use o script `backend/scripts/create-sgi-user.js` (edite email/senha/departamento no próprio arquivo se quiser). Requer `SUPABASE_SERVICE_ROLE_KEY` no `.env.local`:
+  ```bash
+  node backend/scripts/create-sgi-user.js
+  ```
+
+## Roles (PDC_roles)
 
 | Role             | Nível | Descrição           |
 |------------------|-------|---------------------|
@@ -165,6 +189,9 @@ O projeto está preparado para deploy via **Docker** (Coolify ou qualquer orques
 | POST | `/api/users` | Criar usuário |
 | PUT | `/api/users/:id` | Atualizar usuário |
 | PATCH | `/api/users/:id/toggle-active` | Ativar/desativar usuário |
+| GET | `/api/admin/permissions/auth-users` | Listar usuários do Auth (admin) |
+| GET | `/api/admin/permissions/:authUserId` | Obter permissões por departamento |
+| PUT | `/api/admin/permissions/:authUserId` | Definir permissões (body: `{ departamentos: { [dept]: "view" \| "view_edit" } }`) |
 | GET | `/api/roles` | Listar perfis |
 | GET | `/api/templates/:dept` | Template do departamento |
 | PUT | `/api/templates` | Salvar template |

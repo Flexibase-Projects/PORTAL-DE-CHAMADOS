@@ -15,7 +15,6 @@ const KnowledgeBasePage = lazy(() => import("@/features/knowledge-base/Knowledge
 const AdminChamadosPage = lazy(() => import("@/features/admin/AdminChamadosPage").then((m) => ({ default: m.AdminChamadosPage })));
 const TemplateEditorPage = lazy(() => import("@/features/admin/TemplateEditorPage").then((m) => ({ default: m.TemplateEditorPage })));
 const UsersPage = lazy(() => import("@/features/users/UsersPage").then((m) => ({ default: m.UsersPage })));
-const PermissionsPage = lazy(() => import("@/features/admin/PermissionsPage").then((m) => ({ default: m.PermissionsPage })));
 
 function AppRoutes() {
   const { isAuthenticated, loading } = useAuth();
@@ -42,7 +41,6 @@ function AppRoutes() {
           <Route path="/admin/chamados" element={<AdminChamadosPage />} />
           <Route path="/admin/templates" element={<TemplateEditorPage />} />
           <Route path="/admin/usuarios" element={<UsersPage />} />
-          <Route path="/admin/permissoes" element={<PermissionsPage />} />
           <Route path="/painel-administrativo" element={<Navigate to="/admin/chamados" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

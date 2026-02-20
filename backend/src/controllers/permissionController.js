@@ -6,6 +6,7 @@ export const permissionController = {
       const users = await permissionService.listAuthUsers();
       res.json({ success: true, users });
     } catch (error) {
+      console.error('[permissions] listAuthUsers:', error.message);
       res.status(500).json({ success: false, error: error.message });
     }
   },
@@ -17,6 +18,7 @@ export const permissionController = {
       const permissions = await permissionService.getByAuthUserId(authUserId);
       res.json({ success: true, permissions });
     } catch (error) {
+      console.error('[permissions] getByAuthUserId:', error.message);
       res.status(500).json({ success: false, error: error.message });
     }
   },
@@ -29,6 +31,7 @@ export const permissionController = {
       const permissions = await permissionService.setForAuthUser(authUserId, departamentos);
       res.json({ success: true, permissions });
     } catch (error) {
+      console.error('[permissions] setForAuthUser:', error.message);
       res.status(500).json({ success: false, error: error.message });
     }
   },

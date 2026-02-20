@@ -109,11 +109,12 @@ function SortableItem({
         display: "flex",
         alignItems: "center",
         gap: 1,
-        borderRadius: 1,
-        border: 1,
+        borderRadius: 1.5,
+        border: 2,
         borderColor: "divider",
         p: 1,
-        bgcolor: isDragging ? "action.hover" : "background.paper",
+        bgcolor: isDragging ? "action.hover" : "#fff",
+        boxShadow: isDragging ? 2 : "0 1px 3px rgba(0,0,0,0.08)",
         opacity: isDragging ? 0.9 : 1,
       }}
     >

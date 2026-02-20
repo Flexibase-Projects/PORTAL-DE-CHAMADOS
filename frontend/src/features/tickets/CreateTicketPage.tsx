@@ -269,18 +269,33 @@ export function CreateTicketPage() {
               fullWidth
             />
 
-            {templateFields.map((field) => {
-              const fieldId = field.id ?? field.key;
-              return (
-                <TemplateFieldRenderer
-                  key={fieldId}
-                  field={field}
-                  value={dadosExtras[fieldId]}
-                  onChange={(v) => handleDynamicChange(fieldId, v)}
-                  error={errors[fieldId]}
-                />
-              );
-            })}
+            {templateFields.length > 0 && (
+              <Box
+                sx={{
+                  bgcolor: "rgba(37, 99, 235, 0.06)",
+                  borderRadius: 1.5,
+                  border: "1px solid",
+                  borderColor: "rgba(37, 99, 235, 0.2)",
+                  p: 2,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                }}
+              >
+                {templateFields.map((field) => {
+                  const fieldId = field.id ?? field.key;
+                  return (
+                    <TemplateFieldRenderer
+                      key={fieldId}
+                      field={field}
+                      value={dadosExtras[fieldId]}
+                      onChange={(v) => handleDynamicChange(fieldId, v)}
+                      error={errors[fieldId]}
+                    />
+                  );
+                })}
+              </Box>
+            )}
 
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, pt: 1 }}>
               <Button variant="outlined" onClick={() => navigate("/")} disabled={loading}>

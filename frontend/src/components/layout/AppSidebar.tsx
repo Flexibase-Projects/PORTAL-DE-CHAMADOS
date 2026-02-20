@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Send,
   Inbox,
-  Settings,
   BookOpen,
   Moon,
   Sun,
@@ -11,10 +10,8 @@ import {
   ChevronLeft,
   Menu,
   HelpCircle,
-  FolderOpen,
   FileEdit,
   Users,
-  Shield,
 } from "lucide-react";
 import Box from "@mui/material/Box";
 import List from "@mui/material/List";
@@ -27,6 +24,7 @@ import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import { useTheme } from "@/hooks/useTheme";
 import { UserNav } from "./UserNav";
+import { APP_HEADER_HEIGHT } from "./AppHeader";
 
 interface NavItem {
   title: string;
@@ -52,7 +50,6 @@ const navCategories: { label: string; items: NavItem[] }[] = [
       { title: "Gestão de Chamados", icon: TicketCheck, path: "/admin/chamados" },
       { title: "Templates", icon: FileEdit, path: "/admin/templates" },
       { title: "Usuários", icon: Users, path: "/admin/usuarios" },
-      { title: "Permissões", icon: Shield, path: "/admin/permissoes" },
     ],
   },
   {
@@ -114,114 +111,132 @@ export function AppSidebar({
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        py: 0.75,
+        pt: 0,
+        pb: 0.75,
         minHeight: 0,
       }}
     >
-      {/* --- Expandido: Logo + Título à esquerda, botão retrair à direita --- */}
-      {!collapsed && (
-        <>
-          <Box
-            sx={{
-              px: 1.25,
-              py: 1.25,
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              minHeight: 0,
-            }}
-          >
+      {/* Área logo + divider: altura fixa igual ao header para o divider alinhar à linha do header */}
+      <Box
+        sx={{
+          height: APP_HEADER_HEIGHT,
+          minHeight: APP_HEADER_HEIGHT,
+          flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "flex-end",
+        }}
+      >
+        {!collapsed && (
+          <>
             <Box
               sx={{
-                width: LOGO_SIZE,
-                height: LOGO_SIZE,
-                borderRadius: 1,
-                bgcolor: SIDEBAR_ACCENT,
-                color: "#fff",
+                flex: 1,
+                px: 1.25,
+                py: 1.25,
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
+                gap: 1,
+                minHeight: 0,
               }}
-              aria-hidden
             >
-              <TicketCheck style={{ width: 16, height: 16 }} />
-            </Box>
-            <Typography
-              variant="body2"
-              fontWeight={600}
-              noWrap
-              sx={{ flex: 1, minWidth: 0, fontSize: "0.8125rem" }}
-            >
-              Portal de Chamados
-            </Typography>
-            <Tooltip title={toggleLabel} placement="right">
-              <IconButton
-                size="small"
-                onClick={handleToggle}
-                aria-label={toggleLabel}
+              <Box
                 sx={{
-                  color: "text.secondary",
-                  "&:hover": { bgcolor: "action.hover", color: "text.primary" },
+                  width: LOGO_SIZE,
+                  height: LOGO_SIZE,
+                  borderRadius: 1,
+                  bgcolor: SIDEBAR_ACCENT,
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
                 }}
+                aria-hidden
               >
-                <ToggleIcon style={{ width: ICON_SIZE, height: ICON_SIZE }} />
-              </IconButton>
-            </Tooltip>
-          </Box>
-          <Divider sx={{ my: 0.25, borderBottomWidth: 0.5 }} />
-        </>
-      )}
+                <TicketCheck style={{ width: 16, height: 16 }} />
+              </Box>
+              <Typography
+                variant="body2"
+                fontWeight={600}
+                noWrap
+                sx={{ flex: 1, minWidth: 0, fontSize: "0.8125rem" }}
+              >
+                Portal de Chamados
+              </Typography>
+              <Tooltip title={toggleLabel} placement="right">
+                <IconButton
+                  size="small"
+                  onClick={handleToggle}
+                  aria-label={toggleLabel}
+                  sx={{
+                    color: "text.secondary",
+                    "&:hover": { bgcolor: "action.hover", color: "text.primary" },
+                  }}
+                >
+                  <ToggleIcon style={{ width: ICON_SIZE, height: ICON_SIZE }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            <Divider sx={{ flexShrink: 0, borderBottomWidth: 0.5 }} />
+          </>
+        )}
 
-      {/* --- Retraído: Logo, Divider, Botão expandir, Divider --- */}
-      {collapsed && (
-        <>
-          <Box
-            sx={{
-              px: 0,
-              py: 1.25,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 0,
-            }}
-          >
+        {collapsed && (
+          <>
             <Box
               sx={{
-                width: LOGO_SIZE,
-                height: LOGO_SIZE,
-                borderRadius: 1,
-                bgcolor: SIDEBAR_ACCENT,
-                color: "#fff",
+                flex: 1,
+                px: 0,
+                py: 1.25,
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                flexShrink: 0,
+                gap: 0,
               }}
-              aria-hidden
             >
-              <TicketCheck style={{ width: 16, height: 16 }} />
-            </Box>
-          </Box>
-          <Divider sx={{ my: 0.25, borderBottomWidth: 0.5 }} />
-          <Box sx={{ display: "flex", justifyContent: "center", py: 0.5 }}>
-            <Tooltip title={toggleLabel} placement="right">
-              <IconButton
-                size="small"
-                onClick={handleToggle}
-                aria-label={toggleLabel}
+              <Box
                 sx={{
-                  color: "text.secondary",
-                  "&:hover": { bgcolor: "action.hover", color: "text.primary" },
+                  width: LOGO_SIZE,
+                  height: LOGO_SIZE,
+                  borderRadius: 1,
+                  bgcolor: SIDEBAR_ACCENT,
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
                 }}
+                aria-hidden
               >
-                <Menu style={{ width: ICON_SIZE, height: ICON_SIZE }} />
-              </IconButton>
-            </Tooltip>
-          </Box>
-          <Divider sx={{ my: 0.25, borderBottomWidth: 0.5 }} />
-        </>
+                <TicketCheck style={{ width: 16, height: 16 }} />
+              </Box>
+            </Box>
+            <Divider sx={{ flexShrink: 0, borderBottomWidth: 0.5 }} />
+          </>
+        )}
+      </Box>
+
+      {/* Botão expandir (só no modo retraído) */}
+      {collapsed && (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 0.5 }}>
+          <Tooltip title={toggleLabel} placement="right">
+            <IconButton
+              size="small"
+              onClick={handleToggle}
+              aria-label={toggleLabel}
+              sx={{
+                color: "text.secondary",
+                "&:hover": { bgcolor: "action.hover", color: "text.primary" },
+              }}
+            >
+              <Menu style={{ width: ICON_SIZE, height: ICON_SIZE }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
       )}
+      {collapsed && <Divider sx={{ my: 0.25, borderBottomWidth: 0.5 }} />}
 
       {/* Navegação */}
       <List sx={{ flex: 1, py: 0, px: 0.75, minHeight: 0 }} dense>

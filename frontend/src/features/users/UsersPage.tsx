@@ -1,148 +1,125 @@
 import { useState, useEffect } from "react";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
 import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
+import Typography from "@mui/material/Typography";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import IconButton from "@mui/material/IconButton";
-import Chip from "@mui/material/Chip";
 import Alert from "@mui/material/Alert";
 import Skeleton from "@mui/material/Skeleton";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
-import Typography from "@mui/material/Typography";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
 import CircularProgress from "@mui/material/CircularProgress";
-import { Plus, Pencil, UserX, UserCheck } from "lucide-react";
-import { userService } from "@/services/userService";
-import { SETORES, DEPARTAMENTOS_POR_SETOR } from "@/constants/departamentos";
-import { ROLE_LABELS } from "@/constants/roles";
-import type { User, Role } from "@/types/user";
+import { Shield } from "lucide-react";
+import { permissionService, type AuthUserListItem, type PermissaoTipo } from "@/services/permissionService";
+import { getAllDepartamentos } from "@/constants/departamentos";
+
+const PERMISSAO_LABELS: Record<PermissaoTipo, string> = {
+  view: "Ver",
+  view_edit: "Ver e editar",
+};
 
 export function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
+  const [users, setUsers] = useState<AuthUserListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [form, setForm] = useState({
-    nome: "",
-    email: "",
-    setor: "",
-    departamento: "",
-    ramal: "",
-    role_id: "",
-  });
+  const [selectedUser, setSelectedUser] = useState<AuthUserListItem | null>(null);
+  const [perms, setPerms] = useState<Record<string, PermissaoTipo>>({});
+  const [saving, setSaving] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [loadPermsLoading, setLoadPermsLoading] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  const departamentos = getAllDepartamentos();
 
   useEffect(() => {
-    loadData();
+    loadUsers();
   }, []);
 
-  const loadData = async () => {
+  const loadUsers = async () => {
     setLoading(true);
+    setError("");
     try {
-      const [usersRes, rolesRes] = await Promise.all([
-        userService.getAll(),
-        userService.getRoles(),
-      ]);
-      if (usersRes.success) setUsers(usersRes.users);
-      if (rolesRes.success) setRoles(rolesRes.roles);
-    } catch {
-      setError("Erro ao carregar dados.");
+      const res = await permissionService.listAuthUsers();
+      if (res.success) setUsers(res.users || []);
+      else setError("Não foi possível carregar usuários.");
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        "Erro ao carregar usuários do Auth. Configure SUPABASE_SERVICE_ROLE_KEY no backend para listar usuários.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOpenCreate = () => {
-    setEditingUser(null);
-    setForm({
-      nome: "",
-      email: "",
-      setor: "",
-      departamento: "",
-      ramal: "",
-      role_id: roles.find((r) => r.nome === "usuario")?.id || "",
-    });
+  const openPermissions = async (user: AuthUserListItem) => {
+    setSelectedUser(user);
     setDialogOpen(true);
-  };
-
-  const handleOpenEdit = (user: User) => {
-    setEditingUser(user);
-    setForm({
-      nome: user.nome,
-      email: user.email,
-      setor: user.setor,
-      departamento: user.departamento,
-      ramal: user.ramal || "",
-      role_id: user.role_id,
-    });
-    setDialogOpen(true);
-  };
-
-  const handleSave = async () => {
-    if (!form.nome || !form.email || !form.setor || !form.departamento || !form.role_id) {
-      setError("Preencha todos os campos obrigatórios.");
-      return;
-    }
-    setSaving(true);
-    setError("");
+    setSaveError("");
+    setLoadPermsLoading(true);
+    setPerms({});
     try {
-      if (editingUser) {
-        const res = await userService.update(editingUser.id, form);
-        if (res.success) {
-          setSuccess("Usuário atualizado!");
-          setDialogOpen(false);
-          await loadData();
-        }
-      } else {
-        const res = await userService.create(form);
-        if (res.success) {
-          setSuccess("Usuário criado!");
-          setDialogOpen(false);
-          await loadData();
-        }
-      }
+      const res = await permissionService.getByAuthUserId(user.id);
+      if (res.success) setPerms(res.permissions || {});
     } catch {
-      setError("Erro ao salvar usuário.");
+      setPerms({});
+    } finally {
+      setLoadPermsLoading(false);
+    }
+  };
+
+  const handlePermChange = (departamento: string, value: PermissaoTipo | "") => {
+    if (!value) {
+      const next = { ...perms };
+      delete next[departamento];
+      setPerms(next);
+    } else {
+      setPerms((p) => ({ ...p, [departamento]: value }));
+    }
+  };
+
+  const handleSavePermissions = async () => {
+    if (!selectedUser) return;
+    setSaving(true);
+    setSaveError("");
+    setError("");
+    setSuccess("");
+    try {
+      const res = await permissionService.setForAuthUser(selectedUser.id, perms);
+      if (res.success) {
+        setPerms(res.permissions || {});
+        setSuccess("Permissões salvas com sucesso.");
+        setDialogOpen(false);
+      } else {
+        setSaveError("Não foi possível salvar. Tente novamente.");
+      }
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        (err as Error)?.message ||
+        "Erro ao salvar permissões. Verifique se a tabela PDC_user_permissions existe e se o backend tem acesso ao Supabase.";
+      setSaveError(msg);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleToggleActive = async (user: User) => {
-    try {
-      const res = await userService.toggleActive(user.id);
-      if (res.success) {
-        setSuccess(`Usuário ${res.user.ativo ? "ativado" : "desativado"} com sucesso!`);
-        await loadData();
-      }
-    } catch {
-      setError("Erro ao alterar status do usuário.");
-    }
-  };
-
-  const getRoleName = (roleId: string) => {
-    const role = roles.find((r) => r.id === roleId);
-    return role ? ROLE_LABELS[role.nome] || role.nome : "—";
-  };
-
   if (loading) {
     return (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-        {[1, 2, 3, 4].map((i) => (
+        {[1, 2, 3, 4, 5].map((i) => (
           <Skeleton key={i} variant="rounded" height={48} />
         ))}
       </Box>
@@ -151,6 +128,15 @@ export function UsersPage() {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <Box>
+        <Typography variant="h5" gutterBottom sx={{ mb: 0.25 }}>
+          Usuários
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Usuários do Supabase Auth. Clique em &quot;Permissões&quot; para definir por departamento: Ver ou Ver e editar chamados da área.
+        </Typography>
+      </Box>
+
       {error && (
         <Alert severity="error" onClose={() => setError("")}>
           {error}
@@ -162,150 +148,91 @@ export function UsersPage() {
         </Alert>
       )}
 
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
-        <Typography variant="body2" color="text.secondary">
-          {users.length} usuário(s) cadastrado(s)
-        </Typography>
-        <Button variant="contained" startIcon={<Plus style={{ width: 18, height: 18 }} />} onClick={handleOpenCreate}>
-          Novo Usuário
-        </Button>
-      </Box>
-
-      <Card sx={{ overflow: "hidden" }}>
-        <Box sx={{ overflow: "auto" }}>
-        <Table size="small" sx={{ minWidth: 480 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell>Nome</TableCell>
-              <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Email</TableCell>
-              <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>Departamento</TableCell>
-              <TableCell>Perfil</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="right" sx={{ width: 100 }}>Ações</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4 }} color="text.secondary">
-                  Nenhum usuário cadastrado.
-                </TableCell>
-              </TableRow>
-            ) : (
-              users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell fontWeight={500}>{user.nome}</TableCell>
-                  <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }} color="text.secondary">
-                    {user.email}
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{user.departamento}</TableCell>
-                  <TableCell>
-                    <Chip label={getRoleName(user.role_id)} size="small" variant="outlined" />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={user.ativo ? "Ativo" : "Inativo"}
-                      size="small"
-                      color={user.ativo ? "success" : "default"}
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton size="small" onClick={() => handleOpenEdit(user)}>
-                      <Pencil style={{ width: 16, height: 16 }} />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => handleToggleActive(user)}>
-                      {user.ativo ? (
-                        <UserX style={{ width: 16, height: 16 }} color="inherit" />
-                      ) : (
-                        <UserCheck style={{ width: 16, height: 16 }} color="success" />
-                      )}
-                    </IconButton>
-                  </TableCell>
+      <Card>
+        <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
+          {users.length === 0 ? (
+            <Alert severity="info" sx={{ m: 2 }}>
+              Nenhum usuário encontrado. Crie usuários no Supabase Auth (Dashboard → Authentication → Users) e
+              configure SUPABASE_SERVICE_ROLE_KEY no backend para listar aqui.
+            </Alert>
+          ) : (
+            <Table size="small" sx={{ minWidth: 360 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Nome / Identificação</TableCell>
+                  <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Email</TableCell>
+                  <TableCell align="right" sx={{ width: 120 }}>Ações</TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Box>
+              </TableHead>
+              <TableBody>
+                {users.map((u) => (
+                  <TableRow key={u.id}>
+                    <TableCell fontWeight={500}>{u.nome || u.email || u.id}</TableCell>
+                    <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }} color="text.secondary">
+                      {u.email ?? "—"}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<Shield style={{ width: 16, height: 16 }} />}
+                        onClick={() => openPermissions(u)}
+                      >
+                        Permissões
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingUser ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>
+      <Dialog open={dialogOpen} onClose={() => { setDialogOpen(false); setSaveError(""); }} maxWidth="sm" fullWidth>
+        <DialogTitle>Permissões — {selectedUser?.nome || selectedUser?.email || "Usuário"}</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
-              <TextField
-                label="Nome *"
-                size="small"
-                value={form.nome}
-                onChange={(e) => setForm((p) => ({ ...p, nome: e.target.value }))}
-                fullWidth
-              />
-              <TextField
-                label="Email *"
-                type="email"
-                size="small"
-                value={form.email}
-                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                fullWidth
-              />
-              <FormControl fullWidth size="small">
-                <InputLabel>Setor *</InputLabel>
-                <Select
-                  value={form.setor}
-                  label="Setor *"
-                  onChange={(e) => setForm((p) => ({ ...p, setor: e.target.value, departamento: "" }))}
-                >
-                  {SETORES.map((s) => (
-                    <MenuItem key={s} value={s}>
-                      {s}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl fullWidth size="small" disabled={!form.setor}>
-                <InputLabel>Departamento *</InputLabel>
-                <Select
-                  value={form.departamento}
-                  label="Departamento *"
-                  onChange={(e) => setForm((p) => ({ ...p, departamento: e.target.value }))}
-                >
-                  {(DEPARTAMENTOS_POR_SETOR[form.setor] || []).map((d) => (
-                    <MenuItem key={d} value={d}>
-                      {d}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <TextField
-                label="Ramal"
-                size="small"
-                value={form.ramal}
-                onChange={(e) => setForm((p) => ({ ...p, ramal: e.target.value }))}
-                fullWidth
-              />
-              <FormControl fullWidth size="small">
-                <InputLabel>Perfil *</InputLabel>
-                <Select
-                  value={form.role_id}
-                  label="Perfil *"
-                  onChange={(e) => setForm((p) => ({ ...p, role_id: e.target.value }))}
-                >
-                  {roles.map((r) => (
-                    <MenuItem key={r.id} value={r.id}>
-                      {ROLE_LABELS[r.nome] || r.nome}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+          {saveError && (
+            <Alert severity="error" onClose={() => setSaveError("")} sx={{ mb: 2 }}>
+              {saveError}
+            </Alert>
+          )}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Por departamento: sem permissão = não vê chamados da área. &quot;Ver&quot; = só visualizar; &quot;Ver e editar&quot; = pode
+            alterar status e responder.
+          </Typography>
+          {loadPermsLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+              <CircularProgress size={24} />
             </Box>
-          </Box>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {departamentos.map((dept) => (
+                <FormControl key={dept} size="small" fullWidth>
+                  <InputLabel>{dept}</InputLabel>
+                  <Select
+                    value={perms[dept] ?? ""}
+                    label={dept}
+                    onChange={(e) => handlePermChange(dept, (e.target.value as PermissaoTipo) || "")}
+                  >
+                    <MenuItem value="">Sem permissão</MenuItem>
+                    <MenuItem value="view">{PERMISSAO_LABELS.view}</MenuItem>
+                    <MenuItem value="view_edit">{PERMISSAO_LABELS.view_edit}</MenuItem>
+                  </Select>
+                </FormControl>
+              ))}
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSave} disabled={saving} startIcon={saving ? <CircularProgress size={18} /> : null}>
-            {saving ? "Salvando..." : editingUser ? "Salvar" : "Criar"}
+          <Button
+            variant="contained"
+            onClick={handleSavePermissions}
+            disabled={saving}
+            startIcon={saving ? <CircularProgress size={16} /> : <Shield size={16} />}
+          >
+            {saving ? "Salvando..." : "Salvar"}
           </Button>
         </DialogActions>
       </Dialog>
