@@ -254,10 +254,11 @@ export const ticketService = {
 
     const { data: pdcUser } = await supabase
       .from('PDC_users')
-      .select('id')
+      .select('id, departamento')
       .eq('auth_user_id', authUserId)
       .single();
     const solicitanteId = pdcUser?.id || null;
+    if (pdcUser?.departamento?.trim()) permittedSet.add(pdcUser.departamento.trim());
 
     const formatTicket = (t) => ({
       ...t,

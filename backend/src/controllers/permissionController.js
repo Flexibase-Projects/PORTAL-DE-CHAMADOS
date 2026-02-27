@@ -15,8 +15,8 @@ export const permissionController = {
     try {
       const { authUserId } = req.params;
       if (!authUserId) return res.status(400).json({ success: false, error: 'authUserId é obrigatório' });
-      const permissions = await permissionService.getByAuthUserId(authUserId);
-      res.json({ success: true, permissions });
+      const result = await permissionService.getByAuthUserId(authUserId);
+      res.json({ success: true, ...result });
     } catch (error) {
       console.error('[permissions] getByAuthUserId:', error.message);
       res.status(500).json({ success: false, error: error.message });
@@ -26,12 +26,25 @@ export const permissionController = {
   async setForAuthUser(req, res) {
     try {
       const { authUserId } = req.params;
-      const { departamentos } = req.body || {};
+      const { departamentos, userDepartamento } = req.body || {};
       if (!authUserId) return res.status(400).json({ success: false, error: 'authUserId é obrigatório' });
-      const permissions = await permissionService.setForAuthUser(authUserId, departamentos);
-      res.json({ success: true, permissions });
+      const result = await permissionService.setForAuthUser(authUserId, departamentos, userDepartamento);
+      res.json({ success: true, ...result });
     } catch (error) {
       console.error('[permissions] setForAuthUser:', error.message);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+
+  async setUserDepartamento(req, res) {
+    try {
+      const { authUserId } = req.params;
+      const { userDepartamento } = req.body || {};
+      if (!authUserId) return res.status(400).json({ success: false, error: 'authUserId é obrigatório' });
+      const result = await permissionService.setUserDepartamento(authUserId, userDepartamento ?? null);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      console.error('[permissions] setUserDepartamento:', error.message);
       res.status(500).json({ success: false, error: error.message });
     }
   },

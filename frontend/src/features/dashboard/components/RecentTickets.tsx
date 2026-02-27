@@ -1,3 +1,5 @@
+import { useTheme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import CardHeader from "@mui/material/CardHeader";
@@ -28,17 +30,25 @@ function statusColor(status: string): "default" | "primary" | "warning" | "succe
 }
 
 export function RecentTickets({ tickets }: RecentTicketsProps) {
+  const theme = useTheme();
+  const color = theme.palette.primary.main;
   return (
-    <Card>
+    <Card
+      sx={{
+        "&:hover": {
+          boxShadow: `0 0 24px ${alpha(color, 0.28)}, 0 0 48px ${alpha(color, 0.12)}`,
+        },
+      }}
+    >
       <CardHeader title="Chamados Recentes" />
-      <CardContent sx={{ pt: 0 }}>
+      <CardContent sx={{ pt: 0, px: { xs: 1.5, sm: 2 } }}>
         {tickets.length === 0 ? (
           <Typography variant="body2" color="text.secondary" textAlign="center" py={3}>
             Nenhum chamado encontrado.
           </Typography>
         ) : (
-          <Box sx={{ overflowX: "auto", mx: -2 }}>
-            <Table size="small" sx={{ minWidth: 420 }}>
+          <Box sx={{ overflowX: "auto", mx: { xs: -1.5, sm: -2 } }}>
+            <Table size="small" sx={{ minWidth: { xs: 280, sm: 420 } }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Protocolo</TableCell>

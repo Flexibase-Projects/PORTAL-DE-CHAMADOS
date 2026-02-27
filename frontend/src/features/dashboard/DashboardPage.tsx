@@ -6,6 +6,10 @@ import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+import Popover from "@mui/material/Popover";
+import { Calendar } from "lucide-react";
 import { StatsCards } from "./components/StatsCards";
 import { RecentTickets } from "./components/RecentTickets";
 import {
@@ -13,6 +17,11 @@ import {
   DepartmentBarChart,
   TicketsBySetorDonut,
 } from "./components/Charts";
+import {
+  getDateRangeForPeriod,
+  PERIOD_LABELS,
+  type PeriodKey,
+} from "./dashboardPeriod";
 import { getSetorByDepartamento } from "@/constants/departamentos";
 import { ticketService, type DashboardStats } from "@/services/ticketService";
 
@@ -36,61 +45,78 @@ export function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
   const [loading, setLoading] = useState(true);
   const [filterSetorGlobal, setFilterSetorGlobal] = useState<string | null>(null);
-  const [customRangeData, setCustomRangeData] = useState<{
-    por_dia: { date: string; count: number }[];
-    por_dia_industria: { date: string; count: number }[];
-    por_dia_administrativo: { date: string; count: number }[];
-    por_mes_geral_range?: { mes: string; count: number }[];
-    por_mes_industria_range?: { mes: string; count: number }[];
-    por_mes_administrativo_range?: { mes: string; count: number }[];
-  } | null>(null);
+  const [periodKey, setPeriodKey] = useState<PeriodKey>("7d");
+  const [customDateFrom, setCustomDateFrom] = useState("");
+  const [customDateTo, setCustomDateTo] = useState("");
+  const [customViewMode, setCustomViewMode] = useState<"dia" | "mes">("dia");
+  const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null);
 
-  useEffect(() => {
+  const loadStats = (options?: { dateFrom: string; dateTo: string }) => {
+    setLoading(true);
     ticketService
-      .getDashboardStats()
+      .getDashboardStats(options)
       .then((res) => {
         if (res.success) setStats(res.stats);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
-
-  const handleCustomRangeChange = (dateFrom: string, dateTo: string) => {
-    ticketService
-      .getDashboardStats({ dateFrom, dateTo })
-      .then((res) => {
-        if (res.success) {
-          const s = res.stats as DashboardStats & {
-            por_mes_geral_range?: { mes: string; count: number }[];
-            por_mes_industria_range?: { mes: string; count: number }[];
-            por_mes_administrativo_range?: { mes: string; count: number }[];
-          };
-          setCustomRangeData({
-            por_dia: s.por_dia,
-            por_dia_industria: s.por_dia_industria,
-            por_dia_administrativo: s.por_dia_administrativo,
-            por_mes_geral_range: s.por_mes_geral_range,
-            por_mes_industria_range: s.por_mes_industria_range,
-            por_mes_administrativo_range: s.por_mes_administrativo_range,
-          });
-        }
-      })
-      .catch(() => setCustomRangeData(null));
   };
+
+  useEffect(() => {
+    if (periodKey === "custom") {
+      if (customDateFrom && customDateTo && customDateFrom <= customDateTo) {
+        loadStats({ dateFrom: customDateFrom, dateTo: customDateTo });
+      } else {
+        setStats(emptyStats);
+        setLoading(false);
+      }
+      return;
+    }
+    const range = getDateRangeForPeriod(periodKey);
+    if (range) loadStats(range);
+  }, [periodKey, customDateFrom, customDateTo]);
+
+  const handlePeriodChange = (key: PeriodKey) => {
+    setPeriodKey(key);
+  };
+
+  const applyCustomRange = () => {
+    if (customDateFrom && customDateTo && customDateFrom <= customDateTo) {
+      setPopoverAnchor(null);
+    }
+  };
+
+  const todayStr = () => new Date().toISOString().split("T")[0];
 
   if (loading) {
     return (
-      <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 2, md: 2.5 } }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 1.5, sm: 2, md: 2.5 } }}>
         <Box>
           <Skeleton variant="text" width={180} height={36} />
           <Skeleton variant="text" width={260} height={20} />
         </Box>
-        <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" } }}>
+        <Box
+          sx={{
+            display: "grid",
+            gap: 1.5,
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "1fr 1fr",
+              lg: "repeat(4, 1fr)",
+            },
+          }}
+        >
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} variant="rounded" height={88} />
           ))}
         </Box>
-        <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" } }}>
+        <Box
+          sx={{
+            display: "grid",
+            gap: 1.5,
+            gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+          }}
+        >
           <Skeleton variant="rounded" height={260} />
           <Skeleton variant="rounded" height={260} />
         </Box>
@@ -101,17 +127,94 @@ export function DashboardPage() {
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 2, md: 2.5 } }}>
-      <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.5 }}>
-        <Box sx={{ flex: "1 1 auto" }}>
-          <Typography variant="h5" gutterBottom sx={{ mb: 0.25 }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 1.5, sm: 2, md: 2.5 } }}>
+      <Box
+        sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: { xs: 1, sm: 1.5 },
+        }}
+      >
+        <Box sx={{ flex: "1 1 auto", minWidth: 0 }}>
+          <Typography variant="h5" gutterBottom sx={{ mb: 0.25, fontSize: { xs: "1.1rem", sm: "1.25rem" } }}>
             Dashboard
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Visao geral do Portal de Chamados.
           </Typography>
         </Box>
-        <FormControl sx={{ minWidth: 150 }}>
+        <FormControl size="small" sx={{ minWidth: { xs: "100%", sm: 150 }, flex: { xs: "1 1 100%", sm: "0 0 auto" } }}>
+          <InputLabel>Período</InputLabel>
+          <Select
+            value={periodKey}
+            label="Período"
+            onChange={(e) => handlePeriodChange(e.target.value as PeriodKey)}
+          >
+            <MenuItem value="7d">{PERIOD_LABELS["7d"]}</MenuItem>
+            <MenuItem value="mes_atual">{PERIOD_LABELS.mes_atual}</MenuItem>
+            <MenuItem value="mes_anterior">{PERIOD_LABELS.mes_anterior}</MenuItem>
+            <MenuItem value="ano_atual">{PERIOD_LABELS.ano_atual}</MenuItem>
+            <MenuItem value="ano_anterior">{PERIOD_LABELS.ano_anterior}</MenuItem>
+            <MenuItem value="custom">{PERIOD_LABELS.custom}</MenuItem>
+          </Select>
+        </FormControl>
+        {periodKey === "custom" && (
+          <>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<Calendar size={18} />}
+              onClick={(e) => setPopoverAnchor(e.currentTarget)}
+              sx={{ color: "primary.main" }}
+            >
+              {customDateFrom && customDateTo ? `${customDateFrom} → ${customDateTo}` : "Selecionar datas"}
+            </Button>
+            <Popover
+              open={Boolean(popoverAnchor)}
+              anchorEl={popoverAnchor}
+              onClose={() => setPopoverAnchor(null)}
+              anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+              transformOrigin={{ vertical: "top", horizontal: "left" }}
+              slotProps={{ paper: { sx: { p: 2, minWidth: 280 } } }}
+            >
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <Typography variant="subtitle2" fontWeight={600}>
+                  Intervalo
+                </Typography>
+                <TextField
+                  size="small"
+                  fullWidth
+                  label="Data inicial"
+                  type="date"
+                  value={customDateFrom}
+                  onChange={(e) => setCustomDateFrom(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ max: customDateTo || todayStr() }}
+                />
+                <TextField
+                  size="small"
+                  fullWidth
+                  label="Data final"
+                  type="date"
+                  value={customDateTo}
+                  onChange={(e) => setCustomDateTo(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: customDateFrom, max: todayStr() }}
+                />
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={applyCustomRange}
+                  disabled={!customDateFrom || !customDateTo || customDateFrom > customDateTo}
+                >
+                  Aplicar
+                </Button>
+              </Box>
+            </Popover>
+          </>
+        )}
+        <FormControl size="small" sx={{ minWidth: { xs: "100%", sm: 150 }, flex: { xs: "1 1 100%", sm: "0 0 auto" } }}>
           <InputLabel>Filtrar por setor</InputLabel>
           <Select
             value={filterSetorGlobal ?? ""}
@@ -136,7 +239,7 @@ export function DashboardPage() {
         sx={{
           display: "grid",
           gap: 1.5,
-          gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
+          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
         }}
       >
         <ChamadosPorPeriodoChart
@@ -154,25 +257,9 @@ export function DashboardPage() {
                 ? stats.por_mes_administrativo
                 : stats.por_mes_geral
           }
-          dataDiaCustom={
-            customRangeData
-              ? filterSetorGlobal === "Industrial"
-                ? customRangeData.por_dia_industria
-                : filterSetorGlobal === "Administrativo"
-                  ? customRangeData.por_dia_administrativo
-                  : customRangeData.por_dia
-              : null
-          }
-          dataMesCustom={
-            customRangeData
-              ? filterSetorGlobal === "Industrial"
-                ? (customRangeData.por_mes_industria_range ?? null)
-                : filterSetorGlobal === "Administrativo"
-                  ? (customRangeData.por_mes_administrativo_range ?? null)
-                  : (customRangeData.por_mes_geral_range ?? null)
-              : null
-          }
-          onCustomRangeChange={handleCustomRangeChange}
+          periodKey={periodKey}
+          customViewMode={customViewMode}
+          onCustomViewModeChange={setCustomViewMode}
         />
         <TicketsBySetorDonut data={stats.por_setor} />
       </Box>

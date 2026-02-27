@@ -114,13 +114,21 @@ export const dashboardService = {
     if (error) throw new Error(error.message);
 
     const all = tickets || [];
-    const total = all.length;
-    const abertos = all.filter(t => t.status === 'Aberto').length;
-    const em_andamento = all.filter(t => t.status === 'Em Andamento').length;
-    const concluidos = all.filter(t => t.status === 'Concluído').length;
+    /** Quando useCustomRange, todas as estatísticas usam apenas tickets no intervalo. */
+    const listForStats = useCustomRange
+      ? all.filter((t) => {
+          const created = (t.created_at || '').toString().slice(0, 10);
+          return created >= dateFrom && created <= dateTo;
+        })
+      : all;
+
+    const total = listForStats.length;
+    const abertos = listForStats.filter(t => t.status === 'Aberto').length;
+    const em_andamento = listForStats.filter(t => t.status === 'Em Andamento').length;
+    const concluidos = listForStats.filter(t => t.status === 'Concluído').length;
 
     const deptCounts = {};
-    all.forEach(t => {
+    listForStats.forEach(t => {
       deptCounts[t.area_destino] = (deptCounts[t.area_destino] || 0) + 1;
     });
     const por_departamento = Object.entries(deptCounts)
@@ -161,14 +169,25 @@ export const dashboardService = {
       }
       return out;
     };
-    const por_dia = buildPorDia(all);
-    const por_dia_industria = buildPorDia(all, 'Industrial');
-    const por_dia_administrativo = buildPorDia(all, 'Administrativo');
+    const por_dia = buildPorDia(listForStats);
+    const por_dia_industria = buildPorDia(listForStats, 'Industrial');
+    const por_dia_administrativo = buildPorDia(listForStats, 'Administrativo');
 
-    const por_mes_geral = aggregateByMonth(all);
-    const por_mes_industria = aggregateByMonth(all, 'Industrial');
-    const por_mes_administrativo = aggregateByMonth(all, 'Administrativo');
-    const por_setor = aggregateBySetor(all);
+    const por_mes_geral = aggregateByMonth(listForStats);
+    const por_mes_industria = aggregateByMonth(listForStats, 'Industrial');
+    const por_mes_administrativo = aggregateByMonth(listForStats, 'Administrativo');
+    const por_setor = aggregateBySetor(listForStats);
+
+    /** Recentes: quando há período, filtrar por data e pegar os 10 mais recentes no intervalo. */
+    const recentesRaw = recentes || [];
+    const recentesFiltered = useCustomRange
+      ? recentesRaw
+          .filter((t) => {
+            const created = (t.created_at || '').toString().slice(0, 10);
+            return created >= dateFrom && created <= dateTo;
+          })
+          .slice(0, 10)
+      : recentesRaw.slice(0, 10);
 
     const out = {
       total,
@@ -179,7 +198,7 @@ export const dashboardService = {
       por_dia,
       por_dia_industria,
       por_dia_administrativo,
-      recentes: (recentes || []).map(t => ({
+      recentes: recentesFiltered.map(t => ({
         ...t,
         solicitante_nome: t.solicitante?.nome,
         solicitante_email: t.solicitante?.email,
@@ -190,9 +209,9 @@ export const dashboardService = {
       por_setor,
     };
     if (useCustomRange) {
-      out.por_mes_geral_range = aggregateByMonthInRange(all, null, dateFrom, dateTo);
-      out.por_mes_industria_range = aggregateByMonthInRange(all, 'Industrial', dateFrom, dateTo);
-      out.por_mes_administrativo_range = aggregateByMonthInRange(all, 'Administrativo', dateFrom, dateTo);
+      out.por_mes_geral_range = aggregateByMonthInRange(listForStats, null, dateFrom, dateTo);
+      out.por_mes_industria_range = aggregateByMonthInRange(listForStats, 'Industrial', dateFrom, dateTo);
+      out.por_mes_administrativo_range = aggregateByMonthInRange(listForStats, 'Administrativo', dateFrom, dateTo);
     }
 
     statsCache.key = cacheKey;

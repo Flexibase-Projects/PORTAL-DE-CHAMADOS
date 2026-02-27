@@ -36,11 +36,11 @@ export function LoginPage() {
         alignItems: "center",
         justifyContent: "center",
         bgcolor: "background.default",
-        p: 2,
+        p: { xs: 1, sm: 2 },
       }}
     >
       <Card sx={{ maxWidth: 400, width: "100%" }}>
-        <CardContent sx={{ p: 3 }}>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Typography variant="h5" gutterBottom align="center">
             Portal de Chamados
           </Typography>

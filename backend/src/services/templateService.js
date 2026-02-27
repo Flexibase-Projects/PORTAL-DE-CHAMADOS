@@ -1,10 +1,13 @@
 import supabase from '../config/supabase.js';
+import { supabaseAdmin } from '../config/supabaseAdmin.js';
+
+const db = () => supabaseAdmin || supabase;
 
 export const templateService = {
   async getByDepartamento(departamento) {
     if (!departamento) return { departamento: '', fields: [] };
 
-    const { data, error } = await supabase
+    const { data, error } = await db()
       .from('PDC_templates')
       .select('*')
       .eq('departamento', departamento)
@@ -43,7 +46,7 @@ export const templateService = {
 
     safeFields.sort((a, b) => a.order - b.order);
 
-    const { data, error } = await supabase
+    const { data, error } = await db()
       .from('PDC_templates')
       .upsert({
         departamento,
@@ -58,7 +61,7 @@ export const templateService = {
   },
 
   async getAllDepartamentos() {
-    const { data, error } = await supabase
+    const { data, error } = await db()
       .from('PDC_templates')
       .select('departamento')
       .eq('ativo', true);

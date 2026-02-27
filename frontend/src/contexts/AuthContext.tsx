@@ -21,6 +21,12 @@ interface AuthContextValue {
   user: AuthUser | null;
   session: Session | null;
   loading: boolean;
+  /** Departamento do usuário (PDC_users.departamento). Só preenchido após GET /me. */
+  departamento: string | null;
+  /** True se o usuário pertence ao departamento TI (acesso à aba Usuários). */
+  isTiUser: boolean;
+  /** True após a primeira resposta de GET /me (permite saber se já podemos confiar em isTiUser). */
+  meLoaded: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
@@ -31,6 +37,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [departamento, setDepartamento] = useState<string | null>(null);
+  const [meLoaded, setMeLoaded] = useState(false);
 
   const user: AuthUser | null = session?.user
     ? {
@@ -65,7 +73,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           })
           .catch(() => {});
       }
-      if (!newSession) syncedRef.current = null;
+      if (!newSession) {
+        syncedRef.current = null;
+        setDepartamento(null);
+        setMeLoaded(false);
+      }
     });
     void supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
@@ -84,6 +96,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setDepartamento(null);
+      setMeLoaded(false);
+      return;
+    }
+    setMeLoaded(false);
+    api
+      .get<{ success: boolean; departamento: string | null }>("/me")
+      .then((res) => {
+        if (res.data?.success) setDepartamento(res.data.departamento ?? null);
+        setMeLoaded(true);
+      })
+      .catch(() => {
+        setDepartamento(null);
+        setMeLoaded(true);
+      });
+  }, [session?.user?.id]);
+
   const signIn = useCallback(async (email: string, password: string) => {
     if (!supabase) return { error: "Supabase não configurado." };
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -98,6 +129,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     session,
     loading,
+    departamento,
+    isTiUser: (departamento || "").trim().toUpperCase() === "TI",
+    meLoaded,
     signIn,
     signOut,
     isAuthenticated: !!session?.user,

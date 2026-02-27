@@ -36,13 +36,25 @@ export function StatsCards({ total, abertos, emAndamento, concluidos }: StatsCar
       sx={{
         display: "grid",
         gap: 1.5,
-        gridTemplateColumns: { xs: "1fr 1fr", lg: "repeat(4, 1fr)" },
+        gridTemplateColumns: {
+          xs: "1fr",        // 320–575px: 1 coluna
+          sm: "1fr 1fr",    // 576–991px: 2 colunas
+          lg: "repeat(4, 1fr)", // 992px+: 4 colunas
+        },
       }}
     >
       {stats.map((s) => {
         const color = theme.palette[s.colorKey].main;
         return (
-          <Card key={s.key} sx={{ borderLeft: `3px solid ${color}` }}>
+          <Card
+            key={s.key}
+            sx={{
+              borderLeft: `3px solid ${color}`,
+              "&:hover": {
+                boxShadow: `0 0 24px ${alpha(color, 0.28)}, 0 0 48px ${alpha(color, 0.12)}`,
+              },
+            }}
+          >
             <CardContent sx={{ display: "flex", alignItems: "center", gap: 1.5, py: "12px !important" }}>
               <Box
                 sx={{

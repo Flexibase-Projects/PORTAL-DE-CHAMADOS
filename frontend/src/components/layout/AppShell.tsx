@@ -94,7 +94,7 @@ export function AppShell({ children }: AppShellProps) {
           sx={{
             flex: 1,
             overflow: "auto",
-            p: { xs: 1.5, sm: 2, md: 3 },
+            p: { xs: 1, sm: 1.5, md: 2, lg: 3 },
           }}
         >
           {children}

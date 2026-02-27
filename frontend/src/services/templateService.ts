@@ -25,12 +25,7 @@ export const templateService = {
       const template = localStorageStorage.saveTemplate(departamento, (fields ?? []) as TemplateField[]);
       return { success: true, template };
     }
-    try {
-      const res = await api.put("/templates", { departamento, fields });
-      return res.data;
-    } catch {
-      const template = localStorageStorage.saveTemplate(departamento, (fields ?? []) as TemplateField[]);
-      return { success: true, template };
-    }
+    const res = await api.put("/templates", { departamento, fields });
+    return res.data;
   },
 };

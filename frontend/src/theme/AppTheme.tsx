@@ -50,6 +50,15 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
   const isDark = mode === "dark";
 
   const muiTheme = createTheme({
+    breakpoints: {
+      values: {
+        xs: 0,
+        sm: 576,
+        md: 768,
+        lg: 992,
+        xl: 1200,
+      },
+    },
     palette: {
       mode,
       primary: tokens.primary,
@@ -100,7 +109,7 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
             border: "1px solid",
             borderColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
             boxShadow: "none",
-            transition: "box-shadow 0.2s ease, border-color 0.2s ease",
+            transition: "box-shadow 0.25s ease, border-color 0.2s ease",
           },
         },
       },

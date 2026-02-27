@@ -250,11 +250,12 @@ export function TemplateEditor({ departamento }: Props) {
         setFields(res.template?.fields ?? ordered);
       }
     } catch (err: unknown) {
-      const e = err as { code?: string; message?: string };
+      const e = err as { code?: string; message?: string; response?: { data?: { error?: string; message?: string } } };
       if (e.code === "ERR_NETWORK") {
         setError("Não foi possível conectar ao servidor.");
       } else {
-        setError(e.message || "Erro ao salvar template.");
+        const msg = e.response?.data?.error || e.response?.data?.message || e.message;
+        setError(msg || "Erro ao salvar template.");
       }
     } finally {
       setLoading(false);

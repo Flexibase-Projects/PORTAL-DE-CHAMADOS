@@ -15,6 +15,7 @@ import roleRoutes from './routes/roles.js';
 import kbRoutes from './routes/knowledge-base.js';
 import dashboardRoutes from './routes/dashboard.js';
 import permissionRoutes from './routes/permissions.js';
+import meRoutes from './routes/me.js';
 import notificationRoutes from './routes/notifications.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -36,6 +37,7 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/kb', kbRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin/permissions', permissionRoutes);
+app.use('/api/me', meRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 // Health check

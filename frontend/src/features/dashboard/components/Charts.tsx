@@ -17,181 +17,110 @@ import {
   Legend,
 } from "recharts";
 import { useTheme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import CardHeader from "@mui/material/CardHeader";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import TextField from "@mui/material/TextField";
-import Popover from "@mui/material/Popover";
-import Button from "@mui/material/Button";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
-import { Calendar } from "lucide-react";
+// --- Card unificado: Chamados por dia / por mês (período controlado pelo dashboard) ---
 
-// --- Card unificado: Chamados por dia / por mês / intervalo customizado ---
+import type { PeriodKey } from "../dashboardPeriod";
+
+const PERIODO_COLORS = { dia: "#0ea5e9", mes: "#2563eb" };
 
 interface ChamadosPorPeriodoChartProps {
   dataDia: { date: string; count: number }[];
   dataMes: { mes: string; count: number }[];
-  /** Dados do intervalo customizado por dia (já filtrados por setor). */
-  dataDiaCustom: { date: string; count: number }[] | null;
-  /** Dados do intervalo customizado por mês (já filtrados por setor). */
-  dataMesCustom: { mes: string; count: number }[] | null;
-  /** Chamado quando o usuário define data inicial e final no período customizado. */
-  onCustomRangeChange: (dateFrom: string, dateTo: string) => void;
+  /** Período selecionado no topo do dashboard (define visualização dia/mês). */
+  periodKey: PeriodKey;
+  /** Apenas para periodKey === "custom": exibir por dia ou por mês. */
+  customViewMode?: "dia" | "mes";
+  onCustomViewModeChange?: (mode: "dia" | "mes") => void;
 }
-
-const PERIODO_COLORS = { dia: "#0ea5e9", mes: "#2563eb" };
-
-const todayStr = () => new Date().toISOString().split("T")[0];
 
 export function ChamadosPorPeriodoChart({
   dataDia,
   dataMes,
-  dataDiaCustom,
-  dataMesCustom,
-  onCustomRangeChange,
+  periodKey,
+  customViewMode = "dia",
+  onCustomViewModeChange,
 }: ChamadosPorPeriodoChartProps) {
   const theme = useTheme();
   const secondaryColor = theme.palette.secondary.main;
-  const [periodo, setPeriodo] = useState<"dia" | "mes" | "custom">("dia");
-  const [dateFrom, setDateFrom] = useState<string>("");
-  const [dateTo, setDateTo] = useState<string>("");
-  const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null);
-  const [customViewMode, setCustomViewMode] = useState<"dia" | "mes">("dia");
+  const [viewMode, setViewMode] = useState<"dia" | "mes">(customViewMode);
 
-  const openPopover = (e: React.MouseEvent<HTMLElement>) => setPopoverAnchor(e.currentTarget);
-  const closePopover = () => setPopoverAnchor(null);
+  const effectiveViewMode: "dia" | "mes" =
+    periodKey === "custom"
+      ? viewMode
+      : periodKey === "7d" || periodKey === "mes_atual" || periodKey === "mes_anterior"
+        ? "dia"
+        : "mes";
+  const chartDataDia = dataDia;
+  const chartDataMes = dataMes;
+  const isEmpty =
+    effectiveViewMode === "dia" ? chartDataDia.length === 0 : chartDataMes.length === 0;
+  const colorMes = PERIODO_COLORS.mes;
+  const showLineChart = effectiveViewMode === "mes";
 
-  const applyCustomRange = () => {
-    if (dateFrom && dateTo && dateFrom <= dateTo) {
-      onCustomRangeChange(dateFrom, dateTo);
-      closePopover();
-    }
+  const handleViewModeChange = (mode: "dia" | "mes") => {
+    setViewMode(mode);
+    onCustomViewModeChange?.(mode);
   };
 
-  const isEmpty =
-    periodo === "custom"
-      ? customViewMode === "dia"
-        ? !dataDiaCustom || dataDiaCustom.length === 0
-        : !dataMesCustom || dataMesCustom.length === 0
-      : (periodo === "dia" ? dataDia : dataMes).length === 0;
-  const colorMes = PERIODO_COLORS.mes;
-  const showLineChart =
-    periodo === "mes" || (periodo === "custom" && customViewMode === "mes");
-  const chartDataMes = periodo === "custom" ? (dataMesCustom ?? []) : dataMes;
-  const chartDataDia =
-    periodo === "custom" ? (dataDiaCustom ?? []) : periodo === "dia" ? dataDia : [];
-
   return (
-    <Card>
-      <CardHeader
-        title={
-          <Typography variant="subtitle1" fontWeight={600}>
-            Chamados por período
-          </Typography>
-        }
-        action={
-          <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1 }}>
-            {periodo === "custom" && (
-              <>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<Calendar size={18} />}
-                  onClick={openPopover}
-                  sx={{ color: "primary.main" }}
-                >
-                  {dateFrom && dateTo ? `${dateFrom} → ${dateTo}` : "Selecionar datas"}
-                </Button>
-                <Popover
-                  open={Boolean(popoverAnchor)}
-                  anchorEl={popoverAnchor}
-                  onClose={closePopover}
-                  anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-                  transformOrigin={{ vertical: "top", horizontal: "left" }}
-                  slotProps={{ paper: { sx: { p: 2, minWidth: 280 } } }}
-                >
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    <Typography variant="subtitle2" fontWeight={600}>
-                      Intervalo
-                    </Typography>
-                    <TextField
-                      size="small"
-                      fullWidth
-                      label="Data inicial"
-                      type="date"
-                      value={dateFrom}
-                      onChange={(e) => setDateFrom(e.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                      inputProps={{ max: dateTo || todayStr() }}
-                    />
-                    <TextField
-                      size="small"
-                      fullWidth
-                      label="Data final"
-                      type="date"
-                      value={dateTo}
-                      onChange={(e) => setDateTo(e.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                      inputProps={{ min: dateFrom, max: todayStr() }}
-                    />
-                    <Typography variant="subtitle2" fontWeight={600} sx={{ mt: 0.5 }}>
-                      Exibir no período
-                    </Typography>
-                    <ToggleButtonGroup
-                      value={customViewMode}
-                      exclusive
-                      onChange={(_, v) => v != null && setCustomViewMode(v)}
-                      size="small"
-                      fullWidth
-                    >
-                      <ToggleButton value="dia">Por dia</ToggleButton>
-                      <ToggleButton value="mes">Por mês</ToggleButton>
-                    </ToggleButtonGroup>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={applyCustomRange}
-                      disabled={!dateFrom || !dateTo || dateFrom > dateTo}
-                    >
-                      Aplicar
-                    </Button>
-                  </Box>
-                </Popover>
-              </>
-            )}
-            <FormControl size="small" sx={{ minWidth: 140 }}>
-              <InputLabel>Período</InputLabel>
-              <Select
-                value={periodo}
-                label="Período"
-                onChange={(e) => setPeriodo(e.target.value as "dia" | "mes" | "custom")}
-              >
-                <MenuItem value="dia">Por dia (7 dias)</MenuItem>
-                <MenuItem value="mes">Por mês</MenuItem>
-                <MenuItem value="custom">Intervalo customizado</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-        }
-      />
+    <Card
+      sx={{
+        "&:hover": {
+          boxShadow: `0 0 24px ${alpha(secondaryColor, 0.28)}, 0 0 48px ${alpha(secondaryColor, 0.12)}`,
+        },
+      }}
+    >
+      <Box
+        sx={{
+          px: { xs: 1.5, sm: 2 },
+          pt: { xs: 1.5, sm: 2 },
+          pb: 0,
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          alignItems: { xs: "stretch", sm: "center" },
+          justifyContent: "space-between",
+          gap: 1.5,
+        }}
+      >
+        <Typography
+          variant="subtitle1"
+          fontWeight={600}
+          sx={{
+            flex: "0 1 auto",
+            minWidth: 0,
+            maxWidth: { xs: "100%", sm: 160 },
+            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+          }}
+        >
+          Chamados por período
+        </Typography>
+        {periodKey === "custom" && (
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={(_, v) => v != null && handleViewModeChange(v)}
+            size="small"
+          >
+            <ToggleButton value="dia">Por dia</ToggleButton>
+            <ToggleButton value="mes">Por mês</ToggleButton>
+          </ToggleButtonGroup>
+        )}
+      </Box>
       <CardContent sx={{ pt: 0 }}>
-        {periodo === "custom" && !dateFrom && !dateTo ? (
-          <Typography variant="body2" color="text.secondary" textAlign="center" py={6}>
-            Clique em &quot;Selecionar datas&quot; e escolha a data inicial e final no calendário.
-          </Typography>
-        ) : isEmpty ? (
+        {isEmpty ? (
           <Typography variant="body2" color="text.secondary" textAlign="center" py={6}>
             Sem dados disponíveis.
           </Typography>
         ) : showLineChart ? (
-          <Box sx={{ width: "100%", height: 250 }}>
+          <Box sx={{ width: "100%", height: { xs: 220, sm: 250 } }}>
             <ResponsiveContainer>
               <LineChart data={chartDataMes} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -213,7 +142,7 @@ export function ChamadosPorPeriodoChart({
             </ResponsiveContainer>
           </Box>
         ) : (
-          <Box sx={{ width: "100%", height: 250 }}>
+          <Box sx={{ width: "100%", height: { xs: 220, sm: 250 } }}>
             <ResponsiveContainer>
               <AreaChart data={chartDataDia}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -263,7 +192,13 @@ export function DepartmentBarChart({ data, filterSetor, getSetor }: BarChartProp
     : data;
 
   return (
-    <Card>
+    <Card
+      sx={{
+        "&:hover": {
+          boxShadow: `0 0 24px ${alpha(secondaryColor, 0.28)}, 0 0 48px ${alpha(secondaryColor, 0.12)}`,
+        },
+      }}
+    >
       <CardHeader
         title={
           <Typography variant="subtitle1" fontWeight={600}>
@@ -277,7 +212,7 @@ export function DepartmentBarChart({ data, filterSetor, getSetor }: BarChartProp
             Sem dados disponíveis.
           </Typography>
         ) : (
-          <Box sx={{ width: "100%", height: 250 }}>
+          <Box sx={{ width: "100%", height: { xs: 220, sm: 250 } }}>
             <ResponsiveContainer>
               <BarChart data={filteredData} layout="vertical" margin={{ left: 8, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
@@ -322,9 +257,16 @@ const SETORES_DONUT = ["Industrial", "Administrativo"];
 export function TicketsBySetorDonut({ data }: PorSetorProps) {
   const theme = useTheme();
   const filtered = data.filter((d) => SETORES_DONUT.includes(d.setor));
+  const glowColor = theme.palette.primary.main;
 
   return (
-    <Card>
+    <Card
+      sx={{
+        "&:hover": {
+          boxShadow: `0 0 24px ${alpha(glowColor, 0.28)}, 0 0 48px ${alpha(glowColor, 0.12)}`,
+        },
+      }}
+    >
       <CardHeader
         title={
           <Typography variant="subtitle1" fontWeight={600}>
@@ -338,7 +280,7 @@ export function TicketsBySetorDonut({ data }: PorSetorProps) {
             Sem dados disponíveis.
           </Typography>
         ) : (
-          <Box sx={{ width: "100%", height: 260 }}>
+          <Box sx={{ width: "100%", height: { xs: 220, sm: 260 } }}>
             <ResponsiveContainer>
               <PieChart>
                 <Pie
