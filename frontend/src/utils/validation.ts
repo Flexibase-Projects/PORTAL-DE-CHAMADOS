@@ -10,8 +10,10 @@ export interface FormErrors {
 export interface TicketFormData {
   nome: string;
   email: string;
-  setor: string;
-  area: string;
+  setor_origem: string;
+  area_origem: string;
+  setor_destino: string;
+  area_destino: string;
   ramal: string;
   tipoSuporte: string;
   assunto: string;
@@ -30,8 +32,10 @@ export function validateTicketForm(formData: TicketFormData): {
   } else if (!validateEmail(formData.email)) {
     errors.email = "Email inválido";
   }
-  if (!formData.setor?.trim()) errors.setor = "Setor é obrigatório";
-  if (!formData.area?.trim()) errors.area = "Departamento é obrigatório";
+  if (!formData.setor_origem?.trim()) errors.setor_origem = "Setor de origem é obrigatório";
+  if (!formData.area_origem?.trim()) errors.area_origem = "Departamento de origem é obrigatório";
+  if (!formData.setor_destino?.trim()) errors.setor_destino = "Setor destinatário é obrigatório";
+  if (!formData.area_destino?.trim()) errors.area_destino = "Departamento destinatário é obrigatório";
   if (!formData.assunto?.trim()) errors.assunto = "Assunto é obrigatório";
   if (!formData.mensagem?.trim()) errors.mensagem = "Mensagem é obrigatória";
   if (formData.ramal && isNaN(Number(formData.ramal)))

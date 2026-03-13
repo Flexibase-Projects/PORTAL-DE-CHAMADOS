@@ -7,8 +7,12 @@ export const meController = {
       if (!authUserId) {
         return res.status(401).json({ success: false, error: 'Não autenticado' });
       }
-      const departamento = await permissionService.getDepartamentoByAuthUserId(authUserId);
-      res.json({ success: true, departamento: departamento || null });
+      const { permissions, userDepartamento } = await permissionService.getByAuthUserId(authUserId);
+      res.json({
+        success: true,
+        departamento: userDepartamento || null,
+        permissions: permissions || {},
+      });
     } catch (error) {
       console.error('[me] getMe:', error.message);
       res.status(500).json({ success: false, error: error.message });

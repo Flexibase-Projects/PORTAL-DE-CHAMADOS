@@ -13,24 +13,53 @@ export const permissionService = {
       const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
       if (error) throw new Error(`Auth: ${error.message}`);
       const ids = (users || []).map((u) => u.id);
+      const emails = (users || []).map((u) => u.email).filter(Boolean);
+      const emailToAuthId = (users || []).reduce((acc, u) => {
+        if (u.email) acc[u.email] = u.id;
+        return acc;
+      }, {});
       let departamentoByAuthId = {};
+      const BATCH = 150; // evita limite do PostgREST em .in()
       if (ids.length > 0) {
-        const { data: pdcRows } = await supabaseAdmin
-          .from('PDC_users')
-          .select('auth_user_id, departamento')
-          .in('auth_user_id', ids);
-        departamentoByAuthId = (pdcRows || []).reduce((acc, r) => {
+        const allPdcRows = [];
+        for (let i = 0; i < ids.length; i += BATCH) {
+          const batch = ids.slice(i, i + BATCH);
+          const { data: pdcRows, error: pdcErr } = await supabaseAdmin
+            .from('PDC_users')
+            .select('auth_user_id, departamento')
+            .in('auth_user_id', batch);
+          if (pdcErr) throw new Error(`PDC_users (auth_user_id): ${pdcErr.message}`);
+          if (pdcRows?.length) allPdcRows.push(...pdcRows);
+        }
+        departamentoByAuthId = (allPdcRows || []).reduce((acc, r) => {
           if (r.auth_user_id && r.departamento?.trim()) acc[r.auth_user_id] = r.departamento.trim();
           return acc;
         }, {});
+        // Também preencher por email: linhas em PDC_users com email do Auth mas auth_user_id null não entram na query acima
+        if (emails.length > 0) {
+          for (let i = 0; i < emails.length; i += BATCH) {
+            const emailBatch = emails.slice(i, i + BATCH);
+            const { data: pdcByEmail, error: emailErr } = await supabaseAdmin
+              .from('PDC_users')
+              .select('email, departamento')
+              .in('email', emailBatch);
+            if (emailErr) throw new Error(`PDC_users (email): ${emailErr.message}`);
+            (pdcByEmail || []).forEach((r) => {
+              const authId = emailToAuthId[r.email];
+              if (authId && r.departamento?.trim() && !departamentoByAuthId[authId])
+                departamentoByAuthId[authId] = r.departamento.trim();
+            });
+          }
+        }
       }
-      return (users || []).map((u) => ({
+      const result = (users || []).map((u) => ({
         id: u.id,
         email: u.email,
         nome: u.user_metadata?.nome || u.user_metadata?.full_name || u.email?.split('@')[0] || '—',
         created_at: u.created_at,
         departamento: departamentoByAuthId[u.id] || null,
       }));
+      return result;
     }
     // Fallback: listar de PDC_users (quem já fez login e sincronizou). Exige configurar SERVICE_ROLE_KEY para ver todos do Auth.
     const { data: rows, error } = await supabase
@@ -140,6 +169,7 @@ export const permissionService = {
                 auth_user_id: authUserId,
                 departamento: deptTrimmed,
                 nome: authUser.user.user_metadata?.nome || authUser.user.user_metadata?.full_name || email.split('@')[0] || '',
+                setor: '',
                 updated_at: new Date().toISOString(),
               })
               .eq('id', byEmail.id)
@@ -153,6 +183,7 @@ export const permissionService = {
                 email,
                 nome: authUser.user.user_metadata?.nome || authUser.user.user_metadata?.full_name || email.split('@')[0] || 'Usuário',
                 departamento: deptTrimmed,
+                setor: '',
                 role_id: role?.id,
               })
               .select();
@@ -222,28 +253,32 @@ export const permissionService = {
             .eq('email', email)
             .maybeSingle();
           if (byEmail) {
-            await supabaseAdmin
+            const { error: updateByEmailErr } = await supabaseAdmin
               .from('PDC_users')
               .update({
                 auth_user_id: authUserId,
                 departamento: deptTrimmed,
                 nome: authUser.user.user_metadata?.nome || authUser.user.user_metadata?.full_name || email.split('@')[0] || '',
+                setor: '', // NOT NULL no banco; manter '' se já existir
                 updated_at: new Date().toISOString(),
               })
               .eq('id', byEmail.id)
               .select();
+            if (updateByEmailErr) throw new Error(`Erro ao atualizar departamento (por email): ${updateByEmailErr.message}`);
           } else {
             const { data: role } = await supabaseAdmin.from('PDC_roles').select('id').eq('nome', 'usuario').single();
-            await supabaseAdmin
+            const { error: insertErr } = await supabaseAdmin
               .from('PDC_users')
               .insert({
                 auth_user_id: authUserId,
                 email,
                 nome: authUser.user.user_metadata?.nome || authUser.user.user_metadata?.full_name || email.split('@')[0] || 'Usuário',
                 departamento: deptTrimmed,
+                setor: '', // NOT NULL no banco; '' para não violar constraint
                 role_id: role?.id,
               })
               .select();
+            if (insertErr) throw new Error(`Erro ao criar usuário em PDC_users: ${insertErr.message}`);
           }
         }
       }
@@ -254,9 +289,10 @@ export const permissionService = {
           { onConflict: 'auth_user_id,departamento' }
         );
     } else {
+      // Coluna departamento em PDC_users é NOT NULL; usar '' para "sem departamento"
       const { error: updateUserErr } = await supabaseAdmin
         .from('PDC_users')
-        .update({ departamento: null, updated_at: new Date().toISOString() })
+        .update({ departamento: '', updated_at: new Date().toISOString() })
         .eq('auth_user_id', authUserId);
       if (updateUserErr) throw new Error(`Erro ao atualizar departamento do usuário: ${updateUserErr.message}`);
     }

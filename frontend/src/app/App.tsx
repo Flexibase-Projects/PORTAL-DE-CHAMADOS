@@ -16,6 +16,14 @@ const AdminChamadosPage = lazy(() => import("@/features/admin/AdminChamadosPage"
 const TemplateEditorPage = lazy(() => import("@/features/admin/TemplateEditorPage").then((m) => ({ default: m.TemplateEditorPage })));
 const UsersPage = lazy(() => import("@/features/users/UsersPage").then((m) => ({ default: m.UsersPage })));
 
+/** Só renderiza a tela de Usuários se o usuário for do departamento TI; caso contrário redireciona. */
+function UsersPageGate() {
+  const { isTiUser, meLoaded } = useAuth();
+  if (!meLoaded) return <AppLoader />;
+  if (!isTiUser) return <Navigate to="/" replace />;
+  return <UsersPage />;
+}
+
 function AppRoutes() {
   const { isAuthenticated, loading } = useAuth();
   const authConfigured = !!supabase;
@@ -40,7 +48,7 @@ function AppRoutes() {
           <Route path="/base-conhecimento" element={<KnowledgeBasePage />} />
           <Route path="/admin/chamados" element={<AdminChamadosPage />} />
           <Route path="/admin/templates" element={<TemplateEditorPage />} />
-          <Route path="/admin/usuarios" element={<UsersPage />} />
+          <Route path="/admin/usuarios" element={<UsersPageGate />} />
           <Route path="/painel-administrativo" element={<Navigate to="/admin/chamados" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -7,9 +7,11 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Garantir que .env.local da raiz seja carregado (mesmo se este módulo for carregado antes de supabase.js)
-dotenv.config({ path: join(__dirname, '..', '..', '..', '.env.local') });
-dotenv.config({ path: join(__dirname, '..', '..', '.env') });
+// Garantir que .env seja carregado: raiz, backend e cwd (ordem: mais específico primeiro)
+dotenv.config({ path: join(__dirname, '..', '..', '.env.local') }); // backend/.env.local
+dotenv.config({ path: join(__dirname, '..', '..', '.env') });         // backend/.env
+dotenv.config({ path: join(__dirname, '..', '..', '..', '.env.local') }); // raiz .env.local
+dotenv.config({ path: join(__dirname, '..', '..', '..', '.env') });     // raiz .env
 dotenv.config();
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;

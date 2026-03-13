@@ -1,15 +1,14 @@
 import { useState } from "react";
 import {
-  Area,
-  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
+  ComposedChart,
+  LabelList,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
   Line,
   PieChart,
   Pie,
@@ -31,9 +30,12 @@ import type { PeriodKey } from "../dashboardPeriod";
 
 const PERIODO_COLORS = { dia: "#0ea5e9", mes: "#2563eb" };
 
+type PorDiaItem = { date: string; abertos?: number; fechados?: number; count?: number };
+type PorMesItem = { mes: string; abertos?: number; fechados?: number; count?: number };
+
 interface ChamadosPorPeriodoChartProps {
-  dataDia: { date: string; count: number }[];
-  dataMes: { mes: string; count: number }[];
+  dataDia: PorDiaItem[];
+  dataMes: PorMesItem[];
   /** Período selecionado no topo do dashboard (define visualização dia/mês). */
   periodKey: PeriodKey;
   /** Apenas para periodKey === "custom": exibir por dia ou por mês. */
@@ -58,12 +60,27 @@ export function ChamadosPorPeriodoChart({
       : periodKey === "7d" || periodKey === "mes_atual" || periodKey === "mes_anterior"
         ? "dia"
         : "mes";
-  const chartDataDia = dataDia;
-  const chartDataMes = dataMes;
+  const getAbertos = (r: PorDiaItem | PorMesItem) => r.abertos ?? (r as { count?: number }).count ?? 0;
+  const getFechados = (r: PorDiaItem | PorMesItem) => r.fechados ?? 0;
+  const safeDia = Array.isArray(dataDia) ? dataDia : [];
+  const safeMes = Array.isArray(dataMes) ? dataMes : [];
+  const chartDataDia = safeDia.map((d) => ({
+    ...d,
+    abertos: getAbertos(d),
+    fechados: getFechados(d),
+  }));
+  const chartDataMes = safeMes.map((d) => ({
+    ...d,
+    abertos: getAbertos(d),
+    fechados: getFechados(d),
+  }));
   const isEmpty =
     effectiveViewMode === "dia" ? chartDataDia.length === 0 : chartDataMes.length === 0;
-  const colorMes = PERIODO_COLORS.mes;
-  const showLineChart = effectiveViewMode === "mes";
+  const colorAbertos = "#dc2626";
+  const colorFechados = "#2563eb";
+  const showPorMes = effectiveViewMode === "mes";
+  const chartData = showPorMes ? chartDataMes : chartDataDia;
+  const dataKeyX = showPorMes ? "mes" : "date";
 
   const handleViewModeChange = (mode: "dia" | "mes") => {
     setViewMode(mode);
@@ -119,38 +136,19 @@ export function ChamadosPorPeriodoChart({
           <Typography variant="body2" color="text.secondary" textAlign="center" py={6}>
             Sem dados disponíveis.
           </Typography>
-        ) : showLineChart ? (
-          <Box sx={{ width: "100%", height: { xs: 220, sm: 250 } }}>
-            <ResponsiveContainer>
-              <LineChart data={chartDataMes} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="mes" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                <Tooltip
-                  labelFormatter={(_, payload) => (payload?.[0]?.payload?.mes ?? "")}
-                  formatter={(value: number) => [value, "Chamados"]}
-                  contentStyle={{
-                    backgroundColor: theme.palette.background.paper,
-                    color: theme.palette.text.primary,
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: theme.shape.borderRadius,
-                    boxShadow: theme.shadows[2],
-                  }}
-                />
-                <Line type="monotone" dataKey="count" name="Chamados" stroke={colorMes} strokeWidth={2} dot={{ fill: colorMes, r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </Box>
         ) : (
           <Box sx={{ width: "100%", height: { xs: 220, sm: 250 } }}>
             <ResponsiveContainer>
-              <AreaChart data={chartDataDia}>
+              <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <XAxis dataKey={dataKeyX} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip
-                  labelFormatter={(_, payload) => (payload?.[0]?.payload?.date ?? "")}
-                  formatter={(value: number) => [value, "Chamados"]}
+                  labelFormatter={(_, payload) => (payload?.[0]?.payload?.[dataKeyX] ?? "")}
+                  formatter={(value: number, name: string) => [
+                    value,
+                    String(name).toLowerCase() === "abertos" ? "Abertos" : "Fechados",
+                  ]}
                   contentStyle={{
                     backgroundColor: theme.palette.background.paper,
                     color: theme.palette.text.primary,
@@ -159,16 +157,33 @@ export function ChamadosPorPeriodoChart({
                     boxShadow: theme.shadows[2],
                   }}
                 />
-                <Area
+                <Legend />
+                <Bar dataKey="fechados" name="Fechados" fill={colorFechados} radius={4}>
+                  <LabelList
+                    dataKey="fechados"
+                    position="top"
+                    fill={colorFechados}
+                    fontSize={11}
+                    formatter={(value: number) => (value === 0 ? "" : value)}
+                  />
+                </Bar>
+                <Line
                   type="monotone"
-                  dataKey="count"
-                  name="Chamados"
-                  fill={secondaryColor}
-                  fillOpacity={0.3}
-                  stroke={secondaryColor}
+                  dataKey="abertos"
+                  name="Abertos"
+                  stroke={colorAbertos}
                   strokeWidth={2}
-                />
-              </AreaChart>
+                  dot={{ fill: colorAbertos, r: 4 }}
+                >
+                  <LabelList
+                    dataKey="abertos"
+                    position="top"
+                    fill={colorAbertos}
+                    fontSize={11}
+                    formatter={(value: number) => (value === 0 ? "" : value)}
+                  />
+                </Line>
+              </ComposedChart>
             </ResponsiveContainer>
           </Box>
         )}

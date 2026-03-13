@@ -17,11 +17,13 @@ import { useTheme } from "@mui/material/styles";
 import { CheckCircle2 } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
 import { templateService } from "@/services/templateService";
+import { useAuth } from "@/contexts/AuthContext";
 import { validateTicketForm, type FormErrors } from "@/utils/validation";
 import {
   SETORES_CHAMADO,
   DEPARTAMENTOS_POR_SETOR,
   TIPOS_SUPORTE_TI,
+  getSetorByDepartamento,
 } from "@/constants/departamentos";
 import { TemplateFieldRenderer } from "./components/TemplateFieldRenderer";
 import type { TemplateField } from "@/types/template";
@@ -30,14 +32,17 @@ export function CreateTicketPage() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const { user, departamento: userDepartamento } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
-    setor: "",
-    area: "",
+    setor_origem: "",
+    area_origem: "",
+    setor_destino: "",
+    area_destino: "",
     ramal: "",
     tipoSuporte: "",
     assunto: "",
@@ -48,9 +53,9 @@ export function CreateTicketPage() {
   const [errors, setErrors] = useState<FormErrors>({});
 
   useEffect(() => {
-    if (formData.area) {
+    if (formData.area_destino) {
       templateService
-        .getTemplate(formData.area)
+        .getTemplate(formData.area_destino)
         .then((res) => {
           if (res.success && res.template && Array.isArray(res.template.fields)) {
             setTemplateFields(
@@ -68,13 +73,30 @@ export function CreateTicketPage() {
       setTemplateFields([]);
       setDadosExtras({});
     }
-  }, [formData.area]);
+  }, [formData.area_destino]);
+
+  // Pré-preenche email, nome e departamento de origem quando logado
+  useEffect(() => {
+    if (!user) return;
+    setFormData((prev) => {
+      const updates: Partial<typeof prev> = {};
+      if (prev.email === "" && user.email) updates.email = user.email;
+      if (prev.nome === "" && user.nome) updates.nome = user.nome;
+      if (userDepartamento?.trim() && (prev.area_origem === "" || !prev.area_origem)) {
+        updates.area_origem = userDepartamento.trim();
+        const setor = getSetorByDepartamento(userDepartamento);
+        if (setor) updates.setor_origem = setor;
+      }
+      return Object.keys(updates).length > 0 ? { ...prev, ...updates } : prev;
+    });
+  }, [user?.id, user?.email, user?.nome, userDepartamento]);
 
   const handleChange = (name: string, value: string) => {
     setFormData((prev) => {
       const next = { ...prev, [name]: value };
-      if (name === "setor") next.area = "";
-      if (name === "area" && value !== "TI") next.tipoSuporte = "";
+      if (name === "setor_origem") next.area_origem = "";
+      if (name === "setor_destino") next.area_destino = "";
+      if (name === "area_destino" && value !== "TI") next.tipoSuporte = "";
       return next;
     });
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
@@ -111,7 +133,14 @@ export function CreateTicketPage() {
     setLoading(true);
     setErrors({});
     try {
-      const response = await ticketService.create({ ...formData, dadosExtras });
+      const payload = {
+        ...formData,
+        area_origem: formData.area_origem,
+        area_destino: formData.area_destino,
+        setor: formData.setor_destino,
+        dadosExtras,
+      };
+      const response = await ticketService.create(payload);
       if (response.success) {
         setTicketId(response.ticket.id || response.ticket.numero_protocolo);
         setSuccess(true);
@@ -147,7 +176,18 @@ export function CreateTicketPage() {
                 size={isMobile ? "small" : "medium"}
                 onClick={() => {
                   setSuccess(false);
-                  setFormData({ nome: "", email: "", setor: "", area: "", ramal: "", tipoSuporte: "", assunto: "", mensagem: "" });
+                  setFormData({
+                    nome: "",
+                    email: "",
+                    setor_origem: "",
+                    area_origem: "",
+                    setor_destino: "",
+                    area_destino: "",
+                    ramal: "",
+                    tipoSuporte: "",
+                    assunto: "",
+                    mensagem: "",
+                  });
                   setDadosExtras({});
                   setTemplateFields([]);
                 }}
@@ -199,31 +239,57 @@ export function CreateTicketPage() {
                 helperText={errors.email}
                 fullWidth
               />
-              <FormControl fullWidth error={Boolean(errors.setor)}>
-                <InputLabel>Setor *</InputLabel>
+              <FormControl fullWidth error={Boolean(errors.setor_origem)}>
+                <InputLabel>Setor de origem *</InputLabel>
                 <Select
-                  value={formData.setor}
-                  label="Setor *"
-                  onChange={(e) => handleChange("setor", e.target.value)}
+                  value={formData.setor_origem}
+                  label="Setor de origem *"
+                  onChange={(e) => handleChange("setor_origem", e.target.value)}
                 >
                   {SETORES_CHAMADO.map((setor) => (
                     <MenuItem key={setor} value={setor}>{setor}</MenuItem>
                   ))}
                 </Select>
-                {errors.setor && <Typography variant="caption" color="error">{errors.setor}</Typography>}
+                {errors.setor_origem && <Typography variant="caption" color="error">{errors.setor_origem}</Typography>}
               </FormControl>
-              <FormControl fullWidth disabled={!formData.setor} error={Boolean(errors.area)}>
-                <InputLabel>Departamento *</InputLabel>
+              <FormControl fullWidth disabled={!formData.setor_origem} error={Boolean(errors.area_origem)}>
+                <InputLabel>Departamento de origem *</InputLabel>
                 <Select
-                  value={formData.area}
-                  label="Departamento *"
-                  onChange={(e) => handleChange("area", e.target.value)}
+                  value={formData.area_origem}
+                  label="Departamento de origem *"
+                  onChange={(e) => handleChange("area_origem", e.target.value)}
                 >
-                  {(DEPARTAMENTOS_POR_SETOR[formData.setor] || []).map((dept) => (
+                  {(DEPARTAMENTOS_POR_SETOR[formData.setor_origem] || []).map((dept) => (
                     <MenuItem key={dept} value={dept}>{dept}</MenuItem>
                   ))}
                 </Select>
-                {errors.area && <Typography variant="caption" color="error">{errors.area}</Typography>}
+                {errors.area_origem && <Typography variant="caption" color="error">{errors.area_origem}</Typography>}
+              </FormControl>
+              <FormControl fullWidth error={Boolean(errors.setor_destino)}>
+                <InputLabel>Setor destinatário *</InputLabel>
+                <Select
+                  value={formData.setor_destino}
+                  label="Setor destinatário *"
+                  onChange={(e) => handleChange("setor_destino", e.target.value)}
+                >
+                  {SETORES_CHAMADO.map((setor) => (
+                    <MenuItem key={setor} value={setor}>{setor}</MenuItem>
+                  ))}
+                </Select>
+                {errors.setor_destino && <Typography variant="caption" color="error">{errors.setor_destino}</Typography>}
+              </FormControl>
+              <FormControl fullWidth disabled={!formData.setor_destino} error={Boolean(errors.area_destino)}>
+                <InputLabel>Departamento destinatário *</InputLabel>
+                <Select
+                  value={formData.area_destino}
+                  label="Departamento destinatário *"
+                  onChange={(e) => handleChange("area_destino", e.target.value)}
+                >
+                  {(DEPARTAMENTOS_POR_SETOR[formData.setor_destino] || []).map((dept) => (
+                    <MenuItem key={dept} value={dept}>{dept}</MenuItem>
+                  ))}
+                </Select>
+                {errors.area_destino && <Typography variant="caption" color="error">{errors.area_destino}</Typography>}
               </FormControl>
               <TextField
                 label="Ramal"
@@ -234,7 +300,7 @@ export function CreateTicketPage() {
                 helperText={errors.ramal}
                 fullWidth
               />
-              {formData.area === "TI" && (
+              {formData.area_destino === "TI" && (
                 <FormControl fullWidth>
                   <InputLabel>Tipo de Suporte</InputLabel>
                   <Select

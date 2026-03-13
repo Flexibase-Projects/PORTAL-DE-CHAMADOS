@@ -56,7 +56,7 @@ export function DashboardPage() {
     ticketService
       .getDashboardStats(options)
       .then((res) => {
-        if (res.success) setStats(res.stats);
+        if (res.success && res.stats) setStats(res.stats);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -229,10 +229,10 @@ export function DashboardPage() {
       </Box>
 
       <StatsCards
-        total={stats.total}
-        abertos={stats.abertos}
-        emAndamento={stats.em_andamento}
-        concluidos={stats.concluidos}
+        total={stats.total ?? 0}
+        abertos={stats.abertos ?? 0}
+        emAndamento={stats.em_andamento ?? 0}
+        concluidos={stats.concluidos ?? 0}
       />
 
       <Box
@@ -244,33 +244,33 @@ export function DashboardPage() {
       >
         <ChamadosPorPeriodoChart
           dataDia={
-            filterSetorGlobal === "Industrial"
+            (filterSetorGlobal === "Industrial"
               ? stats.por_dia_industria
               : filterSetorGlobal === "Administrativo"
                 ? stats.por_dia_administrativo
-                : stats.por_dia
+                : stats.por_dia) ?? []
           }
           dataMes={
-            filterSetorGlobal === "Industrial"
+            (filterSetorGlobal === "Industrial"
               ? stats.por_mes_industria
               : filterSetorGlobal === "Administrativo"
                 ? stats.por_mes_administrativo
-                : stats.por_mes_geral
+                : stats.por_mes_geral) ?? []
           }
           periodKey={periodKey}
           customViewMode={customViewMode}
           onCustomViewModeChange={setCustomViewMode}
         />
-        <TicketsBySetorDonut data={stats.por_setor} />
+        <TicketsBySetorDonut data={stats.por_setor ?? []} />
       </Box>
 
       <DepartmentBarChart
-        data={stats.por_departamento}
+        data={stats.por_departamento ?? []}
         filterSetor={filterSetorGlobal}
         getSetor={getSetorByDepartamento}
       />
 
-      <RecentTickets tickets={stats.recentes} />
+      <RecentTickets tickets={stats.recentes ?? []} />
     </Box>
   );
 }

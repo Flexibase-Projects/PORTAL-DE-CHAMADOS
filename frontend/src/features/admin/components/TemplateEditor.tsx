@@ -91,10 +91,12 @@ function SortableItem({
   field,
   onEdit,
   onRemove,
+  canEdit,
 }: {
   field: FieldData;
   onEdit: (f: FieldData) => void;
   onRemove: (id: string) => void;
+  canEdit: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: field.id });
@@ -118,7 +120,7 @@ function SortableItem({
         opacity: isDragging ? 0.9 : 1,
       }}
     >
-      <IconButton size="small" sx={{ cursor: "grab", touchAction: "none" }} {...attributes} {...listeners}>
+      <IconButton size="small" sx={{ cursor: canEdit ? "grab" : "default", touchAction: "none" }} {...(canEdit ? { ...attributes, ...listeners } : {})}>
         <GripVertical style={{ width: 18, height: 18 }} />
       </IconButton>
       <Icon style={{ width: 18, height: 18, color: "var(--mui-palette-primary-main)", flexShrink: 0 }} />
@@ -126,10 +128,10 @@ function SortableItem({
         {field.label || "(sem label)"}
         {field.required && <Typography component="span" color="error"> *</Typography>}
       </Typography>
-      <IconButton size="small" onClick={() => onEdit(field)}>
+      <IconButton size="small" onClick={() => canEdit && onEdit(field)} disabled={!canEdit}>
         <Pencil style={{ width: 14, height: 14 }} />
       </IconButton>
-      <IconButton size="small" color="error" onClick={() => onRemove(field.id)}>
+      <IconButton size="small" color="error" onClick={() => canEdit && onRemove(field.id)} disabled={!canEdit}>
         <Trash2 style={{ width: 14, height: 14 }} />
       </IconButton>
     </Box>
@@ -138,9 +140,11 @@ function SortableItem({
 
 interface Props {
   departamento: string;
+  /** Se false, desabilita salvar e adicionar/editar/remover campos (apenas leitura). */
+  canEdit?: boolean;
 }
 
-export function TemplateEditor({ departamento }: Props) {
+export function TemplateEditor({ departamento, canEdit = true }: Props) {
   const [fields, setFields] = useState<FieldData[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingTemplate, setLoadingTemplate] = useState(true);
@@ -294,12 +298,17 @@ export function TemplateEditor({ departamento }: Props) {
           {success}
         </Alert>
       )}
+      {!canEdit && departamento && (
+        <Alert severity="info">
+          Você não tem permissão para editar o template deste departamento. Apenas visualização.
+        </Alert>
+      )}
 
       <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
         <Button
           variant="contained"
           onClick={handleSaveTemplate}
-          disabled={loading}
+          disabled={loading || !canEdit}
           startIcon={loading ? <CircularProgress size={18} /> : <Save style={{ width: 18, height: 18 }} />}
         >
           {loading ? "Salvando..." : "Salvar Template"}
@@ -312,10 +321,12 @@ export function TemplateEditor({ departamento }: Props) {
             Adicionar:
           </Typography>
           {FIELD_TYPES.map(({ value, label, Icon }) => (
-            <Tooltip key={value} title={label}>
-              <IconButton size="small" onClick={() => handleOpenAdd(value)}>
-                <Icon style={{ width: 18, height: 18 }} />
-              </IconButton>
+            <Tooltip key={value} title={canEdit ? label : "Sem permissão de edição"}>
+              <span>
+                <IconButton size="small" onClick={() => canEdit && handleOpenAdd(value)} disabled={!canEdit}>
+                  <Icon style={{ width: 18, height: 18 }} />
+                </IconButton>
+              </span>
             </Tooltip>
           ))}
         </Box>
@@ -323,7 +334,7 @@ export function TemplateEditor({ departamento }: Props) {
         <Box sx={{ p: 1.5, maxHeight: "60vh", overflow: "auto", display: "flex", flexDirection: "column", gap: 1 }}>
           {sorted.length === 0 ? (
             <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
-              Nenhum campo. Clique em um ícone acima para adicionar.
+              {canEdit ? "Nenhum campo. Clique em um ícone acima para adicionar." : "Nenhum campo neste template."}
             </Typography>
           ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -338,6 +349,7 @@ export function TemplateEditor({ departamento }: Props) {
                         prev.filter((f) => f.id !== id).map((f, i) => ({ ...f, order: i }))
                       )
                     }
+                    canEdit={canEdit}
                   />
                 ))}
               </SortableContext>

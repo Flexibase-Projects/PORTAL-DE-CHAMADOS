@@ -53,12 +53,35 @@ export function UsersPage() {
     setError("");
     try {
       const res = await permissionService.listAuthUsers();
+      // #region agent log
+      const firstU = (res.users || [])[0];
+      fetch('http://127.0.0.1:7243/ingest/8ef6696f-588f-412a-bb62-3118887b728f', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '17a79e' },
+        body: JSON.stringify({
+          sessionId: '17a79e',
+          hypothesisId: 'H4',
+          location: 'UsersPage.tsx:loadUsers',
+          message: 'loadUsers response',
+          data: {
+            success: res.success,
+            usersCount: (res.users || []).length,
+            firstUser: firstU ? { id: firstU.id, departamento: firstU.departamento } : null,
+            timestamp: Date.now(),
+          },
+        }),
+      }).catch(() => {});
+      // #endregion
       if (res.success) setUsers(res.users || []);
       else setError("Não foi possível carregar usuários.");
     } catch (err: unknown) {
+      const ax = err as { response?: { data?: { error?: string }; status?: number }; message?: string };
       const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-        "Erro ao carregar usuários do Auth. Configure SUPABASE_SERVICE_ROLE_KEY no backend para listar usuários.";
+        ax?.response?.data?.error ||
+        (ax?.response?.status === 500
+          ? "Backend retornou erro. Verifique o terminal do backend e defina SUPABASE_SERVICE_ROLE_KEY no .env ou .env.local do backend."
+          : ax?.message ||
+            "Erro ao carregar usuários. Verifique se o backend está rodando e se SUPABASE_SERVICE_ROLE_KEY está no .env ou .env.local do backend.");
       setError(msg);
     } finally {
       setLoading(false);
@@ -122,8 +145,34 @@ export function UsersPage() {
     setSavingDeptAuthId(user.id);
     setError("");
     setSuccess("");
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/8ef6696f-588f-412a-bb62-3118887b728f', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '17a79e' },
+      body: JSON.stringify({
+        sessionId: '17a79e',
+        hypothesisId: 'H2',
+        location: 'UsersPage.tsx:handleDepartamentoChange',
+        message: 'handleDepartamentoChange call',
+        data: { userId: user.id, newDept: newDept ?? null, timestamp: Date.now() },
+      }),
+    }).catch(() => {});
+    // #endregion
     try {
       const res = await permissionService.setUserDepartamento(user.id, newDept || null);
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/8ef6696f-588f-412a-bb62-3118887b728f', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '17a79e' },
+        body: JSON.stringify({
+          sessionId: '17a79e',
+          hypothesisId: 'H2',
+          location: 'UsersPage.tsx:handleDepartamentoChange',
+          message: 'setUserDepartamento result',
+          data: { success: res?.success, userDepartamento: res?.userDepartamento, timestamp: Date.now() },
+        }),
+      }).catch(() => {});
+      // #endregion
       if (res.success) {
         setSuccess("Departamento atualizado.");
         setUsers((prev) =>

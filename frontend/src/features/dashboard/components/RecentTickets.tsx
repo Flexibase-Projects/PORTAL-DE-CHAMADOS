@@ -71,7 +71,7 @@ export function RecentTickets({ tickets }: RecentTicketsProps) {
                       <Chip label={ticket.status} color={statusColor(ticket.status)} size="small" variant="outlined" />
                     </TableCell>
                     <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
-                      {ticket.area_destino}
+                      {(ticket as Ticket & { departamento_origem?: string }).departamento_origem ?? ticket.area_destino}
                     </TableCell>
                     <TableCell sx={{ display: { xs: "none", lg: "table-cell" }, whiteSpace: "nowrap" }}>
                       {formatDate(ticket.created_at)}

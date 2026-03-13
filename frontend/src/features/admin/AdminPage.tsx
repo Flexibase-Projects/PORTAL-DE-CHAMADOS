@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Tabs from "@mui/material/Tabs";
@@ -12,13 +12,32 @@ import { TicketManagement } from "./components/TicketManagement";
 import { TemplateEditor } from "./components/TemplateEditor";
 import { UsersPage } from "@/features/users/UsersPage";
 import { getAllDepartamentos } from "@/constants/departamentos";
+import { useAuth } from "@/contexts/AuthContext";
+
+function canEditTemplateForDepartment(
+  permissions: Record<string, string>,
+  userDepartamento: string | null,
+  departamento: string
+): boolean {
+  const d = departamento.trim();
+  if (!d) return false;
+  if (permissions[d] === "view_edit") return true;
+  if (userDepartamento && userDepartamento.trim() === d) return true;
+  return false;
+}
 
 export function AdminPage() {
   const location = useLocation();
+  const { permissions, departamento: userDepartamento } = useAuth();
   const initialTicketId = (location.state as { ticketId?: string })?.ticketId;
   const [templateDepartamento, setTemplateDepartamento] = useState("");
   const [tab, setTab] = useState(0);
-  const departamentos = getAllDepartamentos();
+  const allDepartamentos = getAllDepartamentos();
+  const departamentosComEdicao = useMemo(
+    () => allDepartamentos.filter((d) => canEditTemplateForDepartment(permissions, userDepartamento, d)),
+    [permissions, userDepartamento]
+  );
+  const canEditTemplate = !!templateDepartamento && canEditTemplateForDepartment(permissions, userDepartamento, templateDepartamento);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 2, md: 2.5 } }}>
@@ -51,16 +70,16 @@ export function AdminPage() {
           <FormControl sx={{ minWidth: 200, maxWidth: { xs: "100%", sm: 280 } }}>
             <InputLabel>Departamento</InputLabel>
             <Select
-              value={templateDepartamento}
+              value={departamentosComEdicao.includes(templateDepartamento) ? templateDepartamento : ""}
               label="Departamento"
               onChange={(e) => setTemplateDepartamento(e.target.value)}
             >
-              {departamentos.map((d) => (
+              {departamentosComEdicao.map((d) => (
                 <MenuItem key={d} value={d}>{d}</MenuItem>
               ))}
             </Select>
           </FormControl>
-          <TemplateEditor departamento={templateDepartamento} />
+          <TemplateEditor departamento={templateDepartamento} canEdit={canEditTemplate} />
         </Box>
       )}
 

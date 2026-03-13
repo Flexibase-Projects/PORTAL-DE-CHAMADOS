@@ -3,7 +3,8 @@ import { ticketService } from '../services/ticketService.js';
 export const ticketController = {
   async createTicket(req, res) {
     try {
-      const ticket = await ticketService.createTicket(req.body);
+      const authUserId = req.headers['x-auth-user-id'] || null;
+      const ticket = await ticketService.createTicket(req.body, authUserId);
       res.status(201).json({ success: true, message: 'Chamado criado com sucesso', ticket });
     } catch (error) {
       res.status(500).json({ success: false, error: 'Erro ao criar chamado', message: error.message });

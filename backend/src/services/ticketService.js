@@ -1,4 +1,5 @@
 import supabase from '../config/supabase.js';
+import { supabaseAdmin } from '../config/supabaseAdmin.js';
 
 function generateProtocol() {
   const now = new Date();
@@ -10,48 +11,58 @@ function generateProtocol() {
 }
 
 export const ticketService = {
-  async createTicket(data) {
-    // Buscar user pelo email ou criar referência
+  async createTicket(data, authUserId = null) {
+    const client = supabaseAdmin || supabase;
     let solicitanteId = null;
     if (data.email) {
-      const { data: user } = await supabase
+      const { data: user } = await client
         .from('PDC_users')
         .select('id')
         .eq('email', data.email)
-        .single();
-      solicitanteId = user?.id;
+        .maybeSingle();
+      solicitanteId = user?.id ?? null;
     }
 
-    // Se não encontrou user, criar um temporário
     if (!solicitanteId) {
-      const { data: roles } = await supabase
+      const { data: roles } = await client
         .from('PDC_roles')
         .select('id')
         .eq('nome', 'usuario')
-        .single();
+        .maybeSingle();
 
-      const { data: newUser, error: userErr } = await supabase
+      const departamentoSolicitante = (data.area_origem || data.area || data.area_destino || 'TI').trim() || 'TI';
+      const setorSolicitante = (data.setor_origem || data.setor || 'Administrativo').trim() || 'Administrativo';
+      const { data: newUser, error: userErr } = await client
         .from('PDC_users')
         .upsert({
           nome: data.nome || 'Usuário',
           email: data.email,
-          setor: data.setor || 'Administrativo',
-          departamento: data.area || 'TI',
+          setor: setorSolicitante,
+          departamento: departamentoSolicitante,
           ramal: data.ramal || null,
           role_id: roles?.id,
+          ...(authUserId && { auth_user_id: authUserId }),
         }, { onConflict: 'email' })
         .select('id')
         .single();
 
       if (userErr) throw new Error(`Erro ao criar usuário: ${userErr.message}`);
       solicitanteId = newUser.id;
+    } else if (authUserId && solicitanteId) {
+      const { error: updateErr } = await client
+        .from('PDC_users')
+        .update({ auth_user_id: authUserId, updated_at: new Date().toISOString() })
+        .eq('id', solicitanteId)
+        .select();
+      if (updateErr) throw new Error(`Erro ao vincular usuário ao chamado: ${updateErr.message}`);
     }
 
+    const areaDestino = (data.area_destino || data.area || '').trim() || 'TI';
     const ticket = {
       numero_protocolo: generateProtocol(),
       solicitante_id: solicitanteId,
-      area_destino: data.area || data.area_destino,
-      setor: data.setor,
+      area_destino: areaDestino,
+      setor: (data.setor_destino || data.setor || 'Administrativo').trim() || 'Administrativo',
       assunto: data.assunto,
       mensagem: data.mensagem,
       tipo_suporte: data.tipoSuporte || data.tipo_suporte || null,
@@ -60,7 +71,7 @@ export const ticketService = {
       prioridade: data.prioridade || 'Normal',
     };
 
-    const { data: created, error } = await supabase
+    const { data: created, error } = await client
       .from('PDC_tickets')
       .insert(ticket)
       .select('*')
@@ -138,7 +149,8 @@ export const ticketService = {
   },
 
   async getReceivedTickets() {
-    const { data, error } = await supabase
+    const client = supabaseAdmin || supabase;
+    const { data, error } = await client
       .from('PDC_tickets')
       .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
       .neq('status', 'Concluído')
@@ -160,7 +172,8 @@ export const ticketService = {
     if (status === 'Concluído') {
       updates.closed_at = new Date().toISOString();
     }
-    const { data, error } = await supabase
+    const client = supabaseAdmin || supabase;
+    const { data, error } = await client
       .from('PDC_tickets')
       .update(updates)
       .eq('id', id)
@@ -245,20 +258,35 @@ export const ticketService = {
   async getMeusChamadosByAuthUser(authUserId) {
     if (!authUserId) return { chamadosMeuDepartamento: [], chamadosQueAbriOutros: [] };
 
-    const { data: perms } = await supabase
+    const client = supabaseAdmin || supabase;
+    const { data: perms } = await client
       .from('PDC_user_permissions')
       .select('departamento')
       .eq('auth_user_id', authUserId);
-    const permittedDepts = (perms || []).map((p) => p.departamento);
+    const permittedDepts = (perms || []).map((p) => (p.departamento || '').trim()).filter(Boolean);
     const permittedSet = new Set(permittedDepts);
 
-    const { data: pdcUser } = await supabase
+    let pdcUser = (await client
       .from('PDC_users')
       .select('id, departamento')
       .eq('auth_user_id', authUserId)
-      .single();
+      .maybeSingle()).data;
+    if (!pdcUser?.id && supabaseAdmin) {
+      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(authUserId);
+      const email = authUser?.user?.email;
+      if (email) {
+        const { data: byEmail } = await client
+          .from('PDC_users')
+          .select('id, departamento')
+          .eq('email', email)
+          .maybeSingle();
+        if (byEmail) pdcUser = byEmail;
+      }
+    }
     const solicitanteId = pdcUser?.id || null;
     if (pdcUser?.departamento?.trim()) permittedSet.add(pdcUser.departamento.trim());
+
+    const norm = (v) => (v || '').trim();
 
     const formatTicket = (t) => ({
       ...t,
@@ -266,7 +294,8 @@ export const ticketService = {
       solicitante_email: t.solicitante?.email,
     });
 
-    const { data: allTickets, error } = await supabase
+    const ticketClient = supabaseAdmin || client;
+    const { data: allTickets, error } = await ticketClient
       .from('PDC_tickets')
       .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
       .order('created_at', { ascending: false });
@@ -274,9 +303,9 @@ export const ticketService = {
     if (error) throw new Error(error.message);
     const list = (allTickets || []).map(formatTicket);
 
-    const chamadosMeuDepartamento = list.filter((t) => permittedSet.has(t.area_destino));
+    const chamadosMeuDepartamento = list.filter((t) => permittedSet.has(norm(t.area_destino)));
     const chamadosQueAbriOutros = solicitanteId
-      ? list.filter((t) => t.solicitante_id === solicitanteId && !permittedSet.has(t.area_destino))
+      ? list.filter((t) => t.solicitante_id === solicitanteId && !permittedSet.has(norm(t.area_destino)))
       : [];
 
     return {
@@ -287,7 +316,8 @@ export const ticketService = {
   },
 
   async _getPermissoesMap(authUserId) {
-    const { data } = await supabase
+    const client = supabaseAdmin || supabase;
+    const { data } = await client
       .from('PDC_user_permissions')
       .select('departamento, permissao')
       .eq('auth_user_id', authUserId);

@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard,
   Send,
@@ -87,6 +88,7 @@ export function AppSidebar({
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { isTiUser } = useAuth();
 
   const handleToggle = () => {
     if (isMobile) onHeaderClick?.();
@@ -240,7 +242,12 @@ export function AppSidebar({
 
       {/* Navegação */}
       <List sx={{ flex: 1, py: 0, px: 0.75, minHeight: 0 }} dense>
-        {navCategories.map((category) => (
+        {navCategories.map((category) => {
+          const items = category.items.filter(
+            (item) => item.path !== "/admin/usuarios" || isTiUser
+          );
+          if (items.length === 0) return null;
+          return (
           <Box key={category.label}>
             {!collapsed && (
               <Typography
@@ -259,7 +266,7 @@ export function AppSidebar({
                 {category.label}
               </Typography>
             )}
-            {category.items.map((item) => {
+            {items.map((item) => {
               const isActive = location.pathname === item.path;
               const icon = <item.icon style={{ width: ICON_SIZE, height: ICON_SIZE }} />;
               return (
@@ -329,7 +336,8 @@ export function AppSidebar({
               );
             })}
           </Box>
-        ))}
+          );
+        })}
       </List>
 
       <Divider sx={{ my: 0.25, borderBottomWidth: 0.5 }} />

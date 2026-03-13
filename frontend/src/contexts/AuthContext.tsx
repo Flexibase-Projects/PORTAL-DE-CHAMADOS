@@ -17,12 +17,16 @@ export interface AuthUser {
   nome?: string;
 }
 
+export type PermissaoTipo = "view" | "view_edit";
+
 interface AuthContextValue {
   user: AuthUser | null;
   session: Session | null;
   loading: boolean;
   /** Departamento do usuário (PDC_users.departamento). Só preenchido após GET /me. */
   departamento: string | null;
+  /** Permissões por departamento (view/view_edit). Preenchido após GET /me. */
+  permissions: Record<string, PermissaoTipo>;
   /** True se o usuário pertence ao departamento TI (acesso à aba Usuários). */
   isTiUser: boolean;
   /** True após a primeira resposta de GET /me (permite saber se já podemos confiar em isTiUser). */
@@ -38,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [departamento, setDepartamento] = useState<string | null>(null);
+  const [permissions, setPermissions] = useState<Record<string, "view" | "view_edit">>({});
   const [meLoaded, setMeLoaded] = useState(false);
 
   const user: AuthUser | null = session?.user
@@ -76,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!newSession) {
         syncedRef.current = null;
         setDepartamento(null);
+        setPermissions({});
         setMeLoaded(false);
       }
     });
@@ -99,18 +105,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!session?.user?.id) {
       setDepartamento(null);
+      setPermissions({});
       setMeLoaded(false);
       return;
     }
     setMeLoaded(false);
     api
-      .get<{ success: boolean; departamento: string | null }>("/me")
+      .get<{ success: boolean; departamento: string | null; permissions?: Record<string, "view" | "view_edit"> }>("/me")
       .then((res) => {
-        if (res.data?.success) setDepartamento(res.data.departamento ?? null);
+        if (res.data?.success) {
+          setDepartamento(res.data.departamento ?? null);
+          setPermissions(res.data.permissions ?? {});
+        }
         setMeLoaded(true);
       })
       .catch(() => {
         setDepartamento(null);
+        setPermissions({});
         setMeLoaded(true);
       });
   }, [session?.user?.id]);
@@ -130,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     loading,
     departamento,
+    permissions,
     isTiUser: (departamento || "").trim().toUpperCase() === "TI",
     meLoaded,
     signIn,

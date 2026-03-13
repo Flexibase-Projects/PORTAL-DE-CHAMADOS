@@ -12,13 +12,14 @@ export interface DashboardStats {
   concluidos: number;
   recentes: Ticket[];
   por_departamento: { area: string; count: number }[];
-  por_dia: { date: string; count: number }[];
-  por_dia_industria: { date: string; count: number }[];
-  por_dia_administrativo: { date: string; count: number }[];
-  /** Chamados por mês (geral / industria / administrativo - filtro no card) */
-  por_mes_geral: { mes: string; count: number }[];
-  por_mes_industria: { mes: string; count: number }[];
-  por_mes_administrativo: { mes: string; count: number }[];
+  /** Por dia: abertos (linha) e fechados (barras). Fallback: count = abertos quando API antiga/localStorage. */
+  por_dia: { date: string; abertos?: number; fechados?: number; count?: number }[];
+  por_dia_industria: { date: string; abertos?: number; fechados?: number; count?: number }[];
+  por_dia_administrativo: { date: string; abertos?: number; fechados?: number; count?: number }[];
+  /** Por mês: abertos (linha) e fechados (barras). Fallback: count = abertos quando API antiga/localStorage. */
+  por_mes_geral: { mes: string; abertos?: number; fechados?: number; count?: number }[];
+  por_mes_industria: { mes: string; abertos?: number; fechados?: number; count?: number }[];
+  por_mes_administrativo: { mes: string; abertos?: number; fechados?: number; count?: number }[];
   /** Chamados por setor (donut: Industria, Administrativo, Comercial) */
   por_setor: { setor: string; count: number }[];
 }
