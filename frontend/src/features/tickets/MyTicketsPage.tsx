@@ -23,7 +23,7 @@ type PermissaoMap = Record<string, "view" | "view_edit">;
 
 export function MyTicketsPage() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading: authLoading, user } = useAuth();
   const authConfigured = !!supabase;
 
   const [loading, setLoading] = useState(false);
@@ -41,7 +41,7 @@ export function MyTicketsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await ticketService.getMeusChamadosByAuth();
+      const res = await ticketService.getMeusChamadosByAuth(user?.id, user?.email);
       if (res.success) {
         setChamadosMeuDepartamento(res.chamadosMeuDepartamento || []);
         setChamadosQueAbriOutros(res.chamadosQueAbriOutros || []);
@@ -52,13 +52,13 @@ export function MyTicketsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id, user?.email]);
 
   useEffect(() => {
-    if (authConfigured && isAuthenticated) {
+    if (authConfigured && isAuthenticated && !authLoading && user?.id) {
       loadByAuth();
     }
-  }, [authConfigured, isAuthenticated, loadByAuth]);
+  }, [authConfigured, isAuthenticated, authLoading, user?.id, loadByAuth]);
 
   useEffect(() => {
     if (selectedTicket?.area_destino) {

@@ -9,11 +9,20 @@ const api = axios.create({
   timeout: 10000,
 });
 
+const AUTH_REQUIRED_PATTERNS = ["/tickets/meus-chamados-by-auth", "/dashboard/stats"];
+
+function urlRequiresAuth(url: string): boolean {
+  const path = typeof url === "string" ? url.replace(/^.*\/api/, "") : "";
+  return AUTH_REQUIRED_PATTERNS.some((p) => path.includes(p));
+}
+
 api.interceptors.request.use(async (config) => {
   if (supabase) {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    let session = (await supabase.auth.getSession()).data.session;
+    if (!session?.user?.id && urlRequiresAuth(config.url ?? "")) {
+      await new Promise((r) => setTimeout(r, 300));
+      session = (await supabase.auth.getSession()).data.session;
+    }
     if (session?.user?.id) {
       config.headers["x-auth-user-id"] = session.user.id;
     }

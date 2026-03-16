@@ -6,7 +6,9 @@ export const validateEmail = (email) => {
 };
 
 export const validateTicket = (req, res, next) => {
-  const { nome, email, setor, area, assunto, mensagem } = req.body;
+  const { nome, email, setor, setor_destino, area, area_destino, assunto, mensagem } = req.body;
+  const areaVal = (area || area_destino || '').trim();
+  const setorVal = (setor || setor_destino || '').trim();
 
   const errors = [];
 
@@ -20,11 +22,11 @@ export const validateTicket = (req, res, next) => {
     errors.push('Email inválido');
   }
 
-  if (!setor || setor.trim().length === 0) {
+  if (!setorVal) {
     errors.push('Setor é obrigatório');
   }
 
-  if (!area || area.trim().length === 0) {
+  if (!areaVal) {
     errors.push('Área é obrigatória');
   }
 

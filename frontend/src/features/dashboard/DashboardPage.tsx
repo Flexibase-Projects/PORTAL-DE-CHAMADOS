@@ -16,6 +16,7 @@ import {
   ChamadosPorPeriodoChart,
   DepartmentBarChart,
   TicketsBySetorDonut,
+  ResolvidosGauge,
 } from "./components/Charts";
 import {
   getDateRangeForPeriod,
@@ -24,6 +25,7 @@ import {
 } from "./dashboardPeriod";
 import { getSetorByDepartamento } from "@/constants/departamentos";
 import { ticketService, type DashboardStats } from "@/services/ticketService";
+import { useAuth } from "@/contexts/AuthContext";
 
 const emptyStats: DashboardStats = {
   total: 0,
@@ -42,6 +44,7 @@ const emptyStats: DashboardStats = {
 };
 
 export function DashboardPage() {
+  const { loading: authLoading, user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
   const [loading, setLoading] = useState(true);
   const [filterSetorGlobal, setFilterSetorGlobal] = useState<string | null>(null);
@@ -51,10 +54,11 @@ export function DashboardPage() {
   const [customViewMode, setCustomViewMode] = useState<"dia" | "mes">("dia");
   const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null);
 
-  const loadStats = (options?: { dateFrom: string; dateTo: string }) => {
+  const loadStats = (options?: { dateFrom?: string; dateTo?: string }) => {
     setLoading(true);
+    const params = { ...options, auth_user_id: user?.id ?? undefined };
     ticketService
-      .getDashboardStats(options)
+      .getDashboardStats(params)
       .then((res) => {
         if (res.success && res.stats) setStats(res.stats);
       })
@@ -63,6 +67,7 @@ export function DashboardPage() {
   };
 
   useEffect(() => {
+    if (authLoading) return;
     if (periodKey === "custom") {
       if (customDateFrom && customDateTo && customDateFrom <= customDateTo) {
         loadStats({ dateFrom: customDateFrom, dateTo: customDateTo });
@@ -74,7 +79,7 @@ export function DashboardPage() {
     }
     const range = getDateRangeForPeriod(periodKey);
     if (range) loadStats(range);
-  }, [periodKey, customDateFrom, customDateTo]);
+  }, [authLoading, periodKey, customDateFrom, customDateTo, user?.id]);
 
   const handlePeriodChange = (key: PeriodKey) => {
     setPeriodKey(key);
@@ -153,9 +158,7 @@ export function DashboardPage() {
           >
             <MenuItem value="7d">{PERIOD_LABELS["7d"]}</MenuItem>
             <MenuItem value="mes_atual">{PERIOD_LABELS.mes_atual}</MenuItem>
-            <MenuItem value="mes_anterior">{PERIOD_LABELS.mes_anterior}</MenuItem>
             <MenuItem value="ano_atual">{PERIOD_LABELS.ano_atual}</MenuItem>
-            <MenuItem value="ano_anterior">{PERIOD_LABELS.ano_anterior}</MenuItem>
             <MenuItem value="custom">{PERIOD_LABELS.custom}</MenuItem>
           </Select>
         </FormControl>
@@ -261,7 +264,17 @@ export function DashboardPage() {
           customViewMode={customViewMode}
           onCustomViewModeChange={setCustomViewMode}
         />
-        <TicketsBySetorDonut data={stats.por_setor ?? []} />
+        <Box
+          sx={{
+            display: "grid",
+            gap: 1.5,
+            gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+            minWidth: 0,
+          }}
+        >
+          <TicketsBySetorDonut data={stats.por_setor ?? []} />
+          <ResolvidosGauge total={stats.total ?? 0} concluidos={stats.concluidos ?? 0} />
+        </Box>
       </Box>
 
       <DepartmentBarChart

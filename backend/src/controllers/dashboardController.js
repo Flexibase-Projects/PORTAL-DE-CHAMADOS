@@ -25,8 +25,11 @@ export const dashboardController = {
     DBG('getStats entry', {}, 'H1');
     // #endregion
     try {
-      const { dateFrom, dateTo } = req.query || {};
-      const authUserId = req.headers['x-auth-user-id'] || null;
+      const { dateFrom, dateTo, auth_user_id: queryAuthUserId } = req.query || {};
+      const authUserId = req.headers['x-auth-user-id'] || queryAuthUserId || null;
+      if (process.env.NODE_ENV !== 'production' && !authUserId) {
+        console.debug('[dashboardController] getStats: x-auth-user-id ausente — dashboard retornará vazio para usuário logado');
+      }
       const stats = await dashboardService.getStats({ dateFrom, dateTo, authUserId });
       // #region agent log
       DBG('getStats success', { hasStats: !!stats }, 'H1');

@@ -12,12 +12,9 @@ function canEditTemplateForDepartment(permissions, userDepartamento, departament
 export const templateController = {
   async getTemplate(req, res) {
     try {
-      const authUserId = req.headers['x-auth-user-id'];
-      if (!authUserId) return res.status(401).json({ success: false, error: 'Não autenticado' });
       const departamento = req.params.departamento;
-      const { permissions, userDepartamento } = await permissionService.getByAuthUserId(authUserId);
-      if (!canEditTemplateForDepartment(permissions, userDepartamento, departamento)) {
-        return res.status(403).json({ success: false, error: 'Sem permissão de edição para este departamento' });
+      if (!departamento || !departamento.trim()) {
+        return res.status(400).json({ success: false, error: 'Departamento é obrigatório' });
       }
       const template = await templateService.getByDepartamento(departamento);
       res.json({ success: true, template });

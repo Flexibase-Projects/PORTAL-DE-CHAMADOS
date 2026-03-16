@@ -27,9 +27,12 @@ export interface DashboardStats {
 const DASHBOARD_CACHE_TTL_MS = 60 * 1000;
 let dashboardCache: { key: string; result: { success: boolean; stats: DashboardStats }; expiresAt: number } | null = null;
 
-function getDashboardCacheKey(options?: { dateFrom?: string; dateTo?: string }): string {
-  if (!options?.dateFrom || !options?.dateTo || options.dateFrom > options.dateTo) return "default";
-  return `range:${options.dateFrom}:${options.dateTo}`;
+function getDashboardCacheKey(options?: { dateFrom?: string; dateTo?: string; auth_user_id?: string | null }): string {
+  const range =
+    options?.dateFrom && options?.dateTo && options.dateFrom <= options.dateTo
+      ? `range:${options.dateFrom}:${options.dateTo}`
+      : "default";
+  return `${options?.auth_user_id ?? "anon"}:${range}`;
 }
 
 export const ticketService = {
@@ -75,8 +78,8 @@ export const ticketService = {
     }
   },
 
-  /** Meus chamados por usuário autenticado (requer header x-auth-user-id). */
-  async getMeusChamadosByAuth(): Promise<{
+  /** Meus chamados por usuário autenticado. Envia auth_user_id e email na query para garantir que o backend receba mesmo se o header for perdido. */
+  async getMeusChamadosByAuth(authUserId?: string | null, email?: string | null): Promise<{
     success: boolean;
     chamadosMeuDepartamento?: Ticket[];
     chamadosQueAbriOutros?: Ticket[];
@@ -86,10 +89,15 @@ export const ticketService = {
       return { success: true, chamadosMeuDepartamento: [], chamadosQueAbriOutros: [] };
     }
     try {
-      const res = await api.get("/tickets/meus-chamados-by-auth");
+      const params: Record<string, string> = {};
+      if (authUserId) params.auth_user_id = authUserId;
+      if (email) params.auth_user_email = email;
+      const res = await api.get("/tickets/meus-chamados-by-auth", { params });
       return res.data;
-    } catch {
-      return { success: true, chamadosMeuDepartamento: [], chamadosQueAbriOutros: [] };
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 400) throw new Error("Não foi possível identificar seu usuário. Faça login novamente.");
+      throw err;
     }
   },
 
@@ -154,7 +162,11 @@ export const ticketService = {
     }
   },
 
-  async getDashboardStats(options?: { dateFrom?: string; dateTo?: string }): Promise<{ success: boolean; stats: DashboardStats }> {
+  async getDashboardStats(options?: {
+    dateFrom?: string;
+    dateTo?: string;
+    auth_user_id?: string | null;
+  }): Promise<{ success: boolean; stats: DashboardStats }> {
     if (USE_LOCAL_STORAGE) {
       const stats = localStorageStorage.getDashboardStats(options);
       return { success: true, stats };
@@ -165,7 +177,11 @@ export const ticketService = {
       return dashboardCache.result;
     }
     try {
-      const res = await api.get("/dashboard/stats", { params: options });
+      const params: Record<string, string> = {};
+      if (options?.dateFrom) params.dateFrom = options.dateFrom;
+      if (options?.dateTo) params.dateTo = options.dateTo;
+      if (options?.auth_user_id) params.auth_user_id = options.auth_user_id;
+      const res = await api.get("/dashboard/stats", { params });
       const result = res.data as { success: boolean; stats: DashboardStats };
       dashboardCache = { key: cacheKey, result, expiresAt: now + DASHBOARD_CACHE_TTL_MS };
       return result;

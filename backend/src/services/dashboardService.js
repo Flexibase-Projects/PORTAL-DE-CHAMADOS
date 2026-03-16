@@ -88,12 +88,10 @@ const DBG = (msg, data, hypothesisId) => {
   }).catch(() => {});
 };
 
-/** Retorna Set com departamentos (uppercase) que o usuário pode ver no dashboard (chamados recebidos por suas áreas). */
+/** Retorna Set com o departamento do usuário (PDC_users.departamento). Visibilidade sem exigir PDC_user_permissions. */
 async function getPermittedDepartmentsForDashboard(authUserId) {
-  const { permissions, userDepartamento } = await permissionService.getByAuthUserId(authUserId);
-  const set = new Set(
-    Object.keys(permissions || {}).map((d) => (d || '').trim().toUpperCase()).filter(Boolean)
-  );
+  const { userDepartamento } = await permissionService.getByAuthUserId(authUserId);
+  const set = new Set();
   if (userDepartamento?.trim()) set.add(userDepartamento.trim().toUpperCase());
   return set;
 }
@@ -141,7 +139,7 @@ export const dashboardService = {
 
     let all = tickets || [];
     let recentesParaStats = recentes || [];
-    /** Dashboard mostra SOMENTE chamados que o departamento do usuário logado recebeu (area_destino nas suas permissões). */
+    /** Dashboard mostra chamados cujo area_destino é o departamento do usuário (PDC_users.departamento), sem exigir permissões. */
     const authUserId = options.authUserId;
     if (authUserId) {
       const permittedSet = await getPermittedDepartmentsForDashboard(authUserId);
@@ -177,22 +175,33 @@ export const dashboardService = {
       .map(([area, count]) => ({ area, count }))
       .sort((a, b) => b.count - a.count);
 
+    /** Por dia: "abertos" = saldo de abertos ao fim do dia (criados até o dia - fechados até o dia); "fechados" = quantidade fechada naquele dia. */
     const buildPorDia = (list, filterSetor = null) => {
       const base = filterSetor
         ? list.filter(t => getSetorByArea(t.solicitante?.departamento ?? t.area_destino) === filterSetor)
         : list;
       const out = [];
+      const toDateStr = (x) => (x || '').toString().slice(0, 10);
+      const fechadosNoDia = (dateStr) =>
+        base.filter(t => t.status === 'Concluído' && t.closed_at && toDateStr(t.closed_at) === dateStr).length;
+      const saldoAbertosFimDoDia = (dateStr) =>
+        base.filter((t) => {
+          const created = toDateStr(t.created_at);
+          if (created > dateStr) return false;
+          if (t.status !== 'Concluído' || !t.closed_at) return true;
+          const closed = toDateStr(t.closed_at);
+          return closed > dateStr;
+        }).length;
+
       if (useCustomRange) {
         const start = new Date(dateFrom);
         const end = new Date(dateTo);
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
           const dateStr = d.toISOString().split('T')[0];
-          const abertos = base.filter(t => (t.created_at || '').toString().startsWith(dateStr)).length;
-          const fechados = base.filter(t => t.status === 'Concluído' && t.closed_at && (t.closed_at || '').toString().startsWith(dateStr)).length;
           out.push({
             date: d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-            abertos,
-            fechados,
+            abertos: saldoAbertosFimDoDia(dateStr),
+            fechados: fechadosNoDia(dateStr),
           });
         }
       } else {
@@ -201,12 +210,10 @@ export const dashboardService = {
           const d = new Date(hoje);
           d.setDate(d.getDate() - i);
           const dateStr = d.toISOString().split('T')[0];
-          const abertos = base.filter(t => (t.created_at || '').toString().startsWith(dateStr)).length;
-          const fechados = base.filter(t => t.status === 'Concluído' && t.closed_at && (t.closed_at || '').toString().startsWith(dateStr)).length;
           out.push({
             date: d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-            abertos,
-            fechados,
+            abertos: saldoAbertosFimDoDia(dateStr),
+            fechados: fechadosNoDia(dateStr),
           });
         }
       }

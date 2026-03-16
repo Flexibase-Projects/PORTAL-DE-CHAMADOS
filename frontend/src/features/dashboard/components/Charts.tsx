@@ -14,6 +14,8 @@ import {
   Pie,
   Cell,
   Legend,
+  RadialBarChart,
+  RadialBar,
 } from "recharts";
 import { useTheme } from "@mui/material/styles";
 import { alpha } from "@mui/material/styles";
@@ -259,11 +261,11 @@ interface PorSetorProps {
   data: { setor: string; count: number }[];
 }
 
-/** Cores por setor em tons de azul. */
+/** Cores do gráfico rosca por setor (verde-amarelo e roxo). */
 const SETOR_COLOR_MAP: Record<string, string> = {
-  Administrativo: "#2563eb",
-  Industrial: "#0ea5e9",
-  Comercial: "#3b82f6",
+  Administrativo: "#8a00c4",
+  Industrial: "#a8d001",
+  Comercial: "#8a00c4",
 };
 
 /** Apenas Indústria e Administrativo (Comercial ignorado). */
@@ -277,6 +279,8 @@ export function TicketsBySetorDonut({ data }: PorSetorProps) {
   return (
     <Card
       sx={{
+        width: "100%",
+        minWidth: 0,
         "&:hover": {
           boxShadow: `0 0 24px ${alpha(glowColor, 0.28)}, 0 0 48px ${alpha(glowColor, 0.12)}`,
         },
@@ -347,6 +351,119 @@ export function TicketsBySetorDonut({ data }: PorSetorProps) {
             </ResponsiveContainer>
           </Box>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Velocímetro: percentual de chamados resolvidos. Arco verde, ponteiro, hub central, labels 0% / 100%, percentual abaixo. */
+const GAUGE_FILL = "#2ee39a";
+const GAUGE_BG_LIGHT = "#e4e4e9";
+const GAUGE_BG_DARK = "#333";
+const GAUGE_HUB = "#5a5a5a";
+const GAUGE_POINTER = "#9e9e9e";
+
+interface ResolvidosGaugeProps {
+  total: number;
+  concluidos: number;
+}
+
+export function ResolvidosGauge({ total, concluidos }: ResolvidosGaugeProps) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+  const glowColor = theme.palette.primary.main;
+  const percent = total > 0 ? Math.min(100, (concluidos / total) * 100) : 0;
+  const percentRounded = Math.round(percent);
+  const data = [{ name: "resolvidos", value: percent, fill: GAUGE_FILL }];
+  const gaugeBg = isDark ? GAUGE_BG_DARK : GAUGE_BG_LIGHT;
+  const pointerAngle = -90 + (percent / 100) * 180;
+
+  return (
+    <Card
+      sx={{
+        width: "100%",
+        minWidth: 0,
+        "&:hover": {
+          boxShadow: `0 0 24px ${alpha(glowColor, 0.28)}, 0 0 48px ${alpha(glowColor, 0.12)}`,
+        },
+      }}
+    >
+      <CardHeader
+        title={
+          <Typography variant="subtitle1" fontWeight={600}>
+            Chamados resolvidos
+          </Typography>
+        }
+      />
+      <CardContent sx={{ pt: 0, position: "relative", overflow: "hidden" }}>
+        <Box
+          sx={{
+            width: "100%",
+            height: { xs: 220, sm: 260 },
+            position: "relative",
+            minWidth: 0,
+          }}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <RadialBarChart
+              cx="50%"
+              cy="50%"
+              innerRadius="35%"
+              outerRadius="62%"
+              data={data}
+              startAngle={180}
+              endAngle={0}
+              margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
+            >
+              <RadialBar
+                dataKey="value"
+                background={{ fill: gaugeBg }}
+                cornerRadius={10}
+                isAnimationActive
+              />
+            </RadialBarChart>
+          </ResponsiveContainer>
+          {/* Ponteiro até o meio da barra verde; valor reduzido para não ultrapassar (raio do chart < 50% do container) */}
+          <Box
+            sx={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              width: 2,
+              height: "18%",
+              backgroundColor: GAUGE_POINTER,
+              transformOrigin: "50% 100%",
+              transform: `translate(-50%, -100%) rotate(${pointerAngle}deg)`,
+              borderRadius: 1,
+              pointerEvents: "none",
+            }}
+          />
+          <Box
+            sx={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              width: { xs: 12, sm: 14 },
+              height: { xs: 12, sm: 14 },
+              borderRadius: "50%",
+              backgroundColor: GAUGE_HUB,
+              transform: "translate(-50%, -50%)",
+              pointerEvents: "none",
+            }}
+          />
+        </Box>
+        <Typography
+          variant="h4"
+          fontWeight={700}
+          textAlign="center"
+          sx={{
+            mt: 1,
+            color: "text.primary",
+            fontSize: { xs: "1.5rem", sm: "2rem" },
+          }}
+        >
+          {percentRounded}%
+        </Typography>
       </CardContent>
     </Card>
   );

@@ -156,8 +156,11 @@ O projeto está preparado para deploy via **Docker** (Coolify ou qualquer orques
 
 ## Autenticação e permissões
 
-- **Login**: Supabase Auth (e-mail e senha). Usuários do Auth acessam o painel e a área "Meus Chamados" conforme permissões.
-- **Permissões por departamento** (tabela `PDC_user_permissions`): para cada usuário do Auth é possível definir, por departamento (ex.: SGI, TI), se ele tem **Ver** ou **Ver e editar** os chamados daquela área. Sem permissão para um departamento, o usuário não vê os chamados da área.
+- **Login**: Supabase Auth (e-mail e senha). Usuários do Auth acessam o painel e a área "Meus Chamados".
+- **Envio de chamados**: não exige permissão; qualquer usuário pode abrir chamado para qualquer departamento.
+- **Recebimento de chamados**: quem tem o departamento definido em `PDC_users.departamento` igual ao **área de destino** (`area_destino`) do chamado vê e pode editar/responder esses chamados. Não é obrigatório ter registro em `PDC_user_permissions` para o próprio departamento — basta o usuário ter o departamento correto em **Usuários** (coluna Departamento).
+- **Chamados do meu departamento e Dashboard**: exibem apenas chamados cujo `area_destino` é o departamento do usuário (`PDC_users.departamento`). Garanta que cada usuário receptor tenha o departamento preenchido no painel Usuários.
+- **Permissões por departamento** (tabela `PDC_user_permissions`): opcional. Serve para conceder **Ver** ou **Ver e editar** chamados de *outros* departamentos além do do usuário, ou para políticas futuras.
 - **Criar usuário no Auth e dar acesso ao SGI**: use o script `backend/scripts/create-sgi-user.js` (edite email/senha/departamento no próprio arquivo se quiser). Requer `SUPABASE_SERVICE_ROLE_KEY` no `.env.local`:
   ```bash
   node backend/scripts/create-sgi-user.js
