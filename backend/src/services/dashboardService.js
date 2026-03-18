@@ -60,9 +60,14 @@ function aggregateByMonth(ticketList, filterSetor = null) {
 function aggregateByMonthInRange(ticketList, filterSetor, dateFrom, dateTo) {
   const rangeStart = dateFrom.slice(0, 7);
   const rangeEnd = dateTo.slice(0, 7);
-  return aggregateByMonth(ticketList, filterSetor)
+    return aggregateByMonth(ticketList, filterSetor)
     .filter((row) => row.ym >= rangeStart && row.ym <= rangeEnd)
-    .map(({ mes, abertos, fechados }) => ({ mes, abertos, fechados }));
+    .map(({ mes, ym, abertos, fechados }) => ({
+      mesKey: ym,
+      mes: `${mes} ${ym.slice(0, 4)}`,
+      abertos,
+      fechados,
+    }));
 }
 
 /** Contagem por setor para o donut. Usa departamento de origem (solicitante). */
@@ -194,15 +199,27 @@ export const dashboardService = {
         }).length;
 
       if (useCustomRange) {
-        const start = new Date(dateFrom);
-        const end = new Date(dateTo);
-        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          const dateStr = d.toISOString().split('T')[0];
+        const parseYMD = (s) => {
+          const p = String(s).slice(0, 10).split('-').map(Number);
+          return { y: p[0], m: p[1], d: p[2] };
+        };
+        let { y, m, d } = parseYMD(dateFrom);
+        const endYMD = parseYMD(dateTo);
+        for (;;) {
+          const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          if (dateStr < dateFrom.slice(0, 10) || dateStr > dateTo.slice(0, 10)) break;
+          const loc = new Date(y, m - 1, d);
           out.push({
-            date: d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+            dateKey: dateStr,
+            date: loc.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
             abertos: saldoAbertosFimDoDia(dateStr),
             fechados: fechadosNoDia(dateStr),
           });
+          if (dateStr === dateTo.slice(0, 10)) break;
+          loc.setDate(loc.getDate() + 1);
+          y = loc.getFullYear();
+          m = loc.getMonth() + 1;
+          d = loc.getDate();
         }
       } else {
         const hoje = new Date();

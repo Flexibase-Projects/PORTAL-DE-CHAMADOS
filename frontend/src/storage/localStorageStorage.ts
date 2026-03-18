@@ -335,10 +335,14 @@ export const localStorageStorage = {
     ): { date: string; count: number }[] => {
       const out: { date: string; count: number }[] = [];
       if (useCustomRange && dateFrom && dateTo) {
-        const start = new Date(dateFrom);
-        const end = new Date(dateTo);
-        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          const dateStr = d.toISOString().split("T")[0];
+        const parseYMD = (s: string) => {
+          const p = s.slice(0, 10).split("-").map(Number);
+          return { y: p[0], m: p[1], d: p[2] };
+        };
+        let { y, m, d } = parseYMD(dateFrom);
+        for (;;) {
+          const dateStr = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+          if (dateStr < dateFrom.slice(0, 10) || dateStr > dateTo.slice(0, 10)) break;
           const filtered =
             filterSetor === null
               ? list
@@ -346,10 +350,17 @@ export const localStorageStorage = {
           const count = filtered.filter((t) =>
             (t.created_at ?? "").toString().startsWith(dateStr)
           ).length;
+          const loc = new Date(y, m - 1, d);
           out.push({
-            date: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+            dateKey: dateStr,
+            date: loc.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" }),
             count,
           });
+          if (dateStr === dateTo.slice(0, 10)) break;
+          loc.setDate(loc.getDate() + 1);
+          y = loc.getFullYear();
+          m = loc.getMonth() + 1;
+          d = loc.getDate();
         }
       } else {
         for (let i = 6; i >= 0; i--) {
@@ -403,12 +414,32 @@ export const localStorageStorage = {
       filterSetor: string | null,
       rangeFrom: string,
       rangeTo: string
-    ): { mes: string; count: number }[] => {
+    ): { mes: string; mesKey: string; count: number }[] => {
+      const rangeStart = rangeFrom.slice(0, 7);
+      const rangeEnd = rangeTo.slice(0, 7);
       const filtered = list.filter((t) => {
         const created = (t.created_at ?? "").toString().slice(0, 10);
         return created >= rangeFrom && created <= rangeTo;
       });
-      return aggregateByMonth(filtered, filterSetor);
+      const byMonth: Record<string, number> = {};
+      filtered.forEach((t) => {
+        const setor = getSetorByDepartamento(t.area_destino ?? "");
+        if (filterSetor !== null && setor !== filterSetor) return;
+        const created = (t.created_at ?? "").toString().slice(0, 7);
+        if (!created) return;
+        byMonth[created] = (byMonth[created] ?? 0) + 1;
+      });
+      return Object.keys(byMonth)
+        .sort()
+        .filter((ym) => ym >= rangeStart && ym <= rangeEnd)
+        .map((ym) => {
+          const [y, m] = ym.split("-").map(Number);
+          return {
+            mesKey: ym,
+            mes: `${mesNames[m - 1]}/${String(y).slice(-2)}`,
+            count: byMonth[ym],
+          };
+        });
     };
     const aggregateBySetor = (): { setor: string; count: number }[] => {
       const counts: Record<string, number> = { Comercial: 0, Administrativo: 0, Industrial: 0 };

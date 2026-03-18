@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
 import {
   Bar,
   BarChart,
@@ -32,8 +32,8 @@ import type { PeriodKey } from "../dashboardPeriod";
 
 const PERIODO_COLORS = { dia: "#0ea5e9", mes: "#2563eb" };
 
-type PorDiaItem = { date: string; abertos?: number; fechados?: number; count?: number };
-type PorMesItem = { mes: string; abertos?: number; fechados?: number; count?: number };
+type PorDiaItem = { date: string; dateKey?: string; abertos?: number; fechados?: number; count?: number };
+type PorMesItem = { mes: string; mesKey?: string; abertos?: number; fechados?: number; count?: number };
 
 interface ChamadosPorPeriodoChartProps {
   dataDia: PorDiaItem[];
@@ -82,71 +82,110 @@ export function ChamadosPorPeriodoChart({
   const colorFechados = "#2563eb";
   const showPorMes = effectiveViewMode === "mes";
   const chartData = showPorMes ? chartDataMes : chartDataDia;
-  const dataKeyX = showPorMes ? "mes" : "date";
+  const useDateKey =
+    periodKey === "custom" &&
+    !showPorMes &&
+    chartDataDia.some((r) => Boolean((r as PorDiaItem).dateKey));
+  const useMesKey =
+    periodKey === "custom" &&
+    showPorMes &&
+    chartDataMes.some((r) => Boolean((r as PorMesItem).mesKey));
+  const dataKeyX = useMesKey ? "mesKey" : useDateKey ? "dateKey" : showPorMes ? "mes" : "date";
+
+  const xTickFormatter = (v: string | number) => {
+    const s = String(v ?? "");
+    if (useDateKey) {
+      const row = chartDataDia.find((r) => r.dateKey === s);
+      return row?.date ?? s;
+    }
+    if (useMesKey) {
+      const row = chartDataMes.find((r) => r.mesKey === s);
+      return row?.mes ?? s;
+    }
+    return s;
+  };
+
+  const tooltipLabel = (_: unknown, payload: Array<{ payload?: Record<string, unknown> }> | undefined) => {
+    const p = payload?.[0]?.payload;
+    if (!p) return "";
+    if (useDateKey && typeof p.date === "string") return p.date;
+    if (useMesKey && typeof p.mes === "string") return p.mes;
+    if (typeof p[dataKeyX] === "string") return p[dataKeyX] as string;
+    return "";
+  };
 
   const handleViewModeChange = (mode: "dia" | "mes") => {
     setViewMode(mode);
     onCustomViewModeChange?.(mode);
   };
 
+  const legendWrapperStyle = {
+    paddingTop: 4,
+    lineHeight: 1.2,
+  } as const;
+
   return (
     <Card
       sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
         "&:hover": {
           boxShadow: `0 0 24px ${alpha(secondaryColor, 0.28)}, 0 0 48px ${alpha(secondaryColor, 0.12)}`,
         },
       }}
     >
-      <Box
+      <CardHeader
+        title={
+          <Typography variant="subtitle1" fontWeight={600} sx={{ whiteSpace: "nowrap" }}>
+            Chamados por período
+          </Typography>
+        }
+        action={
+          periodKey === "custom" ? (
+            <ToggleButtonGroup
+              value={viewMode}
+              exclusive
+              onChange={(_, v) => v != null && handleViewModeChange(v)}
+              size="small"
+              sx={{ flexShrink: 0 }}
+            >
+              <ToggleButton value="dia">Por dia</ToggleButton>
+              <ToggleButton value="mes">Por mês</ToggleButton>
+            </ToggleButtonGroup>
+          ) : undefined
+        }
         sx={{
-          px: { xs: 1.5, sm: 2 },
-          pt: { xs: 1.5, sm: 2 },
-          pb: 0,
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          alignItems: { xs: "stretch", sm: "center" },
-          justifyContent: "space-between",
-          gap: 1.5,
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 1,
+          "& .MuiCardHeader-action": { m: 0, alignSelf: "center" },
         }}
-      >
-        <Typography
-          variant="subtitle1"
-          fontWeight={600}
-          sx={{
-            flex: "0 1 auto",
-            minWidth: 0,
-            maxWidth: { xs: "100%", sm: 160 },
-            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
-          }}
-        >
-          Chamados por período
-        </Typography>
-        {periodKey === "custom" && (
-          <ToggleButtonGroup
-            value={viewMode}
-            exclusive
-            onChange={(_, v) => v != null && handleViewModeChange(v)}
-            size="small"
-          >
-            <ToggleButton value="dia">Por dia</ToggleButton>
-            <ToggleButton value="mes">Por mês</ToggleButton>
-          </ToggleButtonGroup>
-        )}
-      </Box>
-      <CardContent sx={{ pt: 0 }}>
+      />
+      <CardContent sx={{ pt: 0, flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         {isEmpty ? (
           <Typography variant="body2" color="text.secondary" textAlign="center" py={6}>
             Sem dados disponíveis.
           </Typography>
         ) : (
-          <Box sx={{ width: "100%", height: { xs: 220, sm: 250 } }}>
-            <ResponsiveContainer>
-              <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+          <Box sx={{ width: "100%", height: { xs: 220, sm: 260 }, flexShrink: 0 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={chartData}
+                margin={{ top: 8, right: 8, left: 8, bottom: 4 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey={dataKeyX} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                <XAxis
+                  dataKey={dataKeyX}
+                  tick={{ fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={xTickFormatter}
+                  interval={periodKey === "custom" && chartData.length > 14 ? "preserveStartEnd" : 0}
+                />
                 <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip
-                  labelFormatter={(_, payload) => (payload?.[0]?.payload?.[dataKeyX] ?? "")}
+                  labelFormatter={tooltipLabel}
                   formatter={(value: number, name: string) => [
                     value,
                     String(name).toLowerCase() === "abertos" ? "Abertos" : "Fechados",
@@ -159,7 +198,11 @@ export function ChamadosPorPeriodoChart({
                     boxShadow: theme.shadows[2],
                   }}
                 />
-                <Legend />
+                <Legend
+                  verticalAlign="bottom"
+                  align="center"
+                  wrapperStyle={legendWrapperStyle}
+                />
                 <Bar dataKey="fechados" name="Fechados" fill={colorFechados} radius={4}>
                   <LabelList
                     dataKey="fechados"
@@ -276,11 +319,19 @@ export function TicketsBySetorDonut({ data }: PorSetorProps) {
   const filtered = data.filter((d) => SETORES_DONUT.includes(d.setor));
   const glowColor = theme.palette.primary.main;
 
+  const donutLegendStyle = {
+    paddingTop: 4,
+    lineHeight: 1.2,
+  } as const;
+
   return (
     <Card
       sx={{
         width: "100%",
         minWidth: 0,
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
         "&:hover": {
           boxShadow: `0 0 24px ${alpha(glowColor, 0.28)}, 0 0 48px ${alpha(glowColor, 0.12)}`,
         },
@@ -293,15 +344,15 @@ export function TicketsBySetorDonut({ data }: PorSetorProps) {
           </Typography>
         }
       />
-      <CardContent sx={{ pt: 0 }}>
+      <CardContent sx={{ pt: 0, flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         {filtered.length === 0 ? (
           <Typography variant="body2" color="text.secondary" textAlign="center" py={6}>
             Sem dados disponíveis.
           </Typography>
         ) : (
-          <Box sx={{ width: "100%", height: { xs: 220, sm: 260 } }}>
-            <ResponsiveContainer>
-              <PieChart>
+          <Box sx={{ width: "100%", height: { xs: 220, sm: 260 }, flexShrink: 0 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart margin={{ top: 8, right: 8, bottom: 4, left: 8 }}>
                 <Pie
                   data={filtered}
                   dataKey="count"
@@ -346,7 +397,11 @@ export function TicketsBySetorDonut({ data }: PorSetorProps) {
                     );
                   }}
                 />
-                <Legend />
+                <Legend
+                  verticalAlign="bottom"
+                  align="center"
+                  wrapperStyle={donutLegendStyle}
+                />
               </PieChart>
             </ResponsiveContainer>
           </Box>
@@ -362,6 +417,19 @@ const GAUGE_BG_LIGHT = "#e4e4e9";
 const GAUGE_BG_DARK = "#333";
 const GAUGE_HUB = "#5a5a5a";
 const GAUGE_POINTER = "#9e9e9e";
+/** Raio interno/externo da barra (mesmos % do RadialBarChart). */
+const GAUGE_INNER_FRAC = 0.35;
+const GAUGE_OUTER_FRAC = 0.62;
+/** Raio efetivo do Recharts ≈ este fator × min(largura, altura) / 2 (overlay alinhado ao SVG). */
+const GAUGE_EFFECTIVE_RADIUS_FACTOR = 0.742;
+
+function gaugePointerLengthPx(width: number, height: number): number {
+  if (width <= 0 || height <= 0) return 0;
+  const minSide = Math.min(width, height);
+  const effectiveMaxR = (minSide / 2) * GAUGE_EFFECTIVE_RADIUS_FACTOR;
+  const midOfGreen = (GAUGE_INNER_FRAC + GAUGE_OUTER_FRAC) / 2;
+  return Math.max(8, midOfGreen * effectiveMaxR);
+}
 
 interface ResolvidosGaugeProps {
   total: number;
@@ -377,6 +445,26 @@ export function ResolvidosGauge({ total, concluidos }: ResolvidosGaugeProps) {
   const data = [{ name: "resolvidos", value: percent, fill: GAUGE_FILL }];
   const gaugeBg = isDark ? GAUGE_BG_DARK : GAUGE_BG_LIGHT;
   const pointerAngle = -90 + (percent / 100) * 180;
+  const gaugeWrapRef = useRef<HTMLDivElement>(null);
+  const [pointerLenPx, setPointerLenPx] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = gaugeWrapRef.current;
+    if (!el) return;
+    const update = () => {
+      const r = el.getBoundingClientRect();
+      setPointerLenPx(gaugePointerLengthPx(r.width, r.height));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const hubPx =
+    pointerLenPx > 0
+      ? Math.max(10, Math.min(16, Math.round(pointerLenPx * 0.26)))
+      : 14;
 
   return (
     <Card
@@ -397,6 +485,7 @@ export function ResolvidosGauge({ total, concluidos }: ResolvidosGaugeProps) {
       />
       <CardContent sx={{ pt: 0, position: "relative", overflow: "hidden" }}>
         <Box
+          ref={gaugeWrapRef}
           sx={{
             width: "100%",
             height: { xs: 220, sm: 260 },
@@ -423,14 +512,13 @@ export function ResolvidosGauge({ total, concluidos }: ResolvidosGaugeProps) {
               />
             </RadialBarChart>
           </ResponsiveContainer>
-          {/* Ponteiro até o meio da barra verde; valor reduzido para não ultrapassar (raio do chart < 50% do container) */}
           <Box
             sx={{
               position: "absolute",
               left: "50%",
               top: "50%",
               width: 2,
-              height: "18%",
+              height: pointerLenPx > 0 ? `${pointerLenPx}px` : "18%",
               backgroundColor: GAUGE_POINTER,
               transformOrigin: "50% 100%",
               transform: `translate(-50%, -100%) rotate(${pointerAngle}deg)`,
@@ -443,8 +531,8 @@ export function ResolvidosGauge({ total, concluidos }: ResolvidosGaugeProps) {
               position: "absolute",
               left: "50%",
               top: "50%",
-              width: { xs: 12, sm: 14 },
-              height: { xs: 12, sm: 14 },
+              width: hubPx,
+              height: hubPx,
               borderRadius: "50%",
               backgroundColor: GAUGE_HUB,
               transform: "translate(-50%, -50%)",

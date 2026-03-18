@@ -13,13 +13,16 @@ export interface DashboardStats {
   recentes: Ticket[];
   por_departamento: { area: string; count: number }[];
   /** Por dia: abertos (linha) e fechados (barras). Fallback: count = abertos quando API antiga/localStorage. */
-  por_dia: { date: string; abertos?: number; fechados?: number; count?: number }[];
-  por_dia_industria: { date: string; abertos?: number; fechados?: number; count?: number }[];
-  por_dia_administrativo: { date: string; abertos?: number; fechados?: number; count?: number }[];
+  por_dia: { date: string; dateKey?: string; abertos?: number; fechados?: number; count?: number }[];
+  por_dia_industria: { date: string; dateKey?: string; abertos?: number; fechados?: number; count?: number }[];
+  por_dia_administrativo: { date: string; dateKey?: string; abertos?: number; fechados?: number; count?: number }[];
   /** Por mês: abertos (linha) e fechados (barras). Fallback: count = abertos quando API antiga/localStorage. */
-  por_mes_geral: { mes: string; abertos?: number; fechados?: number; count?: number }[];
-  por_mes_industria: { mes: string; abertos?: number; fechados?: number; count?: number }[];
-  por_mes_administrativo: { mes: string; abertos?: number; fechados?: number; count?: number }[];
+  por_mes_geral: { mes: string; mesKey?: string; abertos?: number; fechados?: number; count?: number }[];
+  por_mes_industria: { mes: string; mesKey?: string; abertos?: number; fechados?: number; count?: number }[];
+  por_mes_administrativo: { mes: string; mesKey?: string; abertos?: number; fechados?: number; count?: number }[];
+  por_mes_geral_range?: { mes: string; mesKey?: string; abertos?: number; fechados?: number; count?: number }[];
+  por_mes_industria_range?: { mes: string; mesKey?: string; abertos?: number; fechados?: number; count?: number }[];
+  por_mes_administrativo_range?: { mes: string; mesKey?: string; abertos?: number; fechados?: number; count?: number }[];
   /** Chamados por setor (donut: Industria, Administrativo, Comercial) */
   por_setor: { setor: string; count: number }[];
 }

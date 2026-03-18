@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Skeleton from "@mui/material/Skeleton";
@@ -53,6 +53,11 @@ export function DashboardPage() {
   const [customDateTo, setCustomDateTo] = useState("");
   const [customViewMode, setCustomViewMode] = useState<"dia" | "mes">("dia");
   const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null);
+  /** Intervalo customizado só busca ao Aplicar; rascunho no popover não dispara load. */
+  const [customRangeApplied, setCustomRangeApplied] = useState(false);
+  const [appliedDateFrom, setAppliedDateFrom] = useState("");
+  const [appliedDateTo, setAppliedDateTo] = useState("");
+  const prevPeriodKeyRef = useRef<PeriodKey>(periodKey);
 
   const loadStats = (options?: { dateFrom?: string; dateTo?: string }) => {
     setLoading(true);
@@ -67,19 +72,30 @@ export function DashboardPage() {
   };
 
   useEffect(() => {
+    if (prevPeriodKeyRef.current !== periodKey) {
+      if (periodKey === "custom") {
+        setCustomRangeApplied(false);
+        setAppliedDateFrom("");
+        setAppliedDateTo("");
+      }
+      prevPeriodKeyRef.current = periodKey;
+    }
+  }, [periodKey]);
+
+  useEffect(() => {
     if (authLoading) return;
     if (periodKey === "custom") {
-      if (customDateFrom && customDateTo && customDateFrom <= customDateTo) {
-        loadStats({ dateFrom: customDateFrom, dateTo: customDateTo });
-      } else {
+      if (!customRangeApplied || !appliedDateFrom || !appliedDateTo || appliedDateFrom > appliedDateTo) {
         setStats(emptyStats);
         setLoading(false);
+        return;
       }
+      loadStats({ dateFrom: appliedDateFrom, dateTo: appliedDateTo });
       return;
     }
     const range = getDateRangeForPeriod(periodKey);
     if (range) loadStats(range);
-  }, [authLoading, periodKey, customDateFrom, customDateTo, user?.id]);
+  }, [authLoading, periodKey, customRangeApplied, appliedDateFrom, appliedDateTo, user?.id]);
 
   const handlePeriodChange = (key: PeriodKey) => {
     setPeriodKey(key);
@@ -87,6 +103,9 @@ export function DashboardPage() {
 
   const applyCustomRange = () => {
     if (customDateFrom && customDateTo && customDateFrom <= customDateTo) {
+      setAppliedDateFrom(customDateFrom);
+      setAppliedDateTo(customDateTo);
+      setCustomRangeApplied(true);
       setPopoverAnchor(null);
     }
   };
@@ -254,11 +273,17 @@ export function DashboardPage() {
                 : stats.por_dia) ?? []
           }
           dataMes={
-            (filterSetorGlobal === "Industrial"
-              ? stats.por_mes_industria
-              : filterSetorGlobal === "Administrativo"
-                ? stats.por_mes_administrativo
-                : stats.por_mes_geral) ?? []
+            periodKey === "custom"
+              ? (filterSetorGlobal === "Industrial"
+                  ? stats.por_mes_industria_range
+                  : filterSetorGlobal === "Administrativo"
+                    ? stats.por_mes_administrativo_range
+                    : stats.por_mes_geral_range) ?? []
+              : (filterSetorGlobal === "Industrial"
+                  ? stats.por_mes_industria
+                  : filterSetorGlobal === "Administrativo"
+                    ? stats.por_mes_administrativo
+                    : stats.por_mes_geral) ?? []
           }
           periodKey={periodKey}
           customViewMode={customViewMode}
