@@ -4,7 +4,7 @@ import Typography from "@mui/material/Typography";
 import Chip from "@mui/material/Chip";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
-import { Mail, Building2, Clock } from "lucide-react";
+import { Mail, Building2, Clock, UserRound } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import type { Ticket } from "@/types/ticket";
 
@@ -100,6 +100,14 @@ export function TicketCard({
               {formatDate(ticket.created_at)}
             </Typography>
           </Box>
+          {ticket.responsavel_nome && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+              <UserRound style={{ width: 12, height: 12, opacity: 0.7 }} />
+              <Typography variant="caption" color="text.secondary" noWrap>
+                Responsável: {ticket.responsavel_nome}
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         <Typography

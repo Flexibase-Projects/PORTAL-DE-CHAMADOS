@@ -32,6 +32,9 @@ export interface Ticket {
   solicitante_id: string;
   solicitante_nome?: string;
   solicitante_email?: string;
+  responsavel_id?: string | null;
+  responsavel_nome?: string | null;
+  responsavel_email?: string | null;
   area_destino: string;
   setor: string;
   assunto: string;

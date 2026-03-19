@@ -209,6 +209,10 @@ export function TicketManagement({ initialTicketId }: Props) {
                   <Typography variant="caption" color="text.secondary">Data</Typography>
                   <Typography variant="body2">{formatDate(selected.created_at)}</Typography>
                 </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Responsável</Typography>
+                  <Typography variant="body2">{selected.responsavel_nome || "Não atribuído"}</Typography>
+                </Box>
                 {selected.prioridade && (
                   <Box>
                     <Typography variant="caption" color="text.secondary">Prioridade</Typography>

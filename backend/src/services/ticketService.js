@@ -10,6 +10,24 @@ function generateProtocol() {
   return `PDC-${y}${m}${d}-${rand}`;
 }
 
+const TICKET_SELECT_BASE = `*, solicitante:PDC_users!solicitante_id(nome, email)`;
+const TICKET_SELECT_WITH_RESP = `${TICKET_SELECT_BASE}, responsavel:PDC_users!responsavel_id(nome, email)`;
+
+function isMissingResponsavelColumnError(error) {
+  const msg = `${error?.message || ''} ${error?.details || ''}`.toLowerCase();
+  return msg.includes('responsavel_id') || msg.includes('pdc_tickets.responsavel_id');
+}
+
+function mapTicketWithJoins(t) {
+  return {
+    ...t,
+    solicitante_nome: t.solicitante?.nome,
+    solicitante_email: t.solicitante?.email,
+    responsavel_nome: t.responsavel?.nome || null,
+    responsavel_email: t.responsavel?.email || null,
+  };
+}
+
 export const ticketService = {
   async createTicket(data, authUserId = null) {
     const client = supabaseAdmin || supabase;
@@ -91,26 +109,35 @@ export const ticketService = {
   },
 
   async getAllTickets() {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('PDC_tickets')
-      .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
+      .select(TICKET_SELECT_WITH_RESP)
       .order('created_at', { ascending: false });
+    if (error && isMissingResponsavelColumnError(error)) {
+      ({ data, error } = await supabase
+        .from('PDC_tickets')
+        .select(TICKET_SELECT_BASE)
+        .order('created_at', { ascending: false }));
+    }
 
     if (error) throw new Error(error.message);
-    return (data || []).map(t => ({
-      ...t,
-      solicitante_nome: t.solicitante?.nome,
-      solicitante_email: t.solicitante?.email,
-    }));
+    return (data || []).map(mapTicketWithJoins);
   },
 
   async getTicketById(id) {
     const client = supabaseAdmin || supabase;
-    const { data: ticket, error } = await client
+    let { data: ticket, error } = await client
       .from('PDC_tickets')
-      .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
+      .select(TICKET_SELECT_WITH_RESP)
       .eq('id', id)
       .single();
+    if (error && isMissingResponsavelColumnError(error)) {
+      ({ data: ticket, error } = await client
+        .from('PDC_tickets')
+        .select(TICKET_SELECT_BASE)
+        .eq('id', id)
+        .single());
+    }
 
     if (error || !ticket) return null;
 
@@ -129,9 +156,7 @@ export const ticketService = {
       .order('created_at', { ascending: false });
 
     return {
-      ...ticket,
-      solicitante_nome: ticket.solicitante?.nome,
-      solicitante_email: ticket.solicitante?.email,
+      ...mapTicketWithJoins(ticket),
       respostas: (respostas || []).map(r => ({
         ...r,
         autor_nome: r.autor?.nome || 'Administrador',
@@ -160,18 +185,21 @@ export const ticketService = {
     if (!users?.length) return [];
 
     const ids = users.map(u => u.id);
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('PDC_tickets')
-      .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
+      .select(TICKET_SELECT_WITH_RESP)
       .in('solicitante_id', ids)
       .order('created_at', { ascending: false });
+    if (error && isMissingResponsavelColumnError(error)) {
+      ({ data, error } = await supabase
+        .from('PDC_tickets')
+        .select(TICKET_SELECT_BASE)
+        .in('solicitante_id', ids)
+        .order('created_at', { ascending: false }));
+    }
 
     if (error) throw new Error(error.message);
-    return (data || []).map(t => ({
-      ...t,
-      solicitante_nome: t.solicitante?.nome,
-      solicitante_email: t.solicitante?.email,
-    }));
+    return (data || []).map(mapTicketWithJoins);
   },
 
   /**
@@ -277,7 +305,42 @@ export const ticketService = {
     });
 
     // Notificar o solicitante sobre nova resposta (se tiver auth_user_id)
-    const { data: ticketRow } = await client.from('PDC_tickets').select('solicitante_id, area_destino, numero_protocolo, assunto').eq('id', ticketId).single();
+    let { data: ticketRow, error: ticketRowErr } = await client
+      .from('PDC_tickets')
+      .select('solicitante_id, area_destino, numero_protocolo, assunto, responsavel_id')
+      .eq('id', ticketId)
+      .single();
+    if (ticketRowErr && isMissingResponsavelColumnError(ticketRowErr)) {
+      const fallback = await client
+        .from('PDC_tickets')
+        .select('solicitante_id, area_destino, numero_protocolo, assunto')
+        .eq('id', ticketId)
+        .single();
+      ticketRow = fallback.data ? { ...fallback.data, responsavel_id: null } : null;
+      ticketRowErr = fallback.error;
+    }
+    if (ticketRowErr) throw new Error(ticketRowErr.message);
+
+    // Autoatribuição na primeira resposta: somente se autor for do departamento receptor.
+    if (!ticketRow?.responsavel_id && ticketRow?.area_destino && autorId) {
+      const areaNorm = (ticketRow.area_destino || '').trim().toUpperCase();
+      const { data: autorRow } = await client
+        .from('PDC_users')
+        .select('id, departamento')
+        .eq('id', autorId)
+        .maybeSingle();
+      const autorDeptNorm = (autorRow?.departamento || '').trim().toUpperCase();
+      if (autorRow?.id && autorDeptNorm === areaNorm) {
+        const updateResult = await client
+          .from('PDC_tickets')
+          .update({ responsavel_id: autorRow.id, updated_at: new Date().toISOString() })
+          .eq('id', ticketId)
+          .is('responsavel_id', null);
+        if (updateResult.error && !isMissingResponsavelColumnError(updateResult.error)) {
+          throw new Error(updateResult.error.message);
+        }
+      }
+    }
     if (ticketRow?.solicitante_id) {
       const { data: pdcUser } = await client.from('PDC_users').select('auth_user_id').eq('id', ticketRow.solicitante_id).single();
       if (pdcUser?.auth_user_id) {
@@ -329,18 +392,21 @@ export const ticketService = {
   },
 
   async getTicketsByArea(area) {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('PDC_tickets')
-      .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
+      .select(TICKET_SELECT_WITH_RESP)
       .eq('area_destino', area)
       .order('created_at', { ascending: false });
+    if (error && isMissingResponsavelColumnError(error)) {
+      ({ data, error } = await supabase
+        .from('PDC_tickets')
+        .select(TICKET_SELECT_BASE)
+        .eq('area_destino', area)
+        .order('created_at', { ascending: false }));
+    }
 
     if (error) throw new Error(error.message);
-    return (data || []).map(t => ({
-      ...t,
-      solicitante_nome: t.solicitante?.nome,
-      solicitante_email: t.solicitante?.email,
-    }));
+    return (data || []).map(mapTicketWithJoins);
   },
 
   /**
@@ -399,17 +465,19 @@ export const ticketService = {
 
     const norm = (v) => (v || '').trim().toUpperCase();
 
-    const formatTicket = (t) => ({
-      ...t,
-      solicitante_nome: t.solicitante?.nome,
-      solicitante_email: t.solicitante?.email,
-    });
+    const formatTicket = (t) => mapTicketWithJoins(t);
 
     const ticketClient = supabaseAdmin || client;
-    const { data: allTickets, error } = await ticketClient
+    let { data: allTickets, error } = await ticketClient
       .from('PDC_tickets')
-      .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
+      .select(TICKET_SELECT_WITH_RESP)
       .order('created_at', { ascending: false });
+    if (error && isMissingResponsavelColumnError(error)) {
+      ({ data: allTickets, error } = await ticketClient
+        .from('PDC_tickets')
+        .select(TICKET_SELECT_BASE)
+        .order('created_at', { ascending: false }));
+    }
 
     if (error) throw new Error(error.message);
     const list = (allTickets || []).map(formatTicket);

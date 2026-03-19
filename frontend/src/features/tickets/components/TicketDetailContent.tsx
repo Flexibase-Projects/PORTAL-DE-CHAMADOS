@@ -85,6 +85,12 @@ export function TicketDetailContent({
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
+              Responsável
+            </Typography>
+            <Typography variant="body2">{ticket.responsavel_nome || "Não atribuído"}</Typography>
+          </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary">
               Data
             </Typography>
             <Typography variant="body2">{formatDate(ticket.created_at)}</Typography>
