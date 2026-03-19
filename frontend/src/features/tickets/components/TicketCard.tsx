@@ -32,8 +32,19 @@ export function TicketCard({
   showActions = true,
   hasUnreadNotification = false,
 }: TicketCardProps) {
+  const handleCardClick = () => onView?.(ticket);
+
   return (
-    <Card variant="outlined" sx={{ position: "relative", transition: "box-shadow 0.2s", "&:hover": { boxShadow: 2 } }}>
+    <Card
+      variant="outlined"
+      onClick={onView ? handleCardClick : undefined}
+      sx={{
+        position: "relative",
+        transition: "box-shadow 0.2s",
+        cursor: onView ? "pointer" : "default",
+        "&:hover": { boxShadow: 2 },
+      }}
+    >
       {hasUnreadNotification && (
         <Box
           aria-hidden
@@ -112,7 +123,16 @@ export function TicketCard({
         )}
 
         {showActions && onView && (
-          <Button variant="outlined" size="small" fullWidth onClick={() => onView(ticket)}>
+          <Button
+            variant="text"
+            size="small"
+            fullWidth
+            onClick={(e) => {
+              e.stopPropagation();
+              onView(ticket);
+            }}
+            sx={{ color: "primary.main", fontWeight: 500 }}
+          >
             Ver Detalhes
           </Button>
         )}

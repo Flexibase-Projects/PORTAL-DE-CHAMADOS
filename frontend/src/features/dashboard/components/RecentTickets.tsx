@@ -50,7 +50,7 @@ export function RecentTickets({ tickets }: RecentTicketsProps) {
           <Box sx={{ overflowX: "auto", mx: { xs: -1.5, sm: -2 } }}>
             <Table size="small" sx={{ minWidth: { xs: 280, sm: 420 } }}>
               <TableHead>
-                <TableRow>
+                <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.12) }}>
                   <TableCell>Protocolo</TableCell>
                   <TableCell>Assunto</TableCell>
                   <TableCell>Status</TableCell>
@@ -59,8 +59,14 @@ export function RecentTickets({ tickets }: RecentTicketsProps) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {tickets.slice(0, 10).map((ticket) => (
-                  <TableRow key={ticket.id} hover>
+                {tickets.slice(0, 10).map((ticket, index) => (
+                  <TableRow
+                    key={ticket.id}
+                    hover
+                    sx={{
+                      bgcolor: index % 2 === 1 ? alpha(theme.palette.primary.main, 0.12) : undefined,
+                    }}
+                  >
                     <TableCell sx={{ fontFamily: "monospace", fontSize: "0.75rem", whiteSpace: "nowrap" }}>
                       {ticket.numero_protocolo}
                     </TableCell>

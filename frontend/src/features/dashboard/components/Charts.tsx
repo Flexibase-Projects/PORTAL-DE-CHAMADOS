@@ -413,22 +413,22 @@ export function TicketsBySetorDonut({ data }: PorSetorProps) {
 
 /** Velocímetro: percentual de chamados resolvidos. Arco verde, ponteiro, hub central, labels 0% / 100%, percentual abaixo. */
 const GAUGE_FILL = "#2ee39a";
-const GAUGE_BG_LIGHT = "#e4e4e9";
-const GAUGE_BG_DARK = "#333";
+/** Parte não realizada (após o ponteiro) em tom cinza. */
+const GAUGE_BG_LIGHT = "#b8b8b8";
+const GAUGE_BG_DARK = "#555";
 const GAUGE_HUB = "#5a5a5a";
 const GAUGE_POINTER = "#9e9e9e";
-/** Raio interno/externo da barra (mesmos % do RadialBarChart). */
+/** Raio interno/externo da barra (mesmos % do RadialBarChart) – alinhado ao donut (outer 90%). */
 const GAUGE_INNER_FRAC = 0.35;
-const GAUGE_OUTER_FRAC = 0.62;
-/** Raio efetivo do Recharts ≈ este fator × min(largura, altura) / 2 (overlay alinhado ao SVG). */
-const GAUGE_EFFECTIVE_RADIUS_FACTOR = 0.742;
+const GAUGE_OUTER_FRAC = 0.9;
+/** Fator para o ponteiro parar no centro da faixa verde (Recharts usa raio menor que minSide/2). */
+const GAUGE_POINTER_RADIUS_FACTOR = 0.72;
 
 function gaugePointerLengthPx(width: number, height: number): number {
   if (width <= 0 || height <= 0) return 0;
   const minSide = Math.min(width, height);
-  const effectiveMaxR = (minSide / 2) * GAUGE_EFFECTIVE_RADIUS_FACTOR;
   const midOfGreen = (GAUGE_INNER_FRAC + GAUGE_OUTER_FRAC) / 2;
-  return Math.max(8, midOfGreen * effectiveMaxR);
+  return Math.max(8, midOfGreen * (minSide / 2) * GAUGE_POINTER_RADIUS_FACTOR);
 }
 
 interface ResolvidosGaugeProps {
@@ -471,6 +471,9 @@ export function ResolvidosGauge({ total, concluidos }: ResolvidosGaugeProps) {
       sx={{
         width: "100%",
         minWidth: 0,
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
         "&:hover": {
           boxShadow: `0 0 24px ${alpha(glowColor, 0.28)}, 0 0 48px ${alpha(glowColor, 0.12)}`,
         },
@@ -483,12 +486,13 @@ export function ResolvidosGauge({ total, concluidos }: ResolvidosGaugeProps) {
           </Typography>
         }
       />
-      <CardContent sx={{ pt: 0, position: "relative", overflow: "hidden" }}>
+      <CardContent sx={{ pt: 0, flex: 1, position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", minHeight: 0 }}>
         <Box
           ref={gaugeWrapRef}
           sx={{
             width: "100%",
             height: { xs: 220, sm: 260 },
+            flexShrink: 0,
             position: "relative",
             minWidth: 0,
           }}
@@ -498,7 +502,7 @@ export function ResolvidosGauge({ total, concluidos }: ResolvidosGaugeProps) {
               cx="50%"
               cy="50%"
               innerRadius="35%"
-              outerRadius="62%"
+              outerRadius="90%"
               data={data}
               startAngle={180}
               endAngle={0}
