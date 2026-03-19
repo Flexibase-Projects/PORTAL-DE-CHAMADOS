@@ -9,7 +9,11 @@ const api = axios.create({
   timeout: 10000,
 });
 
-const AUTH_REQUIRED_PATTERNS = ["/tickets/meus-chamados-by-auth", "/dashboard/stats"];
+const AUTH_REQUIRED_PATTERNS = [
+  "/tickets/meus-chamados-by-auth",
+  "/tickets/recebidos",
+  "/dashboard/stats",
+];
 
 function urlRequiresAuth(url: string): boolean {
   const path = typeof url === "string" ? url.replace(/^.*\/api/, "") : "";

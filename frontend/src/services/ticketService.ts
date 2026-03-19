@@ -123,13 +123,18 @@ export const ticketService = {
     }
   },
 
-  async getReceived() {
+  async getReceived(authUserId?: string | null, email?: string | null) {
     if (USE_LOCAL_STORAGE) {
       const tickets = localStorageStorage.getTickets().filter((t) => t.status !== "Concluído");
       return { success: true, tickets };
     }
     try {
-      const res = await api.get("/tickets/recebidos");
+      const res = await api.get("/tickets/recebidos", {
+        params: {
+          ...(authUserId ? { auth_user_id: authUserId } : {}),
+          ...(email ? { auth_user_email: email } : {}),
+        },
+      });
       return res.data;
     } catch {
       const tickets = localStorageStorage.getTickets().filter((t) => t.status !== "Concluído");

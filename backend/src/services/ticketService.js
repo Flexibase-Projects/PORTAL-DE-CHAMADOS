@@ -174,20 +174,24 @@ export const ticketService = {
     }));
   },
 
-  async getReceivedTickets() {
-    const client = supabaseAdmin || supabase;
-    const { data, error } = await client
-      .from('PDC_tickets')
-      .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
-      .neq('status', 'Concluído')
-      .order('created_at', { ascending: false });
-
-    if (error) throw new Error(error.message);
-    return (data || []).map(t => ({
-      ...t,
-      solicitante_nome: t.solicitante?.nome,
-      solicitante_email: t.solicitante?.email,
-    }));
+  /**
+   * Chamados "recebidos" na gestão: apenas não concluídos em que o usuário é
+   * remetente (solicitante) ou destinatário (departamento = area_destino).
+   * Mesma regra de visibilidade de getMeusChamadosByAuthUser.
+   */
+  async getReceivedTickets(authUserId, authUserEmail = null) {
+    if (!authUserId) return [];
+    const result = await this.getMeusChamadosByAuthUser(authUserId, authUserEmail);
+    const seen = new Set();
+    const merged = [];
+    for (const t of [...(result.chamadosMeuDepartamento || []), ...(result.chamadosQueAbriOutros || [])]) {
+      if (t.status === 'Concluído') continue;
+      if (seen.has(t.id)) continue;
+      seen.add(t.id);
+      merged.push(t);
+    }
+    merged.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return merged;
   },
 
   async _resolveAutorId(client, authUserId, authUserEmail) {

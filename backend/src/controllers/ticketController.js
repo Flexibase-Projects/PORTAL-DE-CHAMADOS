@@ -58,7 +58,12 @@ export const ticketController = {
 
   async getReceivedTickets(req, res) {
     try {
-      const tickets = await ticketService.getReceivedTickets();
+      const authUserId = req.headers['x-auth-user-id'] || req.query.auth_user_id || null;
+      const authUserEmail = (req.query.auth_user_email || '').trim() || null;
+      if (!authUserId) {
+        return res.status(400).json({ success: false, error: 'auth_user_id obrigatório para listar chamados recebidos' });
+      }
+      const tickets = await ticketService.getReceivedTickets(authUserId, authUserEmail);
       res.json({ success: true, tickets });
     } catch (error) {
       res.status(500).json({ success: false, error: 'Erro ao buscar chamados recebidos', message: error.message });

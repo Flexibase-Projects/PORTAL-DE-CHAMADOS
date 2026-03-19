@@ -1,21 +1,17 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
-import TextField from "@mui/material/TextField";
 import Divider from "@mui/material/Divider";
 import Alert from "@mui/material/Alert";
 import Skeleton from "@mui/material/Skeleton";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
 import Typography from "@mui/material/Typography";
-import CircularProgress from "@mui/material/CircularProgress";
 import { Reply, CheckCircle2, ArrowLeft } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
+import { useAuth } from "@/contexts/AuthContext";
 import { templateService } from "@/services/templateService";
 import { TicketCard } from "@/features/tickets/components/TicketCard";
 import { formatDate } from "@/lib/utils";
@@ -38,19 +34,25 @@ function statusColor(status: string): "default" | "primary" | "warning" | "succe
 }
 
 export function TicketManagement({ initialTicketId }: Props) {
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selected, setSelected] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [responseText, setResponseText] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [templateFields, setTemplateFields] = useState<TemplateField[]>([]);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user?.id) {
+      setTickets([]);
+      setLoading(false);
+      return;
+    }
     loadTickets();
-  }, []);
+  }, [authLoading, user?.id, user?.email]);
 
   useEffect(() => {
     if (selected?.area_destino) {
@@ -73,9 +75,10 @@ export function TicketManagement({ initialTicketId }: Props) {
   }, [initialTicketId, tickets]);
 
   const loadTickets = async () => {
+    if (!user?.id) return;
     setLoading(true);
     try {
-      const res = await ticketService.getReceived();
+      const res = await ticketService.getReceived(user.id, user.email);
       if (res.success) setTickets(res.tickets || []);
     } catch {
       setError("Erro ao carregar chamados.");
@@ -84,30 +87,15 @@ export function TicketManagement({ initialTicketId }: Props) {
     }
   };
 
-  const handleSendResponse = async () => {
-    if (!responseText.trim() || !selected) return;
-    setActionLoading(true);
-    setError("");
-    try {
-      const res = await ticketService.addResponse(selected.id, {
-        mensagem: responseText,
-        autor_id: "admin",
-      });
-      if (res.success) {
-        setSuccess("Resposta enviada!");
-        setDialogOpen(false);
-        setResponseText("");
-        await loadTickets();
-        if (selected) {
-          const detail = await ticketService.getById(selected.id);
-          if (detail.success) setSelected(detail.ticket);
-        }
-      }
-    } catch {
-      setError("Erro ao enviar resposta.");
-    } finally {
-      setActionLoading(false);
-    }
+  const handleResponderNoChat = () => {
+    if (!selected) return;
+    navigate(`/meus-chamados/${selected.id}`, {
+      state: {
+        ticket: selected,
+        canEdit: true,
+        canComment: true,
+      },
+    });
   };
 
   const handleConclude = async () => {
@@ -158,7 +146,16 @@ export function TicketManagement({ initialTicketId }: Props) {
           {tickets.length === 0 ? (
             <Alert severity="info">Nenhum chamado recebido no momento.</Alert>
           ) : (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+            <Box
+              sx={{
+                display: "grid",
+                gap: 1.5,
+                /* Mesma lógica de Meus Chamados: cards com largura ~1/3 no lg; na sidebar (item selecionado) uma coluna ~320px */
+                gridTemplateColumns: selected
+                  ? "1fr"
+                  : { xs: "1fr", sm: "1fr 1fr", lg: "repeat(3, 1fr)" },
+              }}
+            >
               {tickets.map((t) => (
                 <TicketCard
                   key={t.id}
@@ -293,7 +290,7 @@ export function TicketManagement({ initialTicketId }: Props) {
                 <Button
                   variant="contained"
                   startIcon={<Reply style={{ width: 18, height: 18 }} />}
-                  onClick={() => setDialogOpen(true)}
+                  onClick={handleResponderNoChat}
                   disabled={actionLoading || selected.status === "Concluído"}
                 >
                   Responder
@@ -315,34 +312,6 @@ export function TicketManagement({ initialTicketId }: Props) {
           </Card>
         )}
       </Box>
-
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth
-        sx={{ "& .MuiDialog-paper": { mx: { xs: 1 } } }}
-      >
-        <DialogTitle>Responder Chamado</DialogTitle>
-        <DialogContent>
-          <TextField
-            multiline
-            rows={6}
-            value={responseText}
-            onChange={(e) => setResponseText(e.target.value)}
-            placeholder="Digite sua resposta..."
-            fullWidth
-            sx={{ mt: 1 }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button
-            variant="contained"
-            onClick={handleSendResponse}
-            disabled={actionLoading || !responseText.trim()}
-            startIcon={actionLoading ? <CircularProgress size={18} /> : null}
-          >
-            {actionLoading ? "Enviando..." : "Enviar Resposta"}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }
