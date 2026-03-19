@@ -6,7 +6,7 @@ import Divider from "@mui/material/Divider";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import CircularProgress from "@mui/material/CircularProgress";
-import { Reply, CheckCircle2 } from "lucide-react";
+import { Reply, CheckCircle2, MessageSquare, GitBranch, FilePlus } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import type { Ticket } from "@/types/ticket";
 import type { TemplateField } from "@/types/template";
@@ -156,6 +156,67 @@ export function TicketDetailContent({
                     </Typography>
                   </Box>
                   <Typography variant="body2">{r.mensagem}</Typography>
+                </Box>
+              ))}
+            </Box>
+          </>
+        )}
+
+        {ticket.atividades && ticket.atividades.length > 0 && (
+          <>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Histórico
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+              Quando aconteceu, quem fez e o que foi feito.
+            </Typography>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 2 }}>
+              {ticket.atividades.map((a) => (
+                <Box
+                  key={a.id}
+                  sx={{
+                    display: "flex",
+                    gap: 1.5,
+                    alignItems: "flex-start",
+                    p: 1.5,
+                    borderRadius: 1,
+                    bgcolor: "action.hover",
+                    border: 1,
+                    borderColor: "divider",
+                  }}
+                >
+                  <Box sx={{ flexShrink: 0, mt: 0.25 }}>
+                    {a.tipo === "criado" && <FilePlus size={18} color="var(--mui-palette-primary-main)" />}
+                    {a.tipo === "comentario" && <MessageSquare size={18} color="var(--mui-palette-info-main)" />}
+                    {a.tipo === "status_alterado" && <GitBranch size={18} color="var(--mui-palette-warning-main)" />}
+                  </Box>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 0.5, mb: 0.25 }}>
+                      <Typography variant="caption" fontWeight={600}>
+                        {a.autor_nome || "Sistema"}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {formatDate(a.created_at)}
+                      </Typography>
+                    </Box>
+                    {a.tipo === "criado" && (
+                      <Typography variant="body2" color="text.secondary">
+                        Chamado criado.
+                      </Typography>
+                    )}
+                    {a.tipo === "comentario" && a.detalhes?.mensagem != null && (
+                      <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                        {a.detalhes.mensagem}
+                        {a.detalhes.mensagem && a.detalhes.mensagem.length >= 300 && "…"}
+                      </Typography>
+                    )}
+                    {a.tipo === "status_alterado" && (
+                      <Typography variant="body2" color="text.secondary">
+                        Status alterado de <strong>{a.detalhes?.status_anterior ?? "—"}</strong> para{" "}
+                        <strong>{a.detalhes?.status_novo ?? "—"}</strong>.
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
               ))}
             </Box>

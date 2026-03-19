@@ -75,7 +75,9 @@ export const ticketController = {
         return res.status(400).json({ success: false, error: 'Status inválido' });
       }
 
-      const ticket = await ticketService.updateTicketStatus(req.params.id, status);
+      const authUserId = req.headers['x-auth-user-id'] || req.query.auth_user_id || req.body.auth_user_id || null;
+      const authUserEmail = (req.body.auth_user_email || req.query.auth_user_email || '').trim() || null;
+      const ticket = await ticketService.updateTicketStatus(req.params.id, status, authUserId, authUserEmail);
       if (!ticket) return res.status(404).json({ success: false, error: 'Chamado não encontrado' });
 
       res.json({ success: true, message: 'Status atualizado', ticket });

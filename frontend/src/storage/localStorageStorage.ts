@@ -112,7 +112,25 @@ export const localStorageStorage = {
     return get<Ticket[]>(KEYS.TICKETS, []);
   },
   getTicketById(id: string): Ticket | null {
-    return this.getTickets().find((t) => t.id === id) ?? null;
+    const t = this.getTickets().find((t) => t.id === id) ?? null;
+    if (!t) return null;
+    const atividades = [...(t.respostas || [])]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .map((r) => ({
+        id: r.id,
+        tipo: "comentario" as const,
+        autor_nome: r.autor_nome,
+        created_at: r.created_at,
+        detalhes: { mensagem: (r.mensagem || "").slice(0, 300) },
+      }));
+    atividades.unshift({
+      id: `${t.id}-criado`,
+      tipo: "criado",
+      autor_nome: t.solicitante_nome,
+      created_at: t.created_at,
+      detalhes: {},
+    });
+    return { ...t, atividades };
   },
   createTicket(data: Record<string, unknown>): Ticket {
     const tickets = this.getTickets();

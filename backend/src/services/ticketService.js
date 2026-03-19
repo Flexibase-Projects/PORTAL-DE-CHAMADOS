@@ -79,6 +79,14 @@ export const ticketService = {
       .single();
 
     if (error) throw new Error(`Erro ao criar ticket: ${error.message}`);
+
+    await client.from('PDC_ticket_activities').insert({
+      ticket_id: created.id,
+      tipo: 'criado',
+      autor_id: solicitanteId,
+      detalhes: {},
+    });
+
     return created;
   },
 
@@ -113,6 +121,13 @@ export const ticketService = {
       .eq('ticket_id', id)
       .order('created_at', { ascending: true });
 
+    // Buscar atividades (histórico)
+    const { data: atividades } = await client
+      .from('PDC_ticket_activities')
+      .select(`*, autor:PDC_users!autor_id(nome)`)
+      .eq('ticket_id', id)
+      .order('created_at', { ascending: false });
+
     return {
       ...ticket,
       solicitante_nome: ticket.solicitante?.nome,
@@ -120,6 +135,14 @@ export const ticketService = {
       respostas: (respostas || []).map(r => ({
         ...r,
         autor_nome: r.autor?.nome || 'Administrador',
+      })),
+      atividades: (atividades || []).map(a => ({
+        id: a.id,
+        tipo: a.tipo,
+        autor_id: a.autor_id,
+        autor_nome: a.autor?.nome || 'Sistema',
+        created_at: a.created_at,
+        detalhes: a.detalhes || {},
       })),
     };
   },
@@ -166,7 +189,32 @@ export const ticketService = {
     }));
   },
 
-  async updateTicketStatus(id, status) {
+  async _resolveAutorId(client, authUserId, authUserEmail) {
+    let autorId = null;
+    if (authUserId) {
+      const pdcUser = (await client.from('PDC_users').select('id').eq('auth_user_id', authUserId).maybeSingle()).data;
+      if (pdcUser?.id) autorId = pdcUser.id;
+    }
+    if (!autorId && authUserEmail) {
+      const emailTrim = (authUserEmail || '').trim().toLowerCase();
+      const pdcUser = (await client.from('PDC_users').select('id').eq('email', emailTrim).maybeSingle()).data;
+      if (!pdcUser?.id && authUserEmail.trim() !== emailTrim) {
+        const alt = (await client.from('PDC_users').select('id').eq('email', authUserEmail.trim()).maybeSingle()).data;
+        if (alt?.id) autorId = alt.id;
+      } else if (pdcUser?.id) autorId = pdcUser.id;
+    }
+    if (!autorId) {
+      const admin = (await client.from('PDC_users').select('id').eq('email', 'admin@portal.com').maybeSingle()).data;
+      autorId = admin?.id;
+    }
+    return autorId;
+  },
+
+  async updateTicketStatus(id, status, authUserId = null, authUserEmail = null) {
+    const client = supabaseAdmin || supabase;
+    const { data: current } = await client.from('PDC_tickets').select('status').eq('id', id).single();
+    const statusAnterior = current?.status || null;
+
     const updates = {
       status,
       updated_at: new Date().toISOString(),
@@ -174,7 +222,6 @@ export const ticketService = {
     if (status === 'Concluído') {
       updates.closed_at = new Date().toISOString();
     }
-    const client = supabaseAdmin || supabase;
     const { data, error } = await client
       .from('PDC_tickets')
       .update(updates)
@@ -183,7 +230,16 @@ export const ticketService = {
       .single();
 
     if (error) return null;
-    return data;
+
+    const autorId = await this._resolveAutorId(client, authUserId, authUserEmail);
+    await client.from('PDC_ticket_activities').insert({
+      ticket_id: id,
+      tipo: 'status_alterado',
+      autor_id: autorId,
+      detalhes: { status_anterior: statusAnterior, status_novo: status },
+    });
+
+    return this.getTicketById(id);
   },
 
   async addResponse(ticketId, responseData, authUserId = null, authUserEmail = null) {
@@ -191,33 +247,29 @@ export const ticketService = {
 
     let autorId = responseData.autor_id;
     if (!autorId || autorId === 'current') {
-      if (authUserId) {
-        let pdcUser = (await client.from('PDC_users').select('id').eq('auth_user_id', authUserId).maybeSingle()).data;
-        if (!pdcUser?.id && authUserEmail) {
-          const emailTrim = authUserEmail.trim().toLowerCase();
-          pdcUser = (await client.from('PDC_users').select('id').eq('email', emailTrim).maybeSingle()).data;
-          if (!pdcUser?.id && authUserEmail !== emailTrim) {
-            pdcUser = (await client.from('PDC_users').select('id').eq('email', authUserEmail.trim()).maybeSingle()).data;
-          }
-        }
-        if (pdcUser?.id) autorId = pdcUser.id;
-      }
-      if (!autorId || autorId === 'current') {
-        const { data: admin } = await client.from('PDC_users').select('id').eq('email', 'admin@portal.com').maybeSingle();
-        autorId = admin?.id;
-      }
+      autorId = await this._resolveAutorId(client, authUserId, authUserEmail);
     }
     if (!autorId) throw new Error('Não foi possível identificar o autor da resposta. Faça login novamente.');
 
-    const { error: respErr } = await client
+    const { data: insertedResponse, error: respErr } = await client
       .from('PDC_ticket_responses')
       .insert({
         ticket_id: ticketId,
         autor_id: autorId,
         mensagem: responseData.mensagem,
-      });
+      })
+      .select('id')
+      .single();
 
     if (respErr) throw new Error(respErr.message);
+
+    const msgPreview = (responseData.mensagem || '').slice(0, 300);
+    await client.from('PDC_ticket_activities').insert({
+      ticket_id: ticketId,
+      tipo: 'comentario',
+      autor_id: autorId,
+      detalhes: { response_id: insertedResponse?.id, mensagem: msgPreview },
+    });
 
     // Notificar o solicitante sobre nova resposta (se tiver auth_user_id)
     const { data: ticketRow } = await client.from('PDC_tickets').select('solicitante_id, numero_protocolo, assunto').eq('id', ticketId).single();

@@ -10,6 +10,21 @@ export interface TicketResponse {
   created_at: string;
 }
 
+/** Histórico de atividades: comentário, mudança de status, criação */
+export interface TicketActivity {
+  id: string;
+  tipo: "comentario" | "status_alterado" | "criado";
+  autor_id?: string;
+  autor_nome?: string;
+  created_at: string;
+  detalhes?: {
+    mensagem?: string;
+    status_anterior?: string;
+    status_novo?: string;
+    response_id?: string;
+  };
+}
+
 export interface Ticket {
   id: string;
   numero_protocolo: string;
@@ -28,4 +43,5 @@ export interface Ticket {
   updated_at: string;
   closed_at?: string;
   respostas?: TicketResponse[];
+  atividades?: TicketActivity[];
 }
