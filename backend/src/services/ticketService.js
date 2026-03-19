@@ -186,19 +186,30 @@ export const ticketService = {
     return data;
   },
 
-  async addResponse(ticketId, responseData) {
-    // Buscar admin user ID
-    let autorId = responseData.autor_id;
-    if (!autorId || autorId === 'admin') {
-      const { data: admin } = await supabase
-        .from('PDC_users')
-        .select('id')
-        .eq('email', 'admin@portal.com')
-        .single();
-      autorId = admin?.id;
-    }
+  async addResponse(ticketId, responseData, authUserId = null, authUserEmail = null) {
+    const client = supabaseAdmin || supabase;
 
-    const { error: respErr } = await supabase
+    let autorId = responseData.autor_id;
+    if (!autorId || autorId === 'current') {
+      if (authUserId) {
+        let pdcUser = (await client.from('PDC_users').select('id').eq('auth_user_id', authUserId).maybeSingle()).data;
+        if (!pdcUser?.id && authUserEmail) {
+          const emailTrim = authUserEmail.trim().toLowerCase();
+          pdcUser = (await client.from('PDC_users').select('id').eq('email', emailTrim).maybeSingle()).data;
+          if (!pdcUser?.id && authUserEmail !== emailTrim) {
+            pdcUser = (await client.from('PDC_users').select('id').eq('email', authUserEmail.trim()).maybeSingle()).data;
+          }
+        }
+        if (pdcUser?.id) autorId = pdcUser.id;
+      }
+      if (!autorId || autorId === 'current') {
+        const { data: admin } = await client.from('PDC_users').select('id').eq('email', 'admin@portal.com').maybeSingle();
+        autorId = admin?.id;
+      }
+    }
+    if (!autorId) throw new Error('Não foi possível identificar o autor da resposta. Faça login novamente.');
+
+    const { error: respErr } = await client
       .from('PDC_ticket_responses')
       .insert({
         ticket_id: ticketId,
@@ -209,11 +220,11 @@ export const ticketService = {
     if (respErr) throw new Error(respErr.message);
 
     // Notificar o solicitante sobre nova resposta (se tiver auth_user_id)
-    const { data: ticketRow } = await supabase.from('PDC_tickets').select('solicitante_id, numero_protocolo, assunto').eq('id', ticketId).single();
+    const { data: ticketRow } = await client.from('PDC_tickets').select('solicitante_id, numero_protocolo, assunto').eq('id', ticketId).single();
     if (ticketRow?.solicitante_id) {
-      const { data: pdcUser } = await supabase.from('PDC_users').select('auth_user_id').eq('id', ticketRow.solicitante_id).single();
+      const { data: pdcUser } = await client.from('PDC_users').select('auth_user_id').eq('id', ticketRow.solicitante_id).single();
       if (pdcUser?.auth_user_id) {
-        await supabase.from('PDC_notifications').insert({
+        await client.from('PDC_notifications').insert({
           auth_user_id: pdcUser.auth_user_id,
           tipo: 'resposta_chamado',
           ticket_id: ticketId,
@@ -224,7 +235,7 @@ export const ticketService = {
     }
 
     // Atualizar status se ainda estiver Aberto
-    await supabase
+    await client
       .from('PDC_tickets')
       .update({
         status: 'Em Andamento',

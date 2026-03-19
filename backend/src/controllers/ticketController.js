@@ -86,7 +86,9 @@ export const ticketController = {
 
   async addResponse(req, res) {
     try {
-      const ticket = await ticketService.addResponse(req.params.id, req.body);
+      const authUserId = req.headers['x-auth-user-id'] || req.query.auth_user_id || req.body.auth_user_id || null;
+      const authUserEmail = (req.body.auth_user_email || req.query.auth_user_email || '').trim() || null;
+      const ticket = await ticketService.addResponse(req.params.id, req.body, authUserId, authUserEmail);
       if (!ticket) return res.status(404).json({ success: false, error: 'Chamado não encontrado' });
       res.json({ success: true, message: 'Resposta adicionada', ticket });
     } catch (error) {

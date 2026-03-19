@@ -131,6 +131,8 @@ export function TicketDetailPage() {
       const res = await ticketService.addResponse(ticket.id, {
         mensagem,
         autor_id: "current",
+        auth_user_id: user?.id ?? undefined,
+        auth_user_email: user?.email ?? undefined,
       });
       if (res.success && res.ticket) setTicket(res.ticket);
     } finally {

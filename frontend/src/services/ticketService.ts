@@ -151,7 +151,10 @@ export const ticketService = {
     }
   },
 
-  async addResponse(id: string, data: { mensagem: string; autor_id: string }) {
+  async addResponse(
+    id: string,
+    data: { mensagem: string; autor_id: string; auth_user_id?: string | null; auth_user_email?: string | null }
+  ) {
     if (USE_LOCAL_STORAGE) {
       const ticket = localStorageStorage.addTicketResponse(id, data);
       return ticket ? { success: true, message: "Resposta adicionada", ticket } : { success: false };
