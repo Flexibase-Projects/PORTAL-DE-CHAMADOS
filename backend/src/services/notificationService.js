@@ -1,10 +1,14 @@
 import supabase from '../config/supabase.js';
+import { supabaseAdmin } from '../config/supabaseAdmin.js';
+
+const client = () => supabaseAdmin || supabase;
 
 export const notificationService = {
   async getByAuthUserId(authUserId, options = {}) {
     if (!authUserId) return { list: [], unreadCount: 0 };
+    const db = client();
     const unreadOnly = options.unreadOnly === true;
-    let q = supabase
+    let q = db
       .from('PDC_notifications')
       .select('*')
       .eq('auth_user_id', authUserId)
@@ -14,7 +18,7 @@ export const notificationService = {
     const { data, error } = await q;
     if (error) throw new Error(error.message);
     const list = data || [];
-    const { count } = await supabase
+    const { count } = await db
       .from('PDC_notifications')
       .select('*', { count: 'exact', head: true })
       .eq('auth_user_id', authUserId)
@@ -24,7 +28,7 @@ export const notificationService = {
 
   async markAsRead(id, authUserId) {
     if (!authUserId) return null;
-    const { data, error } = await supabase
+    const { data, error } = await client()
       .from('PDC_notifications')
       .update({ lida: true })
       .eq('id', id)
@@ -37,10 +41,20 @@ export const notificationService = {
 
   async markAllAsRead(authUserId) {
     if (!authUserId) return;
-    await supabase
+    await client()
       .from('PDC_notifications')
       .update({ lida: true })
       .eq('auth_user_id', authUserId)
+      .eq('lida', false);
+  },
+
+  async markAllAsReadByTicketId(authUserId, ticketId) {
+    if (!authUserId || !ticketId) return;
+    await client()
+      .from('PDC_notifications')
+      .update({ lida: true })
+      .eq('auth_user_id', authUserId)
+      .eq('ticket_id', ticketId)
       .eq('lida', false);
   },
 };

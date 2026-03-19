@@ -8,6 +8,7 @@ import Skeleton from "@mui/material/Skeleton";
 import { ArrowLeft } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
 import { templateService } from "@/services/templateService";
+import { notificationService } from "@/services/notificationService";
 import { TicketDetailContent } from "./components/TicketDetailContent";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Ticket } from "@/types/ticket";
@@ -92,6 +93,16 @@ export function TicketDetailPage() {
       loadTicket(true);
     }
   }, [id, loadTicket]);
+
+  useEffect(() => {
+    if (!id) return;
+    notificationService
+      .markReadByTicket(id)
+      .then(() => {
+        window.dispatchEvent(new CustomEvent("notifications-refresh"));
+      })
+      .catch(() => {});
+  }, [id]);
 
   useEffect(() => {
     if (!ticket?.area_destino) {
@@ -228,6 +239,7 @@ export function TicketDetailPage() {
           onReply={handleReply}
           onConclude={handleConclude}
           replyLoading={replyLoading}
+          currentUserEmail={user?.email}
         />
       </Box>
     </Box>

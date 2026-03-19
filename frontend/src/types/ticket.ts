@@ -6,6 +6,7 @@ export interface TicketResponse {
   ticket_id: string;
   autor_id: string;
   autor_nome?: string;
+  autor_email?: string | null;
   mensagem: string;
   created_at: string;
 }

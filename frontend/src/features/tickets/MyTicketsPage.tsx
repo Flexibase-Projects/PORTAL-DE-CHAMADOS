@@ -11,6 +11,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Skeleton from "@mui/material/Skeleton";
 import { Search, Inbox, Send } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
+import { notificationService } from "@/services/notificationService";
 import { TicketCard } from "./components/TicketCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -46,16 +47,27 @@ export function MyTicketsPage() {
   const [chamadosMeuDepartamento, setChamadosMeuDepartamento] = useState<Ticket[]>([]);
   const [chamadosQueAbriOutros, setChamadosQueAbriOutros] = useState<Ticket[]>([]);
   const [permissoesPorDepartamento, setPermissoesPorDepartamento] = useState<PermissaoMap>({});
+  const [unreadTicketIds, setUnreadTicketIds] = useState<Set<string>>(new Set());
 
   const loadByAuth = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await ticketService.getMeusChamadosByAuth(user?.id, user?.email);
-      if (res.success) {
-        setChamadosMeuDepartamento(res.chamadosMeuDepartamento || []);
-        setChamadosQueAbriOutros(res.chamadosQueAbriOutros || []);
-        setPermissoesPorDepartamento(res.permissoesPorDepartamento || {});
+      const [ticketsRes, notifRes] = await Promise.all([
+        ticketService.getMeusChamadosByAuth(user?.id, user?.email),
+        notificationService.list(true).catch(() => ({ success: false, notifications: [] as { ticket_id?: string }[] })),
+      ]);
+      if (ticketsRes.success) {
+        setChamadosMeuDepartamento(ticketsRes.chamadosMeuDepartamento || []);
+        setChamadosQueAbriOutros(ticketsRes.chamadosQueAbriOutros || []);
+        setPermissoesPorDepartamento(ticketsRes.permissoesPorDepartamento || {});
+      }
+      if (notifRes.success && notifRes.notifications) {
+        const ids = new Set<string>();
+        for (const n of notifRes.notifications) {
+          if (n.ticket_id) ids.add(n.ticket_id);
+        }
+        setUnreadTicketIds(ids);
       }
     } catch {
       setError("Erro ao carregar seus chamados.");
@@ -69,6 +81,12 @@ export function MyTicketsPage() {
       loadByAuth();
     }
   }, [authConfigured, isAuthenticated, authLoading, user?.id, loadByAuth]);
+
+  useEffect(() => {
+    const onRefresh = () => loadByAuth();
+    window.addEventListener("notifications-refresh", onRefresh);
+    return () => window.removeEventListener("notifications-refresh", onRefresh);
+  }, [loadByAuth]);
 
   const handleViewTicket = useCallback(
     (ticket: Ticket) => {
@@ -124,7 +142,7 @@ export function MyTicketsPage() {
                 ) : (
                   <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(3, 1fr)" } }}>
                     {chamadosMeuDepartamento.map((t) => (
-                      <TicketCard key={t.id} ticket={t} onView={handleViewTicket} />
+                      <TicketCard key={t.id} ticket={t} onView={handleViewTicket} hasUnreadNotification={unreadTicketIds.has(t.id)} />
                     ))}
                   </Box>
                 )}
@@ -145,7 +163,7 @@ export function MyTicketsPage() {
                 ) : (
                   <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(3, 1fr)" } }}>
                     {chamadosQueAbriOutros.map((t) => (
-                      <TicketCard key={t.id} ticket={t} onView={handleViewTicket} />
+                      <TicketCard key={t.id} ticket={t} onView={handleViewTicket} hasUnreadNotification={unreadTicketIds.has(t.id)} />
                     ))}
                   </Box>
                 )}

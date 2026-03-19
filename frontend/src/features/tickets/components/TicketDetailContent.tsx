@@ -19,6 +19,8 @@ export interface TicketDetailContentProps {
   onReply: (mensagem: string) => Promise<void>;
   onConclude: () => Promise<void>;
   replyLoading?: boolean;
+  /** Email do usuário logado para exibir suas mensagens à direita (estilo chat). */
+  currentUserEmail?: string | null;
 }
 
 function statusColor(s: string): "default" | "primary" | "warning" | "success" {
@@ -40,8 +42,10 @@ export function TicketDetailContent({
   onReply,
   onConclude,
   replyLoading = false,
+  currentUserEmail = null,
 }: TicketDetailContentProps) {
   const [responseText, setResponseText] = useState("");
+  const normalizedCurrentEmail = (currentUserEmail || "").trim().toLowerCase();
 
   const handleSendReply = async () => {
     if (!responseText.trim()) return;
@@ -132,32 +136,96 @@ export function TicketDetailContent({
 
         {ticket.respostas && ticket.respostas.length > 0 && (
           <>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            <Divider sx={{ my: 3 }} />
+            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1.5 }}>
               Respostas ({ticket.respostas.length})
             </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 2 }}>
-              {ticket.respostas.map((r) => (
-                <Box
-                  key={r.id}
-                  sx={{
-                    p: 1.5,
-                    borderRadius: 1,
-                    bgcolor: "action.hover",
-                    border: 1,
-                    borderColor: "divider",
-                  }}
-                >
-                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                    <Typography variant="caption" fontWeight={600}>
-                      {r.autor_nome || "—"}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {formatDate(r.created_at)}
-                    </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 1.5,
+                mb: 2,
+                p: 2,
+                borderRadius: 2,
+                bgcolor: "action.hover",
+                border: 1,
+                borderColor: "divider",
+              }}
+            >
+              {ticket.respostas.map((r) => {
+                const isOwn = normalizedCurrentEmail && (r.autor_email || "").trim().toLowerCase() === normalizedCurrentEmail;
+                return (
+                  <Box
+                    key={r.id}
+                    sx={{
+                      display: "flex",
+                      justifyContent: isOwn ? "flex-end" : "flex-start",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 0.75,
+                        maxWidth: "min(85%, 400px)",
+                        "& .message-time": { opacity: 0 },
+                        "&:hover .message-time": { opacity: 1 },
+                      }}
+                    >
+                      {isOwn && (
+                        <Typography
+                          className="message-time"
+                          variant="caption"
+                          sx={{
+                            flexShrink: 0,
+                            transition: "opacity 0.15s ease",
+                            fontSize: "0.7rem",
+                            color: "text.secondary",
+                          }}
+                        >
+                          {formatDate(r.created_at)}
+                        </Typography>
+                      )}
+                      <Box
+                        sx={{
+                          minWidth: 0,
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: isOwn ? "primary.main" : "action.hover",
+                          color: isOwn ? "primary.contrastText" : "text.primary",
+                          border: 1,
+                          borderColor: isOwn ? "primary.main" : "divider",
+                        }}
+                      >
+                        {!isOwn && (
+                          <Typography variant="caption" sx={{ fontWeight: 700, fontSize: "0.875rem", opacity: 0.9, display: "block", mb: 0.25 }}>
+                            {r.autor_nome || "—"}
+                          </Typography>
+                        )}
+                        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                          {r.mensagem}
+                        </Typography>
+                      </Box>
+                      {!isOwn && (
+                        <Typography
+                          className="message-time"
+                          variant="caption"
+                          sx={{
+                            flexShrink: 0,
+                            transition: "opacity 0.15s ease",
+                            fontSize: "0.7rem",
+                            color: "text.secondary",
+                          }}
+                        >
+                          {formatDate(r.created_at)}
+                        </Typography>
+                      )}
+                    </Box>
                   </Box>
-                  <Typography variant="body2">{r.mensagem}</Typography>
-                </Box>
-              ))}
+                );
+              })}
             </Box>
           </>
         )}

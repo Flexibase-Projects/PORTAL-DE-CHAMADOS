@@ -41,4 +41,17 @@ export const notificationController = {
       res.status(500).json({ success: false, error: error.message });
     }
   },
+
+  async markReadByTicket(req, res) {
+    try {
+      const authUserId = getAuthUserId(req);
+      if (!authUserId) return res.status(400).json({ success: false, error: 'auth_user_id obrigatório' });
+      const { ticketId } = req.params;
+      if (!ticketId) return res.status(400).json({ success: false, error: 'ticketId obrigatório' });
+      await notificationService.markAllAsReadByTicketId(authUserId, ticketId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
 };

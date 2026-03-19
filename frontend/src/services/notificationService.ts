@@ -30,4 +30,9 @@ export const notificationService = {
     const res = await api.post("/notifications/mark-all-read");
     return res.data;
   },
+
+  async markReadByTicket(ticketId: string): Promise<{ success: boolean }> {
+    const res = await api.post(`/notifications/mark-read-by-ticket/${ticketId}`);
+    return res.data;
+  },
 };

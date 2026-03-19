@@ -7,6 +7,7 @@
 -- =============================================
 DROP TABLE IF EXISTS public."PDC_kb_articles" CASCADE;
 DROP TABLE IF EXISTS public."PDC_kb_categories" CASCADE;
+DROP TABLE IF EXISTS public."PDC_notifications" CASCADE;
 DROP TABLE IF EXISTS public."PDC_ticket_activities" CASCADE;
 DROP TABLE IF EXISTS public."PDC_ticket_responses" CASCADE;
 DROP TABLE IF EXISTS public."PDC_tickets" CASCADE;
@@ -78,6 +79,18 @@ CREATE TABLE public."PDC_ticket_activities" (
   detalhes jsonb DEFAULT '{}'
 );
 
+-- PDC_notifications - Notificações para o usuário (ex.: nova resposta no chamado)
+CREATE TABLE public."PDC_notifications" (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  auth_user_id uuid NOT NULL,
+  tipo text NOT NULL,
+  ticket_id uuid REFERENCES public."PDC_tickets"(id) ON DELETE CASCADE,
+  titulo text,
+  mensagem text,
+  lida boolean DEFAULT false,
+  created_at timestamptz DEFAULT now()
+);
+
 -- PDC_templates - Templates dinâmicos por departamento
 CREATE TABLE public."PDC_templates" (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -121,6 +134,8 @@ CREATE INDEX idx_pdc_tickets_solicitante_id ON public."PDC_tickets"(solicitante_
 CREATE INDEX idx_pdc_ticket_responses_ticket_id ON public."PDC_ticket_responses"(ticket_id);
 CREATE INDEX idx_pdc_ticket_activities_ticket_id ON public."PDC_ticket_activities"(ticket_id);
 CREATE INDEX idx_pdc_ticket_activities_created_at ON public."PDC_ticket_activities"(ticket_id, created_at DESC);
+CREATE INDEX idx_pdc_notifications_auth_user_id ON public."PDC_notifications"(auth_user_id);
+CREATE INDEX idx_pdc_notifications_ticket_id ON public."PDC_notifications"(ticket_id);
 CREATE INDEX idx_pdc_users_email ON public."PDC_users"(email);
 CREATE INDEX idx_pdc_kb_articles_categoria_id ON public."PDC_kb_articles"(categoria_id);
 
@@ -142,6 +157,7 @@ ALTER TABLE public."PDC_users" DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public."PDC_tickets" DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public."PDC_ticket_responses" DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public."PDC_ticket_activities" DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public."PDC_notifications" DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public."PDC_templates" DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public."PDC_kb_categories" DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public."PDC_kb_articles" DISABLE ROW LEVEL SECURITY;

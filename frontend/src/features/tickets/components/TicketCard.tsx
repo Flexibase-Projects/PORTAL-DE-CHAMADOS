@@ -12,6 +12,7 @@ interface TicketCardProps {
   ticket: Ticket;
   onView?: (ticket: Ticket) => void;
   showActions?: boolean;
+  hasUnreadNotification?: boolean;
 }
 
 function statusColor(status: string): "default" | "primary" | "warning" | "success" {
@@ -29,9 +30,25 @@ export function TicketCard({
   ticket,
   onView,
   showActions = true,
+  hasUnreadNotification = false,
 }: TicketCardProps) {
   return (
-    <Card variant="outlined" sx={{ transition: "box-shadow 0.2s", "&:hover": { boxShadow: 2 } }}>
+    <Card variant="outlined" sx={{ position: "relative", transition: "box-shadow 0.2s", "&:hover": { boxShadow: 2 } }}>
+      {hasUnreadNotification && (
+        <Box
+          aria-hidden
+          sx={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            bgcolor: "error.main",
+            zIndex: 1,
+          }}
+        />
+      )}
       <CardContent sx={{ p: 2 }}>
         <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1, mb: 1.5 }}>
           <Box sx={{ minWidth: 0, flex: 1 }}>

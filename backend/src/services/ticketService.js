@@ -117,7 +117,7 @@ export const ticketService = {
     // Buscar respostas
     const { data: respostas } = await client
       .from('PDC_ticket_responses')
-      .select(`*, autor:PDC_users!autor_id(nome)`)
+      .select(`*, autor:PDC_users!autor_id(nome, email)`)
       .eq('ticket_id', id)
       .order('created_at', { ascending: true });
 
@@ -135,6 +135,7 @@ export const ticketService = {
       respostas: (respostas || []).map(r => ({
         ...r,
         autor_nome: r.autor?.nome || 'Administrador',
+        autor_email: r.autor?.email || null,
       })),
       atividades: (atividades || []).map(a => ({
         id: a.id,
@@ -272,7 +273,7 @@ export const ticketService = {
     });
 
     // Notificar o solicitante sobre nova resposta (se tiver auth_user_id)
-    const { data: ticketRow } = await client.from('PDC_tickets').select('solicitante_id, numero_protocolo, assunto').eq('id', ticketId).single();
+    const { data: ticketRow } = await client.from('PDC_tickets').select('solicitante_id, area_destino, numero_protocolo, assunto').eq('id', ticketId).single();
     if (ticketRow?.solicitante_id) {
       const { data: pdcUser } = await client.from('PDC_users').select('auth_user_id').eq('id', ticketRow.solicitante_id).single();
       if (pdcUser?.auth_user_id) {
@@ -283,6 +284,30 @@ export const ticketService = {
           titulo: 'Nova resposta no chamado',
           mensagem: `Chamado ${ticketRow.numero_protocolo}: ${(ticketRow.assunto || '').slice(0, 60)}...`,
         });
+      }
+    }
+
+    // Notificar usuários do setor receptor (area_destino) sobre nova resposta, exceto o autor do comentário
+    if (ticketRow?.area_destino) {
+      const areaNorm = (ticketRow.area_destino || '').trim().toUpperCase();
+      const { data: receptores } = await client
+        .from('PDC_users')
+        .select('id, auth_user_id, departamento')
+        .not('auth_user_id', 'is', null);
+      const receptoresDoSetor = (receptores || []).filter(
+        (u) => (u.departamento || '').trim().toUpperCase() === areaNorm && u.id !== autorId
+      );
+      if (receptoresDoSetor.length > 0) {
+        const authIds = [...new Set(receptoresDoSetor.map((u) => u.auth_user_id).filter(Boolean))];
+        for (const authUserId of authIds) {
+          await client.from('PDC_notifications').insert({
+            auth_user_id: authUserId,
+            tipo: 'resposta_chamado',
+            ticket_id: ticketId,
+            titulo: 'Nova resposta no chamado',
+            mensagem: `Chamado ${ticketRow.numero_protocolo}: ${(ticketRow.assunto || '').slice(0, 60)}...`,
+          });
+        }
       }
     }
 
