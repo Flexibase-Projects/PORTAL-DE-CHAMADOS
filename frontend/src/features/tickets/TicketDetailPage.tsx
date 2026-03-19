@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Ticket } from "@/types/ticket";
 import type { TemplateField } from "@/types/template";
 
-type PermissaoMap = Record<string, "view" | "view_edit">;
+type PermissaoMap = Record<string, "view" | "view_edit" | "manage_templates">;
 
 interface LocationState {
   ticket?: Ticket;

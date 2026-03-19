@@ -20,22 +20,29 @@ import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import CircularProgress from "@mui/material/CircularProgress";
+import Checkbox from "@mui/material/Checkbox";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import { Shield } from "lucide-react";
 import { permissionService, type AuthUserListItem, type PermissaoTipo } from "@/services/permissionService";
 import { getAllDepartamentos } from "@/constants/departamentos";
+import { useAuth } from "@/contexts/AuthContext";
 
-const PERMISSAO_LABELS: Record<PermissaoTipo, string> = {
+type TicketPermissao = Exclude<PermissaoTipo, "manage_templates">;
+
+const PERMISSAO_LABELS: Record<TicketPermissao, string> = {
   view: "Ver",
   view_edit: "Ver e editar",
 };
 
 export function UsersPage() {
+  const { refreshMe } = useAuth();
   const [users, setUsers] = useState<AuthUserListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [selectedUser, setSelectedUser] = useState<AuthUserListItem | null>(null);
-  const [perms, setPerms] = useState<Record<string, PermissaoTipo>>({});
+  const [ticketPerms, setTicketPerms] = useState<Record<string, TicketPermissao>>({});
+  const [templatePerms, setTemplatePerms] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadPermsLoading, setLoadPermsLoading] = useState(false);
@@ -48,33 +55,17 @@ export function UsersPage() {
     loadUsers();
   }, []);
 
-  const loadUsers = async () => {
-    setLoading(true);
-    setError("");
+  const loadUsers = async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
     try {
       const res = await permissionService.listAuthUsers();
-      // #region agent log
-      const firstU = (res.users || [])[0];
-      fetch('http://127.0.0.1:7243/ingest/8ef6696f-588f-412a-bb62-3118887b728f', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '17a79e' },
-        body: JSON.stringify({
-          sessionId: '17a79e',
-          hypothesisId: 'H4',
-          location: 'UsersPage.tsx:loadUsers',
-          message: 'loadUsers response',
-          data: {
-            success: res.success,
-            usersCount: (res.users || []).length,
-            firstUser: firstU ? { id: firstU.id, departamento: firstU.departamento } : null,
-            timestamp: Date.now(),
-          },
-        }),
-      }).catch(() => {});
-      // #endregion
       if (res.success) setUsers(res.users || []);
-      else setError("Não foi possível carregar usuários.");
+      else if (!silent) setError("Não foi possível carregar usuários.");
     } catch (err: unknown) {
+      if (silent) return;
       const ax = err as { response?: { data?: { error?: string }; status?: number }; message?: string };
       const msg =
         ax?.response?.data?.error ||
@@ -84,7 +75,7 @@ export function UsersPage() {
             "Erro ao carregar usuários. Verifique se o backend está rodando e se SUPABASE_SERVICE_ROLE_KEY está no .env ou .env.local do backend.");
       setError(msg);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -93,25 +84,43 @@ export function UsersPage() {
     setDialogOpen(true);
     setSaveError("");
     setLoadPermsLoading(true);
-    setPerms({});
+    setTicketPerms({});
+    setTemplatePerms({});
     try {
       const res = await permissionService.getByAuthUserId(user.id);
-      if (res.success) setPerms(res.permissions || {});
+      if (res.success) {
+        const nextTicketPerms: Record<string, TicketPermissao> = {};
+        const nextTemplatePerms: Record<string, boolean> = {};
+        for (const [dept, perm] of Object.entries(res.permissions || {})) {
+          if (perm === "manage_templates") nextTemplatePerms[dept] = true;
+          if (perm === "view" || perm === "view_edit") nextTicketPerms[dept] = perm;
+        }
+        (res.templateDepartamentos || []).forEach((dept) => {
+          if (dept?.trim()) nextTemplatePerms[dept.trim()] = true;
+        });
+        setTicketPerms(nextTicketPerms);
+        setTemplatePerms(nextTemplatePerms);
+      }
     } catch {
-      setPerms({});
+      setTicketPerms({});
+      setTemplatePerms({});
     } finally {
       setLoadPermsLoading(false);
     }
   };
 
-  const handlePermChange = (departamento: string, value: PermissaoTipo | "") => {
+  const handlePermChange = (departamento: string, value: TicketPermissao | "") => {
     if (!value) {
-      const next = { ...perms };
+      const next = { ...ticketPerms };
       delete next[departamento];
-      setPerms(next);
+      setTicketPerms(next);
     } else {
-      setPerms((p) => ({ ...p, [departamento]: value }));
+      setTicketPerms((p) => ({ ...p, [departamento]: value }));
     }
+  };
+
+  const handleTemplatePermToggle = (departamento: string, checked: boolean) => {
+    setTemplatePerms((prev) => ({ ...prev, [departamento]: checked }));
   };
 
   const handleSavePermissions = async () => {
@@ -121,12 +130,37 @@ export function UsersPage() {
     setError("");
     setSuccess("");
     try {
-      const res = await permissionService.setForAuthUser(selectedUser.id, { departamentos: perms });
+      const departamentosPayload: Record<string, PermissaoTipo> = { ...ticketPerms };
+      for (const dept of departamentos) {
+        const hasTicketPerm = !!ticketPerms[dept];
+        const canManageTemplate = !!templatePerms[dept];
+        if (!hasTicketPerm && canManageTemplate) {
+          departamentosPayload[dept] = "manage_templates";
+        }
+      }
+      const res = await permissionService.setForAuthUser(selectedUser.id, {
+        departamentos: departamentosPayload,
+        templateDepartamentos: departamentos.filter((dept) => !!templatePerms[dept]),
+      });
       if (res.success) {
-        setPerms(res.permissions || {});
+        const nextTicketPerms: Record<string, TicketPermissao> = {};
+        const nextTemplatePerms: Record<string, boolean> = {};
+        for (const [dept, perm] of Object.entries(res.permissions || {})) {
+          if (perm === "manage_templates") nextTemplatePerms[dept] = true;
+          if (perm === "view" || perm === "view_edit") nextTicketPerms[dept] = perm;
+        }
+        (res.templateDepartamentos || []).forEach((dept) => {
+          if (dept?.trim()) nextTemplatePerms[dept.trim()] = true;
+        });
+        setTicketPerms(nextTicketPerms);
+        setTemplatePerms(nextTemplatePerms);
         setSuccess("Permissões salvas com sucesso.");
         setDialogOpen(false);
-        loadUsers();
+        // Atualiza contexto global para refletir permissões na tela de Templates sem F5.
+        await refreshMe();
+        // Evita bloquear UX com recarga completa (listAuthUsers pode ser lenta em bases grandes).
+        // Recarrega silenciosamente em segundo plano para manter dados atuais.
+        void loadUsers(true);
       } else {
         setSaveError("Não foi possível salvar. Tente novamente.");
       }
@@ -145,36 +179,11 @@ export function UsersPage() {
     setSavingDeptAuthId(user.id);
     setError("");
     setSuccess("");
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/8ef6696f-588f-412a-bb62-3118887b728f', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '17a79e' },
-      body: JSON.stringify({
-        sessionId: '17a79e',
-        hypothesisId: 'H2',
-        location: 'UsersPage.tsx:handleDepartamentoChange',
-        message: 'handleDepartamentoChange call',
-        data: { userId: user.id, newDept: newDept ?? null, timestamp: Date.now() },
-      }),
-    }).catch(() => {});
-    // #endregion
     try {
       const res = await permissionService.setUserDepartamento(user.id, newDept || null);
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/8ef6696f-588f-412a-bb62-3118887b728f', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '17a79e' },
-        body: JSON.stringify({
-          sessionId: '17a79e',
-          hypothesisId: 'H2',
-          location: 'UsersPage.tsx:handleDepartamentoChange',
-          message: 'setUserDepartamento result',
-          data: { success: res?.success, userDepartamento: res?.userDepartamento, timestamp: Date.now() },
-        }),
-      }).catch(() => {});
-      // #endregion
       if (res.success) {
         setSuccess("Departamento atualizado.");
+        await refreshMe();
         setUsers((prev) =>
           prev.map((u) => (u.id === user.id ? { ...u, departamento: res.userDepartamento ?? null } : u))
         );
@@ -301,8 +310,9 @@ export function UsersPage() {
             </Alert>
           )}
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Defina em quais departamentos este usuário pode ver ou editar chamados. Sem permissão = não vê;
-            &quot;Ver&quot; = só visualizar; &quot;Ver e editar&quot; = pode alterar status e responder.
+            Defina em quais departamentos este usuário pode atuar. Sem permissão = não vê chamados;
+            &quot;Ver&quot; = só visualizar; &quot;Ver e editar&quot; = pode alterar status e responder;
+            para templates, use o controle abaixo de cada departamento.
           </Typography>
           {loadPermsLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
@@ -314,14 +324,30 @@ export function UsersPage() {
                 <FormControl key={dept} size="small" fullWidth>
                   <InputLabel>{dept}</InputLabel>
                   <Select
-                    value={perms[dept] ?? ""}
+                    value={ticketPerms[dept] ?? ""}
                     label={dept}
-                    onChange={(e) => handlePermChange(dept, (e.target.value as PermissaoTipo) || "")}
+                    onChange={(e) => handlePermChange(dept, (e.target.value as TicketPermissao) || "")}
                   >
                     <MenuItem value="">Sem permissão</MenuItem>
                     <MenuItem value="view">{PERMISSAO_LABELS.view}</MenuItem>
                     <MenuItem value="view_edit">{PERMISSAO_LABELS.view_edit}</MenuItem>
                   </Select>
+                  <FormControlLabel
+                    sx={{ mt: 0.5, ml: 0.5 }}
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={!!templatePerms[dept] || ticketPerms[dept] === "view_edit"}
+                        onChange={(e) => handleTemplatePermToggle(dept, e.target.checked)}
+                        disabled={ticketPerms[dept] === "view_edit"}
+                      />
+                    }
+                    label={
+                      ticketPerms[dept] === "view_edit"
+                        ? "Template: já permitido por 'Ver e editar'"
+                        : "Permitir manipular templates"
+                    }
+                  />
                 </FormControl>
               ))}
             </Box>

@@ -109,12 +109,16 @@ export const permissionService = {
    */
   async getByAuthUserId(authUserId) {
     const client = supabaseAdmin || supabase;
-    const [permsResult, userResult] = await Promise.all([
+    const [permsResult, templatePermsResult, userResult] = await Promise.all([
       client
         .from('PDC_user_permissions')
         .select('departamento, permissao')
         .eq('auth_user_id', authUserId)
         .order('departamento'),
+      client
+        .from('PDC_user_template_permissions')
+        .select('departamento')
+        .eq('auth_user_id', authUserId),
       (supabaseAdmin || supabase)
         .from('PDC_users')
         .select('departamento')
@@ -128,16 +132,26 @@ export const permissionService = {
     (permsData || []).forEach((row) => {
       map[row.departamento] = row.permissao;
     });
+    const templateData = templatePermsResult?.error ? [] : (templatePermsResult?.data || []);
+    const templateDepartamentos = (templateData || [])
+      .map((row) => row.departamento)
+      .filter((d) => typeof d === 'string' && d.trim().length > 0)
+      .map((d) => d.trim());
+    templateDepartamentos.forEach((dept) => {
+      // Mantém compatibilidade com front antigo que lê manage_templates no mapa.
+      const row = { departamento: dept };
+      if (!map[row.departamento]) map[row.departamento] = 'manage_templates';
+    });
     const userDepartamento = userResult?.data?.departamento?.trim() || null;
-    return { permissions: map, userDepartamento };
+    return { permissions: map, userDepartamento, templateDepartamentos };
   },
 
   /**
    * Atualiza permissões e opcionalmente o departamento atrelado ao usuário.
-   * body: { departamentos: { [departamento]: 'view' | 'view_edit' }, userDepartamento?: string }
+   * body: { departamentos: { [departamento]: 'view' | 'view_edit' | 'manage_templates' }, userDepartamento?: string }
    * Se userDepartamento for informado, atualiza PDC_users.departamento e garante que esse departamento tenha ao menos "view" nas permissões.
    */
-  async setForAuthUser(authUserId, departamentos, userDepartamento = null) {
+  async setForAuthUser(authUserId, departamentos, userDepartamento = null, templateDepartamentos = []) {
     if (!authUserId) throw new Error('auth_user_id é obrigatório');
     if (!supabaseAdmin) {
       throw new Error('SUPABASE_SERVICE_ROLE_KEY é necessária para salvar permissões (RLS na tabela PDC_user_permissions).');
@@ -197,7 +211,8 @@ export const permissionService = {
 
     const rows = [];
     for (const [departamento, permissao] of Object.entries(departamentos || {})) {
-      if (!departamento?.trim() || !PERMISSAO_VALIDAS.includes(permissao)) continue;
+      if (!departamento?.trim()) continue;
+      if (!PERMISSAO_VALIDAS.includes(permissao)) continue;
       rows.push({
         auth_user_id: authUserId,
         departamento: departamento.trim(),
@@ -213,12 +228,46 @@ export const permissionService = {
 
     if (deleteErr) throw new Error(deleteErr.message);
 
+    const templateDeleteResult = await supabaseAdmin
+      .from('PDC_user_template_permissions')
+      .delete()
+      .eq('auth_user_id', authUserId);
+    const normalizedTemplateDepts = [...new Set(
+      (templateDepartamentos || [])
+        .map((d) => (typeof d === 'string' ? d.trim() : ''))
+        .filter(Boolean)
+    )];
+
+    if (templateDeleteResult.error && normalizedTemplateDepts.length > 0) {
+      throw new Error(
+        `Permissão de templates requer tabela PDC_user_template_permissions. ` +
+        `Rode a migration pendente. Detalhe: ${templateDeleteResult.error.message}`
+      );
+    }
+
     if (rows.length > 0) {
       const { error: insertErr } = await supabaseAdmin
         .from('PDC_user_permissions')
         .upsert(rows, { onConflict: 'auth_user_id,departamento' });
 
       if (insertErr) throw new Error(insertErr.message);
+    }
+
+    if (normalizedTemplateDepts.length > 0) {
+      const templateRows = normalizedTemplateDepts.map((departamento) => ({
+        auth_user_id: authUserId,
+        departamento,
+        updated_at: new Date().toISOString(),
+      }));
+      const { error: templateInsertErr } = await supabaseAdmin
+        .from('PDC_user_template_permissions')
+        .upsert(templateRows, { onConflict: 'auth_user_id,departamento' });
+      if (templateInsertErr) {
+        throw new Error(
+          `Erro ao salvar permissão de templates. ` +
+          `Verifique se a migration foi aplicada. Detalhe: ${templateInsertErr.message}`
+        );
+      }
     }
 
     return this.getByAuthUserId(authUserId);

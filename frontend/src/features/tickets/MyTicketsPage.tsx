@@ -17,7 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import type { Ticket } from "@/types/ticket";
 
-type PermissaoMap = Record<string, "view" | "view_edit">;
+type PermissaoMap = Record<string, "view" | "view_edit" | "manage_templates">;
 
 function getPermissionsForTicket(
   ticket: Ticket,

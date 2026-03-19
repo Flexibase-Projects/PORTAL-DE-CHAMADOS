@@ -17,7 +17,7 @@ export interface AuthUser {
   nome?: string;
 }
 
-export type PermissaoTipo = "view" | "view_edit";
+export type PermissaoTipo = "view" | "view_edit" | "manage_templates";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -25,12 +25,16 @@ interface AuthContextValue {
   loading: boolean;
   /** Departamento do usuário (PDC_users.departamento). Só preenchido após GET /me. */
   departamento: string | null;
-  /** Permissões por departamento (view/view_edit). Preenchido após GET /me. */
+  /** Permissões por departamento. Preenchido após GET /me. */
   permissions: Record<string, PermissaoTipo>;
+  /** Departamentos com permissão explícita de manipular templates. */
+  templateDepartamentos: string[];
   /** True se o usuário pertence ao departamento TI (acesso à aba Usuários). */
   isTiUser: boolean;
   /** True após a primeira resposta de GET /me (permite saber se já podemos confiar em isTiUser). */
   meLoaded: boolean;
+  /** Força recarga de /me para refletir permissões/departamento sem F5. */
+  refreshMe: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
@@ -42,7 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [departamento, setDepartamento] = useState<string | null>(null);
-  const [permissions, setPermissions] = useState<Record<string, "view" | "view_edit">>({});
+  const [permissions, setPermissions] = useState<Record<string, PermissaoTipo>>({});
+  const [templateDepartamentos, setTemplateDepartamentos] = useState<string[]>([]);
   const [meLoaded, setMeLoaded] = useState(false);
 
   const user: AuthUser | null = session?.user
@@ -57,6 +62,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     : null;
 
   const syncedRef = useRef<string | null>(null);
+  const refreshMe = useCallback(async () => {
+    if (!session?.user?.id) {
+      setDepartamento(null);
+      setPermissions({});
+      setTemplateDepartamentos([]);
+      setMeLoaded(false);
+      return;
+    }
+    setMeLoaded(false);
+    try {
+      const res = await api.get<{
+        success: boolean;
+        departamento: string | null;
+        permissions?: Record<string, PermissaoTipo>;
+        templateDepartamentos?: string[];
+      }>("/me");
+      if (res.data?.success) {
+        setDepartamento(res.data.departamento ?? null);
+        setPermissions(res.data.permissions ?? {});
+        setTemplateDepartamentos(res.data.templateDepartamentos ?? []);
+      }
+    } finally {
+      setMeLoaded(true);
+    }
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (!supabase) {
@@ -82,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         syncedRef.current = null;
         setDepartamento(null);
         setPermissions({});
+        setTemplateDepartamentos([]);
         setMeLoaded(false);
       }
     });
@@ -106,25 +137,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!session?.user?.id) {
       setDepartamento(null);
       setPermissions({});
+      setTemplateDepartamentos([]);
       setMeLoaded(false);
       return;
     }
-    setMeLoaded(false);
-    api
-      .get<{ success: boolean; departamento: string | null; permissions?: Record<string, "view" | "view_edit"> }>("/me")
-      .then((res) => {
-        if (res.data?.success) {
-          setDepartamento(res.data.departamento ?? null);
-          setPermissions(res.data.permissions ?? {});
-        }
-        setMeLoaded(true);
-      })
-      .catch(() => {
-        setDepartamento(null);
-        setPermissions({});
-        setMeLoaded(true);
-      });
-  }, [session?.user?.id]);
+    void refreshMe().catch(() => {
+      setDepartamento(null);
+      setPermissions({});
+      setTemplateDepartamentos([]);
+      setMeLoaded(true);
+    });
+  }, [session?.user?.id, refreshMe]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     if (!supabase) return { error: "Supabase não configurado." };
@@ -142,8 +165,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     departamento,
     permissions,
+    templateDepartamentos,
     isTiUser: (departamento || "").trim().toUpperCase() === "TI",
     meLoaded,
+    refreshMe,
     signIn,
     signOut,
     isAuthenticated: !!session?.user,

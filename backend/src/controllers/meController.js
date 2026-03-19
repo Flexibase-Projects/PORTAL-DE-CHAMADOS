@@ -7,11 +7,12 @@ export const meController = {
       if (!authUserId) {
         return res.status(401).json({ success: false, error: 'Não autenticado' });
       }
-      const { permissions, userDepartamento } = await permissionService.getByAuthUserId(authUserId);
+      const { permissions, userDepartamento, templateDepartamentos } = await permissionService.getByAuthUserId(authUserId);
       res.json({
         success: true,
         departamento: userDepartamento || null,
         permissions: permissions || {},
+        templateDepartamentos: templateDepartamentos || [],
       });
     } catch (error) {
       console.error('[me] getMe:', error.message);

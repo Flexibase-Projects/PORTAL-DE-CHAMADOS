@@ -86,7 +86,7 @@ export const ticketService = {
     success: boolean;
     chamadosMeuDepartamento?: Ticket[];
     chamadosQueAbriOutros?: Ticket[];
-    permissoesPorDepartamento?: Record<string, "view" | "view_edit">;
+    permissoesPorDepartamento?: Record<string, "view" | "view_edit" | "manage_templates">;
   }> {
     if (USE_LOCAL_STORAGE) {
       return { success: true, chamadosMeuDepartamento: [], chamadosQueAbriOutros: [] };
@@ -136,9 +136,10 @@ export const ticketService = {
         },
       });
       return res.data;
-    } catch {
-      const tickets = localStorageStorage.getTickets().filter((t) => t.status !== "Concluído");
-      return { success: true, tickets };
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 400) throw new Error("Não foi possível identificar seu usuário. Faça login novamente.");
+      throw err;
     }
   },
 

@@ -1,42 +1,49 @@
 import { useState, useMemo, useEffect } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
 import { TemplateEditor } from "./components/TemplateEditor";
-import { getAllDepartamentos } from "@/constants/departamentos";
+import { TemplateDepartmentCarousel } from "./components/TemplateDepartmentCarousel";
 import { useAuth } from "@/contexts/AuthContext";
-
-function canEditTemplateForDepartment(
-  permissions: Record<string, string>,
-  userDepartamento: string | null,
-  departamento: string
-): boolean {
-  const d = departamento.trim();
-  if (!d) return false;
-  if (permissions[d] === "view_edit") return true;
-  if (userDepartamento && userDepartamento.trim() === d) return true;
-  return false;
-}
+import {
+  canEditTemplateForDepartment,
+  getDepartamentosComEdicaoTemplate,
+} from "./utils/templateDepartamentosEditaveis";
 
 export function TemplateEditorPage() {
-  const { permissions, departamento: userDepartamento, meLoaded } = useAuth();
+  const { permissions, templateDepartamentos, departamento: userDepartamento, meLoaded } = useAuth();
   const [departamento, setDepartamento] = useState("");
 
-  const allDepartamentos = getAllDepartamentos();
   const departamentosComEdicao = useMemo(
-    () => allDepartamentos.filter((d) => canEditTemplateForDepartment(permissions, userDepartamento, d)),
-    [permissions, userDepartamento]
+    () => getDepartamentosComEdicaoTemplate(permissions, templateDepartamentos, userDepartamento),
+    [permissions, templateDepartamentos, userDepartamento]
   );
-  const canEdit = !!departamento && canEditTemplateForDepartment(permissions, userDepartamento, departamento);
+
+  const explicitTemplateSet = useMemo(
+    () => new Set((templateDepartamentos || []).map((d) => (d || "").trim().toUpperCase())),
+    [templateDepartamentos]
+  );
+
+  const canEdit =
+    !!departamento &&
+    (explicitTemplateSet.has(departamento.trim().toUpperCase()) ||
+      canEditTemplateForDepartment(permissions, userDepartamento, departamento));
 
   useEffect(() => {
     if (meLoaded && departamento && departamentosComEdicao.length > 0 && !departamentosComEdicao.includes(departamento)) {
       setDepartamento("");
     }
   }, [meLoaded, departamento, departamentosComEdicao]);
+
+  useEffect(() => {
+    if (!meLoaded || departamentosComEdicao.length !== 1) return;
+    const only = departamentosComEdicao[0];
+    setDepartamento((prev) => (prev === only ? prev : only));
+  }, [meLoaded, departamentosComEdicao]);
+
+  useEffect(() => {
+    if (!meLoaded || departamentosComEdicao.length <= 1) return;
+    if (!departamento) setDepartamento(departamentosComEdicao[0]);
+  }, [meLoaded, departamentosComEdicao, departamento]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 2, md: 2.5 } }}>
@@ -45,28 +52,30 @@ export function TemplateEditorPage() {
           Templates por Departamento
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Edite os campos do formulário de chamado por área. Só é possível editar departamentos em que você tem permissão &quot;Ver e editar&quot;.
+          Edite os campos do formulário de chamado por área.
         </Typography>
       </Box>
-      <FormControl sx={{ minWidth: 200, maxWidth: { xs: "100%", sm: 280 } }}>
-        <InputLabel>Departamento</InputLabel>
-        <Select
+
+      {departamentosComEdicao.length > 0 && (
+        <TemplateDepartmentCarousel
+          departamentos={departamentosComEdicao}
           value={departamento}
-          label="Departamento"
-          onChange={(e) => setDepartamento(e.target.value)}
-        >
-          {departamentosComEdicao.map((d) => (
-            <MenuItem key={d} value={d}>
-              {d}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+          onChange={setDepartamento}
+          hint={
+            departamentosComEdicao.length > 1
+              ? "Deslize horizontalmente (ou use a barra de rolagem) para ver todos os departamentos."
+              : undefined
+          }
+        />
+      )}
+
       {departamentosComEdicao.length === 0 && (
         <Typography variant="body2" color="text.secondary">
-          Você não tem permissão de edição para nenhum departamento. Peça a um administrador (TI) para conceder &quot;Ver e editar&quot; no departamento desejado.
+          Você não tem permissão de edição para nenhum departamento. Peça a um administrador (TI) para conceder
+          &quot;Ver e editar&quot; ou &quot;Manipular templates&quot; no departamento desejado.
         </Typography>
       )}
+
       <TemplateEditor departamento={departamento} canEdit={canEdit} />
     </Box>
   );

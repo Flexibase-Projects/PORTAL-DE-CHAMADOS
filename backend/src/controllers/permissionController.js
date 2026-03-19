@@ -26,9 +26,14 @@ export const permissionController = {
   async setForAuthUser(req, res) {
     try {
       const { authUserId } = req.params;
-      const { departamentos, userDepartamento } = req.body || {};
+      const { departamentos, userDepartamento, templateDepartamentos } = req.body || {};
       if (!authUserId) return res.status(400).json({ success: false, error: 'authUserId é obrigatório' });
-      const result = await permissionService.setForAuthUser(authUserId, departamentos, userDepartamento);
+      const result = await permissionService.setForAuthUser(
+        authUserId,
+        departamentos,
+        userDepartamento,
+        templateDepartamentos
+      );
       res.json({ success: true, ...result });
     } catch (error) {
       console.error('[permissions] setForAuthUser:', error.message);

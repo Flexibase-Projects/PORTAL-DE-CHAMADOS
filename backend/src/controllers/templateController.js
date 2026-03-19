@@ -4,7 +4,8 @@ import { permissionService } from '../services/permissionService.js';
 function canEditTemplateForDepartment(permissions, userDepartamento, departamento) {
   const dept = (departamento || '').trim();
   if (!dept) return false;
-  if (permissions[dept] === 'view_edit') return true;
+  const p = permissions?.[dept];
+  if (p === 'view_edit' || p === 'manage_templates') return true;
   if (userDepartamento && (userDepartamento || '').trim() === dept) return true;
   return false;
 }
@@ -31,8 +32,10 @@ export const templateController = {
       if (!departamento || typeof departamento !== 'string') {
         return res.status(400).json({ success: false, error: 'Departamento é obrigatório' });
       }
-      const { permissions, userDepartamento } = await permissionService.getByAuthUserId(authUserId);
-      if (!canEditTemplateForDepartment(permissions, userDepartamento, departamento)) {
+      const { permissions, userDepartamento, templateDepartamentos } = await permissionService.getByAuthUserId(authUserId);
+      const fromTemplateList = (templateDepartamentos || [])
+        .some((d) => (d || '').trim().toUpperCase() === departamento.trim().toUpperCase());
+      if (!fromTemplateList && !canEditTemplateForDepartment(permissions, userDepartamento, departamento)) {
         return res.status(403).json({ success: false, error: 'Sem permissão de edição para este departamento' });
       }
       const template = await templateService.save(departamento, fields);

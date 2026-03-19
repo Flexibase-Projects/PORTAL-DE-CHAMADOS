@@ -8,7 +8,7 @@ export interface AuthUserListItem {
   departamento?: string | null;
 }
 
-export type PermissaoTipo = "view" | "view_edit";
+export type PermissaoTipo = "view" | "view_edit" | "manage_templates";
 
 export const permissionService = {
   async listAuthUsers(): Promise<{ success: boolean; users: AuthUserListItem[] }> {
@@ -18,15 +18,29 @@ export const permissionService = {
 
   async getByAuthUserId(
     authUserId: string
-  ): Promise<{ success: boolean; permissions: Record<string, PermissaoTipo>; userDepartamento: string | null }> {
+  ): Promise<{
+    success: boolean;
+    permissions: Record<string, PermissaoTipo>;
+    userDepartamento: string | null;
+    templateDepartamentos?: string[];
+  }> {
     const res = await api.get(`/admin/permissions/${authUserId}`);
     return res.data;
   },
 
   async setForAuthUser(
     authUserId: string,
-    payload: { departamentos: Record<string, PermissaoTipo>; userDepartamento?: string | null }
-  ): Promise<{ success: boolean; permissions: Record<string, PermissaoTipo>; userDepartamento: string | null }> {
+    payload: {
+      departamentos: Record<string, PermissaoTipo>;
+      userDepartamento?: string | null;
+      templateDepartamentos?: string[];
+    }
+  ): Promise<{
+    success: boolean;
+    permissions: Record<string, PermissaoTipo>;
+    userDepartamento: string | null;
+    templateDepartamentos?: string[];
+  }> {
     const res = await api.put(`/admin/permissions/${authUserId}`, payload);
     return res.data;
   },
