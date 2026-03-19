@@ -11,6 +11,9 @@ import { supabase } from "@/lib/supabase";
 const DashboardPage = lazy(() => import("@/features/dashboard/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const CreateTicketPage = lazy(() => import("@/features/tickets/CreateTicketPage").then((m) => ({ default: m.CreateTicketPage })));
 const MyTicketsPage = lazy(() => import("@/features/tickets/MyTicketsPage").then((m) => ({ default: m.MyTicketsPage })));
+const TicketDetailPage = lazy(() =>
+  import("@/features/tickets/TicketDetailPage").then((m) => ({ default: m.TicketDetailPage }))
+);
 const KnowledgeBasePage = lazy(() => import("@/features/knowledge-base/KnowledgeBasePage").then((m) => ({ default: m.KnowledgeBasePage })));
 const AdminChamadosPage = lazy(() => import("@/features/admin/AdminChamadosPage").then((m) => ({ default: m.AdminChamadosPage })));
 const TemplateEditorPage = lazy(() => import("@/features/admin/TemplateEditorPage").then((m) => ({ default: m.TemplateEditorPage })));
@@ -45,6 +48,7 @@ function AppRoutes() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/criar-chamado" element={<CreateTicketPage />} />
           <Route path="/meus-chamados" element={<MyTicketsPage />} />
+          <Route path="/meus-chamados/:id" element={<TicketDetailPage />} />
           <Route path="/base-conhecimento" element={<KnowledgeBasePage />} />
           <Route path="/admin/chamados" element={<AdminChamadosPage />} />
           <Route path="/admin/templates" element={<TemplateEditorPage />} />

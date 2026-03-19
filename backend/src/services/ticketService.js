@@ -97,16 +97,17 @@ export const ticketService = {
   },
 
   async getTicketById(id) {
-    const { data: ticket, error } = await supabase
+    const client = supabaseAdmin || supabase;
+    const { data: ticket, error } = await client
       .from('PDC_tickets')
       .select(`*, solicitante:PDC_users!solicitante_id(nome, email)`)
       .eq('id', id)
       .single();
 
-    if (error) return null;
+    if (error || !ticket) return null;
 
     // Buscar respostas
-    const { data: respostas } = await supabase
+    const { data: respostas } = await client
       .from('PDC_ticket_responses')
       .select(`*, autor:PDC_users!autor_id(nome)`)
       .eq('ticket_id', id)

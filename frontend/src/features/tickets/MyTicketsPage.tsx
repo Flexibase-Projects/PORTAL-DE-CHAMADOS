@@ -11,15 +11,30 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Skeleton from "@mui/material/Skeleton";
 import { Search, Inbox, Send } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
-import { templateService } from "@/services/templateService";
 import { TicketCard } from "./components/TicketCard";
-import { TicketDetailDrawer } from "./components/TicketDetailDrawer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import type { Ticket } from "@/types/ticket";
-import type { TemplateField } from "@/types/template";
 
 type PermissaoMap = Record<string, "view" | "view_edit">;
+
+function getPermissionsForTicket(
+  ticket: Ticket,
+  chamadosMeuDepartamento: Ticket[],
+  chamadosQueAbriOutros: Ticket[],
+  permissoesPorDepartamento: PermissaoMap
+): { canEdit: boolean; canComment: boolean } {
+  const isFromMyDept = Object.prototype.hasOwnProperty.call(
+    permissoesPorDepartamento,
+    ticket.area_destino
+  );
+  const permissao = permissoesPorDepartamento[ticket.area_destino];
+  const canEdit = isFromMyDept && permissao === "view_edit";
+  const canComment =
+    (isFromMyDept && (permissao === "view" || permissao === "view_edit")) ||
+    chamadosQueAbriOutros.some((t) => t.id === ticket.id);
+  return { canEdit, canComment };
+}
 
 export function MyTicketsPage() {
   const navigate = useNavigate();
@@ -31,11 +46,6 @@ export function MyTicketsPage() {
   const [chamadosMeuDepartamento, setChamadosMeuDepartamento] = useState<Ticket[]>([]);
   const [chamadosQueAbriOutros, setChamadosQueAbriOutros] = useState<Ticket[]>([]);
   const [permissoesPorDepartamento, setPermissoesPorDepartamento] = useState<PermissaoMap>({});
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const [detailTicket, setDetailTicket] = useState<Ticket | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [replyLoading, setReplyLoading] = useState(false);
-  const [templateFields, setTemplateFields] = useState<TemplateField[]>([]);
 
   const loadByAuth = useCallback(async () => {
     setLoading(true);
@@ -60,76 +70,20 @@ export function MyTicketsPage() {
     }
   }, [authConfigured, isAuthenticated, authLoading, user?.id, loadByAuth]);
 
-  useEffect(() => {
-    if (selectedTicket?.area_destino) {
-      templateService
-        .getTemplate(selectedTicket.area_destino)
-        .then((r) => setTemplateFields(Array.isArray(r.template?.fields) ? r.template.fields : []))
-        .catch(() => setTemplateFields([]));
-    } else {
-      setTemplateFields([]);
-    }
-  }, [selectedTicket?.area_destino]);
-
-  const handleViewTicket = useCallback(async (ticket: Ticket) => {
-    setSelectedTicket(ticket);
-    setDrawerOpen(true);
-    setDetailTicket(null);
-    try {
-      const res = await ticketService.getById(ticket.id);
-      if (res.success && res.ticket) setDetailTicket(res.ticket);
-      else setDetailTicket(ticket);
-    } catch {
-      setDetailTicket(ticket);
-    }
-  }, []);
-
-  const isFromMyDept = selectedTicket
-    ? Object.prototype.hasOwnProperty.call(permissoesPorDepartamento, selectedTicket.area_destino)
-    : false;
-  const permissao = selectedTicket ? permissoesPorDepartamento[selectedTicket.area_destino] : undefined;
-  const canEdit = isFromMyDept && permissao === "view_edit";
-  const canComment =
-    (isFromMyDept && (permissao === "view" || permissao === "view_edit")) ||
-    (!!selectedTicket &&
-      chamadosQueAbriOutros.some((t) => t.id === selectedTicket.id));
-
-  const handleReply = async (mensagem: string) => {
-    if (!selectedTicket) return;
-    setReplyLoading(true);
-    try {
-      const res = await ticketService.addResponse(selectedTicket.id, {
-        mensagem,
-        autor_id: "current",
+  const handleViewTicket = useCallback(
+    (ticket: Ticket) => {
+      const { canEdit, canComment } = getPermissionsForTicket(
+        ticket,
+        chamadosMeuDepartamento,
+        chamadosQueAbriOutros,
+        permissoesPorDepartamento
+      );
+      navigate(`/meus-chamados/${ticket.id}`, {
+        state: { ticket, canEdit, canComment },
       });
-      if (res.success && res.ticket) setDetailTicket(res.ticket);
-      await loadByAuth();
-    } finally {
-      setReplyLoading(false);
-    }
-  };
-
-  const handleConclude = async () => {
-    if (!selectedTicket || !confirm("Concluir este chamado?")) return;
-    setReplyLoading(true);
-    try {
-      const res = await ticketService.updateStatus(selectedTicket.id, "Concluído");
-      if (res.success) {
-        setDrawerOpen(false);
-        setSelectedTicket(null);
-        setDetailTicket(null);
-        await loadByAuth();
-      }
-    } finally {
-      setReplyLoading(false);
-    }
-  };
-
-  const handleCloseDrawer = () => {
-    setDrawerOpen(false);
-    setSelectedTicket(null);
-    setDetailTicket(null);
-  };
+    },
+    [navigate, chamadosMeuDepartamento, chamadosQueAbriOutros, permissoesPorDepartamento]
+  );
 
   if (authConfigured && isAuthenticated) {
     return (
@@ -199,18 +153,6 @@ export function MyTicketsPage() {
             </Card>
           </>
         )}
-
-        <TicketDetailDrawer
-          open={drawerOpen}
-          onClose={handleCloseDrawer}
-          ticket={detailTicket || selectedTicket}
-          templateFields={templateFields}
-          canEdit={canEdit}
-          canComment={canComment || !!selectedTicket}
-          onReply={handleReply}
-          onConclude={handleConclude}
-          replyLoading={replyLoading}
-        />
       </Box>
     );
   }
