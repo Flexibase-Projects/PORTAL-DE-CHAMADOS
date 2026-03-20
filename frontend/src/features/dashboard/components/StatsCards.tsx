@@ -3,6 +3,12 @@ import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
+import {
+  DASHBOARD_TOTAL_BLUE,
+  STATUS_COLOR_ABERTO,
+  STATUS_COLOR_CONCLUIDO,
+  STATUS_COLOR_EM_ANDAMENTO,
+} from "@/constants/ticketStatusColors";
 
 interface StatsCardsProps {
   total: number;
@@ -13,14 +19,11 @@ interface StatsCardsProps {
 
 type StatKey = "total" | "abertos" | "emAndamento" | "concluidos";
 
-/** Cores alinhadas à referência visual (Aberto / Em andamento / Encerrado + azul céu tipo Pendente para o resumo Total). */
-const ORANGE_ABERTOS = "#ff7900";
-
 const stats: readonly { key: StatKey; label: string; color: string }[] = [
-  { key: "total", label: "Total", color: "#0ea5e9" },
-  { key: "abertos", label: "Abertos", color: ORANGE_ABERTOS },
-  { key: "emAndamento", label: "Em Andamento", color: "#84cc16" },
-  { key: "concluidos", label: "Concluidos", color: "#475569" },
+  { key: "total", label: "Total", color: DASHBOARD_TOTAL_BLUE },
+  { key: "abertos", label: "Abertos", color: STATUS_COLOR_ABERTO },
+  { key: "emAndamento", label: "Em Andamento", color: STATUS_COLOR_EM_ANDAMENTO },
+  { key: "concluidos", label: "Concluidos", color: STATUS_COLOR_CONCLUIDO },
 ];
 
 function percentForCard(key: StatKey, count: number, totalAll: number): number {
@@ -70,8 +73,12 @@ export function StatsCards({ total, abertos, emAndamento, concluidos }: StatsCar
                 px: 2,
                 background:
                   s.key === "abertos"
-                    ? `linear-gradient(90deg, ${alpha(ORANGE_ABERTOS, 0.22)} 0%, ${alpha(ORANGE_ABERTOS, 0.07)} 46%, transparent 74%)`
-                    : `linear-gradient(90deg, ${alpha(color, 0.14)} 0%, transparent 72%)`,
+                    ? `linear-gradient(90deg, ${alpha(STATUS_COLOR_ABERTO, 0.22)} 0%, ${alpha(STATUS_COLOR_ABERTO, 0.07)} 46%, transparent 74%)`
+                    : s.key === "emAndamento"
+                      ? `linear-gradient(90deg, ${alpha(STATUS_COLOR_EM_ANDAMENTO, 0.22)} 0%, ${alpha(STATUS_COLOR_EM_ANDAMENTO, 0.07)} 46%, transparent 74%)`
+                      : s.key === "concluidos"
+                        ? `linear-gradient(90deg, ${alpha(STATUS_COLOR_CONCLUIDO, 0.22)} 0%, ${alpha(STATUS_COLOR_CONCLUIDO, 0.07)} 46%, transparent 74%)`
+                        : `linear-gradient(90deg, ${alpha(color, 0.14)} 0%, transparent 72%)`,
               }}
             >
               <Box

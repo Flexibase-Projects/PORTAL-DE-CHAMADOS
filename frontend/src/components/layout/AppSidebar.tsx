@@ -11,6 +11,7 @@ import {
   Menu,
   FileEdit,
   Users,
+  CalendarDays,
 } from "lucide-react";
 import Box from "@mui/material/Box";
 import List from "@mui/material/List";
@@ -48,6 +49,7 @@ const navCategories: { label: string; items: NavItem[] }[] = [
     label: "Administração",
     items: [
       { title: "Gestão de Chamados", icon: TicketCheck, path: "/admin/chamados" },
+      { title: "Calendário", icon: CalendarDays, path: "/admin/calendario" },
       { title: "Templates", icon: FileEdit, path: "/admin/templates" },
       { title: "Usuários", icon: Users, path: "/admin/usuarios" },
     ],
