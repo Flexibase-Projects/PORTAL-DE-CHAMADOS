@@ -1,15 +1,8 @@
-import { useTheme } from "@mui/material/styles";
-import { alpha } from "@mui/material/styles";
+import { useTheme, alpha } from "@mui/material/styles";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  TicketCheck,
-} from "lucide-react";
 
 interface StatsCardsProps {
   total: number;
@@ -18,18 +11,27 @@ interface StatsCardsProps {
   concluidos: number;
 }
 
-const ICON_SIZE = 18;
+type StatKey = "total" | "abertos" | "emAndamento" | "concluidos";
 
-const stats = [
-  { key: "total", label: "Total", icon: TicketCheck, colorKey: "primary" as const },
-  { key: "abertos", label: "Abertos", icon: AlertCircle, colorKey: "error" as const },
-  { key: "emAndamento", label: "Em Andamento", icon: Clock, colorKey: "warning" as const },
-  { key: "concluidos", label: "Concluidos", icon: CheckCircle2, colorKey: "success" as const },
-] as const;
+/** Cores alinhadas à referência visual (Aberto / Em andamento / Encerrado + azul céu tipo Pendente para o resumo Total). */
+const ORANGE_ABERTOS = "#ff7900";
+
+const stats: readonly { key: StatKey; label: string; color: string }[] = [
+  { key: "total", label: "Total", color: "#0ea5e9" },
+  { key: "abertos", label: "Abertos", color: ORANGE_ABERTOS },
+  { key: "emAndamento", label: "Em Andamento", color: "#84cc16" },
+  { key: "concluidos", label: "Concluidos", color: "#475569" },
+];
+
+function percentForCard(key: StatKey, count: number, totalAll: number): number {
+  if (key === "total") return 100;
+  if (totalAll <= 0) return 0;
+  return Math.round((count / totalAll) * 100);
+}
 
 export function StatsCards({ total, abertos, emAndamento, concluidos }: StatsCardsProps) {
   const theme = useTheme();
-  const values: Record<string, number> = { total, abertos, emAndamento, concluidos };
+  const values: Record<StatKey, number> = { total, abertos, emAndamento, concluidos };
 
   return (
     <Box
@@ -37,47 +39,102 @@ export function StatsCards({ total, abertos, emAndamento, concluidos }: StatsCar
         display: "grid",
         gap: 1.5,
         gridTemplateColumns: {
-          xs: "1fr",        // 320–575px: 1 coluna
-          sm: "1fr 1fr",    // 576–991px: 2 colunas
-          lg: "repeat(4, 1fr)", // 992px+: 4 colunas
+          xs: "1fr",
+          sm: "1fr 1fr",
+          lg: "repeat(4, 1fr)",
         },
       }}
     >
       {stats.map((s) => {
-        const color = theme.palette[s.colorKey].main;
+        const count = values[s.key];
+        const color = s.color;
+        const pct = percentForCard(s.key, count, total);
+        const barWidth = s.key === "total" ? 100 : pct;
+
         return (
           <Card
             key={s.key}
+            variant="outlined"
+            elevation={0}
             sx={{
-              borderLeft: `3px solid ${color}`,
+              borderRadius: 1.5,
+              overflow: "hidden",
               "&:hover": {
-                boxShadow: `0 0 24px ${alpha(color, 0.28)}, 0 0 48px ${alpha(color, 0.12)}`,
+                boxShadow: `0 0 20px ${alpha(color, 0.2)}, 0 0 40px ${alpha(color, 0.08)}`,
               },
             }}
           >
-            <CardContent sx={{ display: "flex", alignItems: "center", gap: 1.5, py: "12px !important" }}>
+            <CardContent
+              sx={{
+                py: "14px !important",
+                px: 2,
+                background:
+                  s.key === "abertos"
+                    ? `linear-gradient(90deg, ${alpha(ORANGE_ABERTOS, 0.22)} 0%, ${alpha(ORANGE_ABERTOS, 0.07)} 46%, transparent 74%)`
+                    : `linear-gradient(90deg, ${alpha(color, 0.14)} 0%, transparent 72%)`,
+              }}
+            >
               <Box
                 sx={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: "50%",
-                  bgcolor: alpha(color, 0.1),
-                  color,
                   display: "flex",
+                  justifyContent: "space-between",
                   alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
+                  gap: 1,
+                  mb: 1.25,
                 }}
               >
-                <s.icon style={{ width: ICON_SIZE, height: ICON_SIZE }} />
-              </Box>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="caption" color="text.secondary" noWrap>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      bgcolor: color,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <Typography
+                    component="span"
+                    variant="h5"
+                    fontWeight={700}
+                    lineHeight={1.15}
+                    sx={{ color }}
+                  >
+                    {count}
+                  </Typography>
+                </Box>
+                <Typography
+                  variant="subtitle2"
+                  fontWeight={700}
+                  sx={{ color, textAlign: "right" }}
+                  noWrap
+                >
                   {s.label}
                 </Typography>
-                <Typography variant="h5" fontWeight={700} lineHeight={1.2}>
-                  {values[s.key]}
+              </Box>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
+                <Typography variant="caption" fontWeight={600} sx={{ color, flexShrink: 0 }}>
+                  {pct}%
                 </Typography>
+                <Box
+                  sx={{
+                    flex: 1,
+                    height: 5,
+                    borderRadius: 2.5,
+                    bgcolor: alpha(theme.palette.divider, 0.9),
+                    overflow: "hidden",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      height: "100%",
+                      width: `${barWidth}%`,
+                      borderRadius: 2.5,
+                      bgcolor: color,
+                      transition: theme.transitions.create("width", { duration: 200 }),
+                    }}
+                  />
+                </Box>
               </Box>
             </CardContent>
           </Card>

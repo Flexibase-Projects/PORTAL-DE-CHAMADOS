@@ -14,7 +14,6 @@ const MyTicketsPage = lazy(() => import("@/features/tickets/MyTicketsPage").then
 const TicketDetailPage = lazy(() =>
   import("@/features/tickets/TicketDetailPage").then((m) => ({ default: m.TicketDetailPage }))
 );
-const KnowledgeBasePage = lazy(() => import("@/features/knowledge-base/KnowledgeBasePage").then((m) => ({ default: m.KnowledgeBasePage })));
 const AdminChamadosPage = lazy(() => import("@/features/admin/AdminChamadosPage").then((m) => ({ default: m.AdminChamadosPage })));
 const TemplateEditorPage = lazy(() => import("@/features/admin/TemplateEditorPage").then((m) => ({ default: m.TemplateEditorPage })));
 const UsersPage = lazy(() => import("@/features/users/UsersPage").then((m) => ({ default: m.UsersPage })));
@@ -49,7 +48,6 @@ function AppRoutes() {
           <Route path="/criar-chamado" element={<CreateTicketPage />} />
           <Route path="/meus-chamados" element={<MyTicketsPage />} />
           <Route path="/meus-chamados/:id" element={<TicketDetailPage />} />
-          <Route path="/base-conhecimento" element={<KnowledgeBasePage />} />
           <Route path="/admin/chamados" element={<AdminChamadosPage />} />
           <Route path="/admin/templates" element={<TemplateEditorPage />} />
           <Route path="/admin/usuarios" element={<UsersPageGate />} />

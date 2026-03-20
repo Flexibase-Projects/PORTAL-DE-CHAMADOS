@@ -81,6 +81,22 @@ function aggregateBySetor(ticketList) {
     .map((setor) => ({ setor, count: counts[setor] }))
     .filter((x) => x.count > 0);
 }
+
+/** Top usuários que mais abriram chamados no conjunto filtrado (permissão + período). */
+function aggregateTopSolicitantes(ticketList, limit = 25) {
+  const map = new Map();
+  ticketList.forEach((t) => {
+    const sid = t.solicitante_id;
+    if (!sid) return;
+    const nome = (t.solicitante?.nome || '').trim() || 'Usuário';
+    const dept = (t.solicitante?.departamento || '').trim();
+    if (!map.has(sid)) {
+      map.set(sid, { usuario_id: sid, nome, departamento_origem: dept, count: 0 });
+    }
+    map.get(sid).count += 1;
+  });
+  return [...map.values()].sort((a, b) => b.count - a.count).slice(0, limit);
+}
 const DBG = (msg, data, hypothesisId) => {
   const payload = { location: 'dashboardService.js', message: msg, data: data || {}, hypothesisId, timestamp: Date.now() };
   const line = JSON.stringify(payload) + '\n';
@@ -131,7 +147,7 @@ export const dashboardService = {
 
     const client = supabaseAdmin || supabase;
     const [ticketsResult, recentesResult] = await Promise.all([
-      client.from('PDC_tickets').select('id, status, area_destino, created_at, closed_at, solicitante:PDC_users!solicitante_id(departamento)'),
+      client.from('PDC_tickets').select('id, status, area_destino, created_at, closed_at, solicitante_id, solicitante:PDC_users!solicitante_id(nome, departamento)'),
       client.from('PDC_tickets').select(`*, solicitante:PDC_users!solicitante_id(nome, email, departamento)`).order('created_at', { ascending: false }).limit(10),
     ]);
 
@@ -244,6 +260,7 @@ export const dashboardService = {
     const por_mes_industria = aggregateByMonth(all, 'Industrial');
     const por_mes_administrativo = aggregateByMonth(all, 'Administrativo');
     const por_setor = aggregateBySetor(listForStats);
+    const top_solicitantes = aggregateTopSolicitantes(listForStats);
 
     /** Recentes: quando há período, filtrar por data e pegar os 10 mais recentes no intervalo. */
     const recentesRaw = recentesParaStats;
@@ -275,6 +292,7 @@ export const dashboardService = {
       por_mes_industria,
       por_mes_administrativo,
       por_setor,
+      top_solicitantes,
     };
     if (useCustomRange) {
       out.por_mes_geral_range = aggregateByMonthInRange(listForStats, null, dateFrom, dateTo);

@@ -25,6 +25,13 @@ export interface DashboardStats {
   por_mes_administrativo_range?: { mes: string; mesKey?: string; abertos?: number; fechados?: number; count?: number }[];
   /** Chamados por setor (donut: Industria, Administrativo, Comercial) */
   por_setor: { setor: string; count: number }[];
+  /** Quem mais abriu chamados no período (e escopo de permissão do dashboard). */
+  top_solicitantes: {
+    usuario_id: string;
+    nome: string;
+    count: number;
+    departamento_origem?: string;
+  }[];
 }
 
 const DASHBOARD_CACHE_TTL_MS = 60 * 1000;

@@ -1,12 +1,13 @@
 import { createTheme, ThemeProvider as MuiThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { useTheme } from "@/hooks/useTheme";
+import { APP_FONT_FAMILY } from "./fontFamily";
 
 const PRIMARY_BLUE = "#2563eb";
 const LIGHT = {
   primary: { main: PRIMARY_BLUE, light: "#3b82f6", dark: "#1d4ed8", contrastText: "#fff" },
   secondary: { main: "#0ea5e9", light: "#38bdf8", dark: "#0284c7", contrastText: "#fff" },
-  background: { default: "#f6f8fa", paper: "#ffffff" },
+  background: { default: "#F0F8FF", paper: "#ffffff" },
   divider: "rgba(0, 0, 0, 0.08)",
   action: {
     hover: "rgba(0, 0, 0, 0.04)",
@@ -74,7 +75,7 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
     },
     shape: { borderRadius: 10 },
     typography: {
-      fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontFamily: APP_FONT_FAMILY,
       h4: { fontWeight: 700, fontSize: "1.5rem", lineHeight: 1.3 },
       h5: { fontWeight: 700, fontSize: "1.25rem", lineHeight: 1.35 },
       h6: { fontWeight: 600, fontSize: "1.1rem", lineHeight: 1.4 },
@@ -88,8 +89,10 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
     components: {
       MuiCssBaseline: {
         styleOverrides: {
-          "@import": "url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap')",
-          body: { backgroundColor: tokens.background.default },
+          body: {
+            backgroundColor: tokens.background.default,
+            fontFamily: APP_FONT_FAMILY,
+          },
         },
       },
       MuiPaper: {
@@ -192,7 +195,8 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
         styleOverrides: {
           paper: {
             borderRightColor: tokens.divider,
-            backgroundColor: isDark ? "hsl(222, 18%, 13%)" : "#f8f9fa",
+            /* Mesmo tom do header (background.paper) para barra lateral + lista */
+            backgroundColor: tokens.background.paper,
             border: "none",
             borderRight: `1px solid ${tokens.divider}`,
           },

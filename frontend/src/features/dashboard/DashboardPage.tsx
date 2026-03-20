@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Skeleton from "@mui/material/Skeleton";
@@ -9,7 +9,8 @@ import MenuItem from "@mui/material/MenuItem";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Popover from "@mui/material/Popover";
-import { Calendar } from "lucide-react";
+import { useTheme, alpha } from "@mui/material/styles";
+import { Calendar, Layers } from "lucide-react";
 import { StatsCards } from "./components/StatsCards";
 import { RecentTickets } from "./components/RecentTickets";
 import {
@@ -18,6 +19,7 @@ import {
   TicketsBySetorDonut,
   ResolvidosGauge,
 } from "./components/Charts";
+import { TopTicketCreatorsCard } from "./components/TopTicketCreatorsCard";
 import {
   getDateRangeForPeriod,
   PERIOD_LABELS,
@@ -41,9 +43,21 @@ const emptyStats: DashboardStats = {
   por_mes_industria: [],
   por_mes_administrativo: [],
   por_setor: [],
+  top_solicitantes: [],
 };
 
+const DASHBOARD_MENU_ITEM_SX = {
+  borderRadius: "10px",
+  mx: 0.5,
+  my: 0.125,
+  minHeight: 40,
+  fontSize: "0.875rem",
+  transition: "background-color 0.18s ease, color 0.18s ease, transform 0.12s ease",
+  "&:active": { transform: "scale(0.98)" },
+} as const;
+
 export function DashboardPage() {
+  const theme = useTheme();
   const { loading: authLoading, user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
   const [loading, setLoading] = useState(true);
@@ -112,6 +126,91 @@ export function DashboardPage() {
 
   const todayStr = () => new Date().toISOString().split("T")[0];
 
+  const filterMenuProps = useMemo(
+    () => ({
+      transitionDuration: 220,
+      slotProps: {
+        paper: {
+          elevation: 0,
+          sx: {
+            mt: 1,
+            borderRadius: "14px",
+            minWidth: 216,
+            border: `1px solid ${theme.palette.divider}`,
+            bgcolor:
+              theme.palette.mode === "dark"
+                ? alpha(theme.palette.background.paper, 0.98)
+                : alpha("#ffffff", 0.98),
+            backdropFilter: "blur(14px)",
+            boxShadow:
+              theme.palette.mode === "dark"
+                ? "0 20px 48px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06)"
+                : `0 12px 40px ${alpha(theme.palette.primary.main, 0.14)}, 0 4px 14px rgba(0,0,0,0.06)`,
+            overflow: "hidden",
+            "& .MuiMenu-list": { py: 1, px: 0.25 },
+          },
+        },
+        backdrop: {
+          invisible: false,
+          sx: {
+            backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.14 : 0.08),
+            backdropFilter: "blur(6px)",
+          },
+        },
+      },
+    }),
+    [theme]
+  );
+
+  const filterFormControlSx = useMemo(
+    () => ({
+      minWidth: { xs: "100%", sm: 168 },
+      flex: { xs: "1 1 100%", sm: "0 0 auto" },
+      "& .MuiOutlinedInput-root": {
+        borderRadius: "12px",
+        backgroundColor: alpha(theme.palette.background.paper, 0.92),
+        backdropFilter: "blur(10px)",
+        transition: theme.transitions.create(["box-shadow", "border-color", "transform"], {
+          duration: theme.transitions.duration.shorter,
+        }),
+        "& .MuiOutlinedInput-notchedOutline": {
+          borderColor: alpha(theme.palette.primary.main, 0.25),
+        },
+        "&:hover": {
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: theme.palette.primary.main,
+          },
+          boxShadow: `0 4px 18px ${alpha(theme.palette.primary.main, 0.16)}`,
+        },
+        "&.Mui-focused": {
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderWidth: "2px",
+          },
+          boxShadow: `0 6px 22px ${alpha(theme.palette.primary.main, 0.2)}`,
+        },
+      },
+      "& .MuiInputLabel-root": {
+        fontWeight: 600,
+      },
+    }),
+    [theme]
+  );
+
+  const menuItemSelectedSx = useMemo(
+    () => ({
+      ...DASHBOARD_MENU_ITEM_SX,
+      "&.Mui-selected": {
+        bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.28 : 0.12),
+        color: theme.palette.primary.main,
+        fontWeight: 700,
+        "&:hover": {
+          bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.36 : 0.18),
+        },
+      },
+    }),
+    [theme]
+  );
+
   if (loading) {
     return (
       <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 1.5, sm: 2, md: 2.5 } }}>
@@ -131,7 +230,7 @@ export function DashboardPage() {
           }}
         >
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} variant="rounded" height={88} />
+            <Skeleton key={i} variant="rounded" height={108} />
           ))}
         </Box>
         <Box
@@ -150,8 +249,19 @@ export function DashboardPage() {
     );
   }
 
+  const dashboardShellSx = {
+    display: "flex",
+    flexDirection: "column",
+    gap: { xs: 1.5, sm: 2, md: 2.5 },
+    "& .MuiCard-root": {
+      border: "none",
+      borderWidth: 0,
+      outline: "none",
+    },
+  } as const;
+
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 1.5, sm: 2, md: 2.5 } }}>
+    <Box sx={dashboardShellSx}>
       <Box
         sx={{
           display: "flex",
@@ -168,17 +278,34 @@ export function DashboardPage() {
             Visao geral do Portal de Chamados.
           </Typography>
         </Box>
-        <FormControl size="small" sx={{ minWidth: { xs: "100%", sm: 150 }, flex: { xs: "1 1 100%", sm: "0 0 auto" } }}>
-          <InputLabel>Período</InputLabel>
+        <FormControl size="small" sx={filterFormControlSx}>
+          <InputLabel id="dashboard-period-label">Período</InputLabel>
           <Select
+            labelId="dashboard-period-label"
             value={periodKey}
             label="Período"
             onChange={(e) => handlePeriodChange(e.target.value as PeriodKey)}
+            MenuProps={filterMenuProps}
+            renderValue={(value) => (
+              <Box component="span" sx={{ display: "flex", alignItems: "center", gap: 1, fontWeight: 600 }}>
+                <Calendar size={17} strokeWidth={2} style={{ opacity: 0.9, flexShrink: 0 }} />
+                {PERIOD_LABELS[value as PeriodKey]}
+              </Box>
+            )}
+            sx={{ "& .MuiSelect-select": { py: 1, display: "flex", alignItems: "center" } }}
           >
-            <MenuItem value="7d">{PERIOD_LABELS["7d"]}</MenuItem>
-            <MenuItem value="mes_atual">{PERIOD_LABELS.mes_atual}</MenuItem>
-            <MenuItem value="ano_atual">{PERIOD_LABELS.ano_atual}</MenuItem>
-            <MenuItem value="custom">{PERIOD_LABELS.custom}</MenuItem>
+            <MenuItem value="7d" sx={menuItemSelectedSx}>
+              {PERIOD_LABELS["7d"]}
+            </MenuItem>
+            <MenuItem value="mes_atual" sx={menuItemSelectedSx}>
+              {PERIOD_LABELS.mes_atual}
+            </MenuItem>
+            <MenuItem value="ano_atual" sx={menuItemSelectedSx}>
+              {PERIOD_LABELS.ano_atual}
+            </MenuItem>
+            <MenuItem value="custom" sx={menuItemSelectedSx}>
+              {PERIOD_LABELS.custom}
+            </MenuItem>
           </Select>
         </FormControl>
         {periodKey === "custom" && (
@@ -236,16 +363,39 @@ export function DashboardPage() {
             </Popover>
           </>
         )}
-        <FormControl size="small" sx={{ minWidth: { xs: "100%", sm: 150 }, flex: { xs: "1 1 100%", sm: "0 0 auto" } }}>
-          <InputLabel>Filtrar por setor</InputLabel>
+        <FormControl size="small" sx={filterFormControlSx}>
+          <InputLabel id="dashboard-setor-label">Filtrar por setor</InputLabel>
           <Select
+            labelId="dashboard-setor-label"
             value={filterSetorGlobal ?? ""}
             label="Filtrar por setor"
             onChange={(e) => setFilterSetorGlobal(e.target.value || null)}
+            MenuProps={filterMenuProps}
+            renderValue={(value) => {
+              const label =
+                value === "Administrativo"
+                  ? "Administrativo"
+                  : value === "Industrial"
+                    ? "Industrial"
+                    : "Todos";
+              return (
+                <Box component="span" sx={{ display: "flex", alignItems: "center", gap: 1, fontWeight: 600 }}>
+                  <Layers size={17} strokeWidth={2} style={{ opacity: 0.9, flexShrink: 0 }} />
+                  {label}
+                </Box>
+              );
+            }}
+            sx={{ "& .MuiSelect-select": { py: 1, display: "flex", alignItems: "center" } }}
           >
-            <MenuItem value="">Todos</MenuItem>
-            <MenuItem value="Administrativo">Administrativo</MenuItem>
-            <MenuItem value="Industrial">Industrial</MenuItem>
+            <MenuItem value="" sx={menuItemSelectedSx}>
+              Todos
+            </MenuItem>
+            <MenuItem value="Administrativo" sx={menuItemSelectedSx}>
+              Administrativo
+            </MenuItem>
+            <MenuItem value="Industrial" sx={menuItemSelectedSx}>
+              Industrial
+            </MenuItem>
           </Select>
         </FormControl>
       </Box>
@@ -302,11 +452,29 @@ export function DashboardPage() {
         </Box>
       </Box>
 
-      <DepartmentBarChart
-        data={stats.por_departamento ?? []}
-        filterSetor={filterSetorGlobal}
-        getSetor={getSetorByDepartamento}
-      />
+      <Box
+        sx={{
+          display: "grid",
+          gap: 1.5,
+          alignItems: "start",
+          gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1.65fr) minmax(280px, 1fr)" },
+        }}
+      >
+        <Box sx={{ minWidth: 0, width: "100%" }}>
+          <DepartmentBarChart
+            data={stats.por_departamento ?? []}
+            filterSetor={filterSetorGlobal}
+            getSetor={getSetorByDepartamento}
+          />
+        </Box>
+        <Box sx={{ minWidth: 0, width: "100%" }}>
+          <TopTicketCreatorsCard
+            data={stats.top_solicitantes ?? []}
+            filterSetor={filterSetorGlobal}
+            getSetor={getSetorByDepartamento}
+          />
+        </Box>
+      </Box>
 
       <RecentTickets tickets={stats.recentes ?? []} />
     </Box>

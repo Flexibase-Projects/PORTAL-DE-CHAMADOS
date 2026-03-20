@@ -9,6 +9,7 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
+import { useTheme, alpha } from "@mui/material/styles";
 import { Menu as MenuIcon, Bell } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { notificationService } from "@/services/notificationService";
@@ -25,6 +26,7 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ onMobileToggle }: AppHeaderProps) {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -42,12 +44,20 @@ export function AppHeader({ onMobileToggle }: AppHeaderProps) {
       }).catch(() => {});
     };
     load();
-    const t = setInterval(load, 60 * 1000);
+    const t = setInterval(load, 30 * 1000);
     const onRefresh = () => load();
     window.addEventListener("notifications-refresh", onRefresh);
+    const onFocus = () => load();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       clearInterval(t);
       window.removeEventListener("notifications-refresh", onRefresh);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [isAuthenticated]);
 
@@ -109,7 +119,9 @@ export function AppHeader({ onMobileToggle }: AppHeaderProps) {
           aria-label="Abrir menu"
           sx={{
             display: { xs: "inline-flex", md: "none" },
-            color: "text.secondary",
+            color: "primary.main",
+            opacity: 0.85,
+            "&:hover": { opacity: 1, bgcolor: alpha(theme.palette.primary.main, 0.08) },
           }}
           size="small"
         >
@@ -118,8 +130,23 @@ export function AppHeader({ onMobileToggle }: AppHeaderProps) {
       </Box>
       {isAuthenticated && (
         <>
-          <IconButton onClick={handleOpen} aria-label="Notificações" size="small" color="inherit">
-            <Badge badgeContent={unreadCount > 0 ? unreadCount : 0} color="error">
+          <IconButton
+            onClick={handleOpen}
+            aria-label="Notificações"
+            size="small"
+            sx={{
+              color: "primary.main",
+              opacity: 0.88,
+              "&:hover": { opacity: 1, bgcolor: alpha(theme.palette.primary.main, 0.08) },
+            }}
+          >
+            <Badge
+              badgeContent={unreadCount > 0 ? unreadCount : undefined}
+              color="error"
+              overlap="circular"
+              invisible={unreadCount <= 0}
+              aria-label={unreadCount > 0 ? `${unreadCount} notificações não lidas` : "Sem notificações novas"}
+            >
               <Bell style={{ width: 20, height: 20 }} />
             </Badge>
           </IconButton>
@@ -140,7 +167,10 @@ export function AppHeader({ onMobileToggle }: AppHeaderProps) {
               <List dense sx={{ maxHeight: 320, overflow: "auto" }}>
                 {notifications.length === 0 ? (
                   <ListItemButton disabled>
-                    <ListItemText primary="Nenhuma notificação" secondary="Você será avisado de novas respostas e atualizações." />
+                    <ListItemText
+                      primary="Nenhuma notificação"
+                      secondary="Novos chamados no seu departamento, respostas e atualizações aparecem aqui e no título da página."
+                    />
                   </ListItemButton>
                 ) : (
                   notifications.slice(0, 20).map((n) => (

@@ -7,7 +7,6 @@ import { generateProtocol } from "@/lib/utils";
 import { getSetorByDepartamento } from "@/constants/departamentos";
 import type { Ticket } from "@/types/ticket";
 import type { User, Role } from "@/types/user";
-import type { KBCategory, KBArticle } from "@/types/knowledge-base";
 import type { TemplateField } from "@/types/template";
 
 const KEYS = {
@@ -15,8 +14,6 @@ const KEYS = {
   USERS: "PDC_users",
   ROLES: "PDC_roles",
   TEMPLATES: "PDC_templates",
-  KB_CATEGORIES: "PDC_kb_categories",
-  KB_ARTICLES: "PDC_kb_articles",
 } as const;
 
 function get<T>(key: string, defaultValue: T): T {
@@ -45,12 +42,6 @@ const INITIAL_ROLES: Role[] = [
   { id: "2", nome: "gestor_area", descricao: "Gestor de Área", nivel: 3 },
   { id: "3", nome: "tecnico", descricao: "Técnico/Suporte", nivel: 2 },
   { id: "4", nome: "usuario", descricao: "Usuário", nivel: 1 },
-];
-
-const DEFAULT_KB_CATEGORIES: Omit<KBCategory, "article_count">[] = [
-  { id: "kb-cat-comercial", nome: "Comercial", descricao: "Artigos da área comercial", icone: "briefcase", ordem: 1, created_at: now() },
-  { id: "kb-cat-administrativo", nome: "Administrativo", descricao: "Artigos da área administrativa", icone: "building", ordem: 2, created_at: now() },
-  { id: "kb-cat-industrial", nome: "Industrial", descricao: "Artigos da área industrial", icone: "factory", ordem: 3, created_at: now() },
 ];
 
 export const localStorageStorage = {
@@ -241,95 +232,6 @@ export const localStorageStorage = {
     return { departamento, fields };
   },
 
-  // KB Categories
-  getCategories(): KBCategory[] {
-    let cats = get<KBCategory[]>(KEYS.KB_CATEGORIES, []);
-    if (cats.length === 0) {
-      cats = [...DEFAULT_KB_CATEGORIES];
-      set(KEYS.KB_CATEGORIES, cats);
-    }
-    const articlesRaw = get<KBArticle[]>(KEYS.KB_ARTICLES, []);
-    return cats.map((c) => ({
-      ...c,
-      article_count: articlesRaw.filter((a) => a.categoria_id === c.id).length,
-    }));
-  },
-  createCategory(data: Partial<KBCategory>): KBCategory {
-    const cats = this.getCategories();
-    const cat: KBCategory = {
-      id: genId(),
-      nome: data.nome ?? "",
-      descricao: data.descricao,
-      icone: data.icone ?? "folder",
-      ordem: data.ordem ?? 0,
-      created_at: now(),
-      updated_at: now(),
-    };
-    cats.push(cat);
-    set(KEYS.KB_CATEGORIES, cats);
-    return cat;
-  },
-  updateCategory(id: string, data: Partial<KBCategory>): KBCategory | null {
-    const cats = get<KBCategory[]>(KEYS.KB_CATEGORIES, []);
-    const idx = cats.findIndex((c) => c.id === id);
-    if (idx === -1) return null;
-    cats[idx] = { ...cats[idx], ...data, updated_at: now() };
-    set(KEYS.KB_CATEGORIES, cats);
-    return cats[idx];
-  },
-  deleteCategory(id: string): boolean {
-    const cats = get<KBCategory[]>(KEYS.KB_CATEGORIES, []).filter((c) => c.id !== id);
-    set(KEYS.KB_CATEGORIES, cats);
-    const articlesRaw = get<KBArticle[]>(KEYS.KB_ARTICLES, []).filter((a) => a.categoria_id !== id);
-    set(KEYS.KB_ARTICLES, articlesRaw);
-    return true;
-  },
-
-  // KB Articles
-  getArticles(categoriaId?: string): KBArticle[] {
-    const articles = get<KBArticle[]>(KEYS.KB_ARTICLES, []);
-    let list = articles;
-    if (categoriaId) list = articles.filter((a) => a.categoria_id === categoriaId);
-    const cats = get<KBCategory[]>(KEYS.KB_CATEGORIES, []);
-    return list.map((a) => ({
-      ...a,
-      categoria_nome: cats.find((c) => c.id === a.categoria_id)?.nome,
-    }));
-  },
-  getArticleById(id: string): KBArticle | null {
-    const articles = this.getArticles();
-    return articles.find((a) => a.id === id) ?? null;
-  },
-  createArticle(data: Partial<KBArticle>): KBArticle {
-    const articles = get<KBArticle[]>(KEYS.KB_ARTICLES, []);
-    const article: KBArticle = {
-      id: genId(),
-      categoria_id: data.categoria_id ?? "",
-      titulo: data.titulo ?? "",
-      conteudo: data.conteudo ?? "",
-      autor_id: data.autor_id,
-      publicado: data.publicado !== false,
-      created_at: now(),
-      updated_at: now(),
-    };
-    articles.push(article);
-    set(KEYS.KB_ARTICLES, articles);
-    return article;
-  },
-  updateArticle(id: string, data: Partial<KBArticle>): KBArticle | null {
-    const articles = get<KBArticle[]>(KEYS.KB_ARTICLES, []);
-    const idx = articles.findIndex((a) => a.id === id);
-    if (idx === -1) return null;
-    articles[idx] = { ...articles[idx], ...data, updated_at: now() };
-    set(KEYS.KB_ARTICLES, articles);
-    return articles[idx];
-  },
-  deleteArticle(id: string): boolean {
-    const articles = this.getArticles().filter((a) => a.id !== id);
-    set(KEYS.KB_ARTICLES, articles);
-    return true;
-  },
-
   // Dashboard stats (opcional: dateFrom e dateTo para intervalo customizado em por_dia)
   getDashboardStats(options?: { dateFrom?: string; dateTo?: string }) {
     const tickets = this.getTickets();
@@ -346,6 +248,34 @@ export const localStorageStorage = {
     const dateFrom = options?.dateFrom ? String(options.dateFrom).slice(0, 10) : null;
     const dateTo = options?.dateTo ? String(options.dateTo).slice(0, 10) : null;
     const useCustomRange = Boolean(dateFrom && dateTo && dateFrom <= dateTo);
+
+    const ticketsForTopStats =
+      dateFrom && dateTo && dateFrom <= dateTo
+        ? tickets.filter((t) => {
+            const c = (t.created_at ?? "").toString().slice(0, 10);
+            return c >= dateFrom && c <= dateTo;
+          })
+        : tickets;
+    const users = this.getUsers();
+    const topSolicitantesMap = new Map<
+      string,
+      { usuario_id: string; nome: string; departamento_origem: string; count: number }
+    >();
+    ticketsForTopStats.forEach((t) => {
+      const sid = t.solicitante_id;
+      if (!sid) return;
+      const u = users.find((x) => x.id === sid);
+      const nome = (t.solicitante_nome || u?.nome || "").trim() || "Usuário";
+      const dept = (u?.departamento || "").trim();
+      if (!topSolicitantesMap.has(sid)) {
+        topSolicitantesMap.set(sid, { usuario_id: sid, nome, departamento_origem: dept, count: 0 });
+      }
+      const row = topSolicitantesMap.get(sid)!;
+      row.count += 1;
+    });
+    const top_solicitantes = [...topSolicitantesMap.values()]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 25);
 
     const buildPorDia = (
       list: Ticket[],
@@ -484,6 +414,7 @@ export const localStorageStorage = {
       por_mes_industria: aggregateByMonth(tickets, "Industrial"),
       por_mes_administrativo: aggregateByMonth(tickets, "Administrativo"),
       por_setor: aggregateBySetor(),
+      top_solicitantes,
     };
     if (useCustomRange && dateFrom && dateTo) {
       return {

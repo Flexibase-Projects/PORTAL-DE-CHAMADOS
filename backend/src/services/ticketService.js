@@ -28,6 +28,38 @@ function mapTicketWithJoins(t) {
   };
 }
 
+/** Notifica todos os PDC_users com auth vinculado ao departamento receptor (area_destino), exceto excludePdcUserId. */
+async function notifyPdcUsersInDestinationDepartment(client, {
+  areaDestino,
+  ticketId,
+  numeroProtocolo,
+  assunto,
+  excludePdcUserId,
+  tipo,
+  titulo,
+}) {
+  if (!areaDestino || !String(areaDestino).trim()) return;
+  const areaNorm = String(areaDestino).trim().toUpperCase();
+  const { data: receptores } = await client
+    .from('PDC_users')
+    .select('id, auth_user_id, departamento')
+    .not('auth_user_id', 'is', null);
+  const receptoresDoSetor = (receptores || []).filter(
+    (u) => (u.departamento || '').trim().toUpperCase() === areaNorm && u.id !== excludePdcUserId
+  );
+  if (receptoresDoSetor.length === 0) return;
+  const authIds = [...new Set(receptoresDoSetor.map((u) => u.auth_user_id).filter(Boolean))];
+  const rows = authIds.map((auth_user_id) => ({
+    auth_user_id,
+    tipo,
+    ticket_id: ticketId,
+    titulo,
+    mensagem: `Chamado ${numeroProtocolo}: ${(assunto || '').slice(0, 60)}...`,
+  }));
+  const { error } = await client.from('PDC_notifications').insert(rows);
+  if (error) console.error('[notifyPdcUsersInDestinationDepartment]', error.message);
+}
+
 export const ticketService = {
   async createTicket(data, authUserId = null) {
     const client = supabaseAdmin || supabase;
@@ -103,6 +135,16 @@ export const ticketService = {
       tipo: 'criado',
       autor_id: solicitanteId,
       detalhes: {},
+    });
+
+    await notifyPdcUsersInDestinationDepartment(client, {
+      areaDestino: created.area_destino,
+      ticketId: created.id,
+      numeroProtocolo: created.numero_protocolo,
+      assunto: created.assunto,
+      excludePdcUserId: solicitanteId,
+      tipo: 'novo_chamado',
+      titulo: 'Novo chamado',
     });
 
     return created;
@@ -354,29 +396,15 @@ export const ticketService = {
       }
     }
 
-    // Notificar usuários do setor receptor (area_destino) sobre nova resposta, exceto o autor do comentário
-    if (ticketRow?.area_destino) {
-      const areaNorm = (ticketRow.area_destino || '').trim().toUpperCase();
-      const { data: receptores } = await client
-        .from('PDC_users')
-        .select('id, auth_user_id, departamento')
-        .not('auth_user_id', 'is', null);
-      const receptoresDoSetor = (receptores || []).filter(
-        (u) => (u.departamento || '').trim().toUpperCase() === areaNorm && u.id !== autorId
-      );
-      if (receptoresDoSetor.length > 0) {
-        const authIds = [...new Set(receptoresDoSetor.map((u) => u.auth_user_id).filter(Boolean))];
-        for (const authUserId of authIds) {
-          await client.from('PDC_notifications').insert({
-            auth_user_id: authUserId,
-            tipo: 'resposta_chamado',
-            ticket_id: ticketId,
-            titulo: 'Nova resposta no chamado',
-            mensagem: `Chamado ${ticketRow.numero_protocolo}: ${(ticketRow.assunto || '').slice(0, 60)}...`,
-          });
-        }
-      }
-    }
+    await notifyPdcUsersInDestinationDepartment(client, {
+      areaDestino: ticketRow?.area_destino,
+      ticketId,
+      numeroProtocolo: ticketRow.numero_protocolo,
+      assunto: ticketRow.assunto,
+      excludePdcUserId: autorId,
+      tipo: 'resposta_chamado',
+      titulo: 'Nova resposta no chamado',
+    });
 
     // Atualizar status se ainda estiver Aberto
     await client

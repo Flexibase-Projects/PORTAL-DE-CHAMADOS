@@ -13,6 +13,7 @@ const AUTH_REQUIRED_PATTERNS = [
   "/tickets/meus-chamados-by-auth",
   "/tickets/recebidos",
   "/dashboard/stats",
+  "/notifications",
 ];
 
 function urlRequiresAuth(url: string): boolean {
