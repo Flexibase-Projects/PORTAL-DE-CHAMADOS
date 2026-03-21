@@ -33,6 +33,7 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import { Maximize2 } from "lucide-react";
 import { ChartFullscreenDialog } from "./ChartFullscreenDialog";
 import type { PeriodKey } from "../dashboardPeriod";
+import { DASHBOARD_GAUGE_GREEN_END, DASHBOARD_GAUGE_GREEN_START } from "@/constants/ticketStatusColors";
 
 type PorDiaItem = { date: string; dateKey?: string; abertos?: number; fechados?: number; count?: number };
 type PorMesItem = { mes: string; mesKey?: string; abertos?: number; fechados?: number; count?: number };
@@ -681,8 +682,8 @@ function ResolvidosGaugePlot({
           <PolarAngleAxis type="number" domain={[0, 100]} tick={false} angleAxisId={0} />
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#03ff6c" />
-              <stop offset="100%" stopColor="#0E8C43" />
+              <stop offset="0%" stopColor={DASHBOARD_GAUGE_GREEN_START} />
+              <stop offset="100%" stopColor={DASHBOARD_GAUGE_GREEN_END} />
             </linearGradient>
           </defs>
           <RadialBar

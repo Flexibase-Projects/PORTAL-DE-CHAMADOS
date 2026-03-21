@@ -11,6 +11,17 @@ export const STATUS_COLOR_EM_ANDAMENTO = "#ca8a04";
 /** Verde para concluído (substitui o cinza anterior). */
 export const STATUS_COLOR_CONCLUIDO = "#16a34a";
 
+/**
+ * Mesmas cores do gradiente do velocímetro “Resolvidos” (ResolvidosGauge em Charts.tsx).
+ * linearGradient x1→x2 equivale a ~90deg no CSS.
+ */
+export const DASHBOARD_GAUGE_GREEN_START = "#03ff6c";
+export const DASHBOARD_GAUGE_GREEN_END = "#0E8C43";
+
+export function dashboardGaugeGreenGradientCss(angleDeg: number = 90): string {
+  return `linear-gradient(${angleDeg}deg, ${DASHBOARD_GAUGE_GREEN_START} 0%, ${DASHBOARD_GAUGE_GREEN_END} 100%)`;
+}
+
 export function statusColorForLeadBar(status: string): string {
   switch (status as TicketStatus) {
     case "Aberto":
