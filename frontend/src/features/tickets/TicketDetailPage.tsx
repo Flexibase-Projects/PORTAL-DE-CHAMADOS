@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import IconButton from "@mui/material/IconButton";
 import Button from "@mui/material/Button";
 import Skeleton from "@mui/material/Skeleton";
-import { ArrowLeft } from "lucide-react";
+import Stack from "@mui/material/Stack";
+import Paper from "@mui/material/Paper";
+import CircularProgress from "@mui/material/CircularProgress";
+import { ArrowLeft, CheckCircle2, Clock } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
 import { templateService } from "@/services/templateService";
 import { notificationService } from "@/services/notificationService";
@@ -52,6 +54,7 @@ export function TicketDetailPage() {
   const [loading, setLoading] = useState(!state?.ticket);
   const [notFound, setNotFound] = useState(false);
   const [replyLoading, setReplyLoading] = useState(false);
+  const [statusActionLoading, setStatusActionLoading] = useState(false);
   const [canEdit, setCanEdit] = useState(state?.canEdit ?? false);
   const [canComment, setCanComment] = useState(state?.canComment ?? true);
 
@@ -151,16 +154,28 @@ export function TicketDetailPage() {
     }
   };
 
+  const handleStartAttendance = async () => {
+    if (!ticket) return;
+    setStatusActionLoading(true);
+    try {
+      const res = await ticketService.updateStatus(ticket.id, "Em Andamento");
+      if (res.success && "ticket" in res && res.ticket) setTicket(res.ticket);
+      else await loadTicket(false);
+    } finally {
+      setStatusActionLoading(false);
+    }
+  };
+
   const handleConclude = async () => {
-    if (!ticket || !confirm("Concluir este chamado?")) return;
-    setReplyLoading(true);
+    if (!ticket || !confirm("Encerrar este chamado?")) return;
+    setStatusActionLoading(true);
     try {
       const res = await ticketService.updateStatus(ticket.id, "Concluído");
       if (res.success) {
         navigate("/meus-chamados");
       }
     } finally {
-      setReplyLoading(false);
+      setStatusActionLoading(false);
     }
   };
 
@@ -181,17 +196,30 @@ export function TicketDetailPage() {
 
   if (loading && !ticket) {
     return (
-      <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, p: 2, borderBottom: 1, borderColor: "divider" }}>
-          <IconButton onClick={handleBack} aria-label="Voltar" size="small">
-            <ArrowLeft style={{ width: 24, height: 24 }} />
-          </IconButton>
-          <Skeleton variant="text" width={200} height={32} />
+      <Box sx={{ display: "flex", flexDirection: "column", height: "100%", bgcolor: "background.default" }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            flexWrap: "wrap",
+            p: 1.5,
+            borderBottom: 1,
+            borderColor: "divider",
+            bgcolor: "background.paper",
+          }}
+        >
+          <Skeleton variant="rounded" width={88} height={36} />
+          <Skeleton variant="text" width={180} height={36} />
+          <Box sx={{ flex: 1 }} />
+          <Skeleton variant="rounded" width={140} height={36} />
         </Box>
-        <Box sx={{ p: 2, flex: 1 }}>
-          <Skeleton variant="rounded" height={120} sx={{ mb: 2 }} />
-          <Skeleton variant="text" width="100%" />
-          <Skeleton variant="text" width="80%" />
+        <Box sx={{ p: 2, flex: 1, maxWidth: 1200, width: "100%", mx: "auto" }}>
+          <Stack spacing={2}>
+            <Skeleton variant="rounded" height={140} sx={{ borderRadius: 2 }} />
+            <Skeleton variant="rounded" height={100} sx={{ borderRadius: 2 }} />
+            <Skeleton variant="rounded" height={88} sx={{ borderRadius: 2 }} />
+          </Stack>
         </Box>
       </Box>
     );
@@ -210,34 +238,100 @@ export function TicketDetailPage() {
     );
   }
 
+  const showActions = ticket.status !== "Concluído" && canEdit;
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-      <Box
+      <Paper
+        elevation={0}
+        square
+        variant="outlined"
         sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
-          p: 1.5,
-          borderBottom: 1,
-          borderColor: "divider",
+          borderLeft: 0,
+          borderRight: 0,
+          borderTop: 0,
+          borderRadius: 0,
+          px: { xs: 1, sm: 1.5 },
+          py: 1.25,
           flexShrink: 0,
+          bgcolor: "background.paper",
         }}
       >
-        <IconButton onClick={handleBack} aria-label="Voltar para Meus Chamados" size="medium">
-          <ArrowLeft style={{ width: 24, height: 24 }} />
-        </IconButton>
-        <Typography variant="h6" fontWeight={600} noWrap sx={{ flex: 1, minWidth: 0 }}>
-          {ticket.assunto || "Detalhes do chamado"}
-        </Typography>
-      </Box>
-      <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: { xs: 0.5, sm: 1 },
+            flexWrap: "wrap",
+            maxWidth: 1200,
+            mx: "auto",
+            width: "100%",
+          }}
+        >
+          <Button
+            variant="text"
+            size="small"
+            startIcon={<ArrowLeft size={20} />}
+            onClick={handleBack}
+            aria-label="Voltar para Meus Chamados"
+            sx={{ color: "text.secondary", minWidth: "auto", px: 1 }}
+          >
+            Voltar
+          </Button>
+          <Typography
+            variant="h6"
+            component="h1"
+            fontWeight={700}
+            sx={{ color: "primary.main", flex: 1, minWidth: 140 }}
+          >
+            Chamado detalhado
+          </Typography>
+          {showActions ? (
+            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", justifyContent: "flex-end", width: { xs: "100%", sm: "auto" } }}>
+              {ticket.status === "Aberto" ? (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  startIcon={
+                    statusActionLoading ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <Clock style={{ width: 18, height: 18 }} />
+                    )
+                  }
+                  onClick={handleStartAttendance}
+                  disabled={statusActionLoading}
+                >
+                  Iniciar atendimento
+                </Button>
+              ) : null}
+              <Button
+                variant="contained"
+                color="success"
+                size="small"
+                startIcon={
+                  statusActionLoading ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <CheckCircle2 style={{ width: 18, height: 18 }} />
+                  )
+                }
+                onClick={handleConclude}
+                disabled={statusActionLoading}
+              >
+                Encerrar
+              </Button>
+            </Box>
+          ) : null}
+        </Box>
+      </Paper>
+      <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         <TicketDetailContent
           ticket={ticket}
           templateFields={templateFields}
-          canEdit={canEdit}
           canComment={canComment}
           onReply={handleReply}
-          onConclude={handleConclude}
           replyLoading={replyLoading}
           currentUserEmail={user?.email}
         />
