@@ -8,8 +8,12 @@ export function TicketStatusPill({ status }: { status: TicketStatus }) {
   const theme = useTheme();
   const dark = theme.palette.mode === "dark";
 
-  const openBg = alpha(theme.palette.error.main, dark ? 0.22 : 0.12);
-  const openFg = dark ? theme.palette.error.light : theme.palette.error.dark;
+  /**
+   * Modo escuro: `palette.error.light` no tema é translúcido (para overlays), não serve como cor de texto.
+   * Usamos coral/vermelho Tailwind (red-400/200) para fundo e texto legíveis sem o vermelho “cru” do error.main.
+   */
+  const openBg = dark ? alpha("#F87171", 0.22) : alpha(theme.palette.error.main, 0.12);
+  const openFg = dark ? "#FECACA" : theme.palette.error.dark;
 
   /** Âmbar fixo: `palette.warning.light` no tema escuro é translúcido e some no texto. */
   const progressBg = dark ? alpha("#FBBF24", 0.34) : alpha("#F59E0B", 0.22);
@@ -21,7 +25,7 @@ export function TicketStatusPill({ status }: { status: TicketStatus }) {
   const map = {
     Aberto: { Icon: HelpCircle, bg: openBg, fg: openFg, label: "Aberto" as const },
     "Em Andamento": { Icon: Clock, bg: progressBg, fg: progressFg, label: "Em atendimento" as const },
-    Concluído: { Icon: CheckCircle2, bg: doneBg, fg: doneFg, label: "Encerrado" as const },
+    Concluído: { Icon: CheckCircle2, bg: doneBg, fg: doneFg, label: "Concluído" as const },
   };
 
   const cfg = map[status] ?? map.Aberto;

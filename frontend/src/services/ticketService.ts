@@ -10,7 +10,6 @@ export interface DashboardStats {
   abertos: number;
   em_andamento: number;
   concluidos: number;
-  recentes: Ticket[];
   por_departamento: { area: string; count: number }[];
   /** Por dia: abertos (linha) e fechados (barras). Fallback: count = abertos quando API antiga/localStorage. */
   por_dia: { date: string; dateKey?: string; abertos?: number; fechados?: number; count?: number }[];

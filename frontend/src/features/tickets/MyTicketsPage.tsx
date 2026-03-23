@@ -13,9 +13,10 @@ import { Search, Inbox, Send } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
 import { notificationService } from "@/services/notificationService";
 import { TicketCard } from "./components/TicketCard";
+import { TicketStatusPill } from "./components/TicketStatusPill";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import type { Ticket } from "@/types/ticket";
+import type { Ticket, TicketStatus } from "@/types/ticket";
 
 type PermissaoMap = Record<string, "view" | "view_edit" | "manage_templates">;
 
@@ -35,6 +36,56 @@ function getPermissionsForTicket(
     (isFromMyDept && (permissao === "view" || permissao === "view_edit")) ||
     chamadosQueAbriOutros.some((t) => t.id === ticket.id);
   return { canEdit, canComment };
+}
+
+/** Ordem das seções: aberto → em atendimento → encerrado. */
+const STATUS_SECTION_ORDER: TicketStatus[] = ["Aberto", "Em Andamento", "Concluído"];
+
+function groupTicketsByStatus(tickets: Ticket[]): Record<TicketStatus, Ticket[]> {
+  const map: Record<TicketStatus, Ticket[]> = { "Em Andamento": [], Aberto: [], Concluído: [] };
+  for (const t of tickets) {
+    map[t.status].push(t);
+  }
+  return map;
+}
+
+function TicketGridByStatus({
+  tickets,
+  onView,
+  unreadIds,
+}: {
+  tickets: Ticket[];
+  onView: (t: Ticket) => void;
+  unreadIds: Set<string>;
+}) {
+  const grouped = groupTicketsByStatus(tickets);
+  return (
+    <>
+      {STATUS_SECTION_ORDER.map((status) => {
+        const list = grouped[status];
+        if (list.length === 0) return null;
+        return (
+          <Box key={status} sx={{ mb: 2.75 }}>
+            <Box sx={{ mb: 1.25, display: "inline-flex" }}>
+              <TicketStatusPill status={status} />
+            </Box>
+            <Box
+              sx={{
+                display: "grid",
+                gap: 2,
+                gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                justifyItems: "center",
+              }}
+            >
+              {list.map((t) => (
+                <TicketCard key={t.id} ticket={t} onView={onView} hasUnreadNotification={unreadIds.has(t.id)} />
+              ))}
+            </Box>
+          </Box>
+        );
+      })}
+    </>
+  );
 }
 
 export function MyTicketsPage() {
@@ -122,9 +173,10 @@ export function MyTicketsPage() {
         )}
 
         {loading ? (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <Skeleton variant="rounded" height={180} />
-            <Skeleton variant="rounded" height={180} />
+          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
+            <Skeleton variant="rounded" height={220} sx={{ maxWidth: 300, width: "100%", justifySelf: "center" }} />
+            <Skeleton variant="rounded" height={220} sx={{ maxWidth: 300, width: "100%", justifySelf: "center" }} />
+            <Skeleton variant="rounded" height={220} sx={{ maxWidth: 300, width: "100%", justifySelf: "center" }} />
           </Box>
         ) : (
           <>
@@ -140,11 +192,7 @@ export function MyTicketsPage() {
                 {chamadosMeuDepartamento.length === 0 ? (
                   <Alert severity="info">Nenhum chamado das suas áreas no momento.</Alert>
                 ) : (
-                  <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(3, 1fr)" } }}>
-                    {chamadosMeuDepartamento.map((t) => (
-                      <TicketCard key={t.id} ticket={t} onView={handleViewTicket} hasUnreadNotification={unreadTicketIds.has(t.id)} />
-                    ))}
-                  </Box>
+                  <TicketGridByStatus tickets={chamadosMeuDepartamento} onView={handleViewTicket} unreadIds={unreadTicketIds} />
                 )}
               </CardContent>
             </Card>
@@ -161,11 +209,7 @@ export function MyTicketsPage() {
                 {chamadosQueAbriOutros.length === 0 ? (
                   <Alert severity="info">Você não abriu chamados para outras áreas.</Alert>
                 ) : (
-                  <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(3, 1fr)" } }}>
-                    {chamadosQueAbriOutros.map((t) => (
-                      <TicketCard key={t.id} ticket={t} onView={handleViewTicket} hasUnreadNotification={unreadTicketIds.has(t.id)} />
-                    ))}
-                  </Box>
+                  <TicketGridByStatus tickets={chamadosQueAbriOutros} onView={handleViewTicket} unreadIds={unreadTicketIds} />
                 )}
               </CardContent>
             </Card>
@@ -237,11 +281,11 @@ function MyTicketsPageFallback({ onViewTicket }: { onViewTicket: (t: Ticket) => 
       </Card>
       {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
       {searched && (
-        <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(3, 1fr)" } }}>
+        <Box sx={{ width: "100%" }}>
           {enviados.length === 0 ? (
             <Alert severity="info">Nenhum chamado encontrado para este nome.</Alert>
           ) : (
-            enviados.map((t) => <TicketCard key={t.id} ticket={t} onView={onViewTicket} />)
+            <TicketGridByStatus tickets={enviados} onView={onViewTicket} unreadIds={new Set()} />
           )}
         </Box>
       )}

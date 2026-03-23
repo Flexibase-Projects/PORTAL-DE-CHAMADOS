@@ -385,7 +385,10 @@ export const ticketService = {
     }
     if (ticketRow?.solicitante_id) {
       const { data: pdcUser } = await client.from('PDC_users').select('auth_user_id').eq('id', ticketRow.solicitante_id).single();
-      if (pdcUser?.auth_user_id) {
+      const remetenteEhSolicitante =
+        ticketRow.solicitante_id === autorId ||
+        (authUserId && pdcUser?.auth_user_id && pdcUser.auth_user_id === authUserId);
+      if (pdcUser?.auth_user_id && !remetenteEhSolicitante) {
         await client.from('PDC_notifications').insert({
           auth_user_id: pdcUser.auth_user_id,
           tipo: 'resposta_chamado',

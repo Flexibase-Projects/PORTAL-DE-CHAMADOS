@@ -12,7 +12,6 @@ import Popover from "@mui/material/Popover";
 import { useTheme, alpha } from "@mui/material/styles";
 import { Calendar, Layers } from "lucide-react";
 import { StatsCards } from "./components/StatsCards";
-import { RecentTickets } from "./components/RecentTickets";
 import {
   ChamadosPorPeriodoChart,
   DepartmentBarChart,
@@ -34,7 +33,6 @@ const emptyStats: DashboardStats = {
   abertos: 0,
   em_andamento: 0,
   concluidos: 0,
-  recentes: [],
   por_departamento: [],
   por_dia: [],
   por_dia_industria: [],
@@ -475,8 +473,6 @@ export function DashboardPage() {
           />
         </Box>
       </Box>
-
-      <RecentTickets tickets={stats.recentes ?? []} />
     </Box>
   );
 }

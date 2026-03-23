@@ -146,31 +146,24 @@ export const dashboardService = {
     const useCustomRange = dateFrom && dateTo && dateFrom <= dateTo;
 
     const client = supabaseAdmin || supabase;
-    const [ticketsResult, recentesResult] = await Promise.all([
-      client.from('PDC_tickets').select('id, status, area_destino, created_at, closed_at, solicitante_id, solicitante:PDC_users!solicitante_id(nome, departamento)'),
-      client.from('PDC_tickets').select(`*, solicitante:PDC_users!solicitante_id(nome, email, departamento)`).order('created_at', { ascending: false }).limit(10),
-    ]);
+    const { data: tickets, error } = await client
+      .from('PDC_tickets')
+      .select('id, status, area_destino, created_at, closed_at, solicitante_id, solicitante:PDC_users!solicitante_id(nome, departamento)');
 
-    const { data: tickets, error } = ticketsResult;
-    const { data: recentes, error: recentesError } = recentesResult;
-
-    DBG('queries done', { error: error?.message, ticketsLen: (tickets || []).length, recentesError: recentesError?.message, recentesLen: (recentes || []).length }, 'H1,H2,H3,H4');
+    DBG('queries done', { error: error?.message, ticketsLen: (tickets || []).length }, 'H1,H2,H3,H4');
 
     if (error) throw new Error(error.message);
 
     let all = tickets || [];
-    let recentesParaStats = recentes || [];
     /** Dashboard mostra chamados cujo area_destino é o departamento do usuário (PDC_users.departamento), sem exigir permissões. */
     const authUserId = options.authUserId;
     if (authUserId) {
       const permittedSet = await getPermittedDepartmentsForDashboard(authUserId);
       const areaMatch = (area) => permittedSet.has((area || '').trim().toUpperCase());
       all = all.filter((t) => areaMatch(t.area_destino));
-      recentesParaStats = (recentes || []).filter((t) => areaMatch(t.area_destino));
     } else {
       /** Sem usuário autenticado: não exibir dados de outros departamentos. */
       all = [];
-      recentesParaStats = [];
     }
 
     /** Quando useCustomRange, todas as estatísticas usam apenas tickets no intervalo. */
@@ -262,17 +255,6 @@ export const dashboardService = {
     const por_setor = aggregateBySetor(listForStats);
     const top_solicitantes = aggregateTopSolicitantes(listForStats);
 
-    /** Recentes: quando há período, filtrar por data e pegar os 10 mais recentes no intervalo. */
-    const recentesRaw = recentesParaStats;
-    const recentesFiltered = useCustomRange
-      ? recentesRaw
-          .filter((t) => {
-            const created = (t.created_at || '').toString().slice(0, 10);
-            return created >= dateFrom && created <= dateTo;
-          })
-          .slice(0, 10)
-      : recentesRaw.slice(0, 10);
-
     const out = {
       total,
       abertos,
@@ -282,12 +264,6 @@ export const dashboardService = {
       por_dia,
       por_dia_industria,
       por_dia_administrativo,
-      recentes: recentesFiltered.map(t => ({
-        ...t,
-        solicitante_nome: t.solicitante?.nome,
-        solicitante_email: t.solicitante?.email,
-        departamento_origem: (t.solicitante?.departamento || '').trim() || t.area_destino || '—',
-      })),
       por_mes_geral,
       por_mes_industria,
       por_mes_administrativo,

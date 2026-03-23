@@ -333,10 +333,6 @@ export const localStorageStorage = {
     const por_dia = buildPorDia(tickets);
     const por_dia_industria = buildPorDia(tickets, "Industrial");
     const por_dia_administrativo = buildPorDia(tickets, "Administrativo");
-    const recentes = [...tickets]
-      .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
-      .slice(0, 10);
-
     const mesNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     const aggregateByMonth = (
       list: Ticket[],
@@ -409,7 +405,6 @@ export const localStorageStorage = {
       por_dia,
       por_dia_industria,
       por_dia_administrativo,
-      recentes,
       por_mes_geral: aggregateByMonth(tickets),
       por_mes_industria: aggregateByMonth(tickets, "Industrial"),
       por_mes_administrativo: aggregateByMonth(tickets, "Administrativo"),

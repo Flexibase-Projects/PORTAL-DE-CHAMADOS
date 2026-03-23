@@ -13,7 +13,7 @@ import { Reply, CheckCircle2, ArrowLeft } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
 import { useAuth } from "@/contexts/AuthContext";
 import { templateService } from "@/services/templateService";
-import { TicketCard } from "@/features/tickets/components/TicketCard";
+import { TicketsTable } from "@/features/tickets/components/TicketsTable";
 import { formatDate } from "@/lib/utils";
 import type { Ticket } from "@/types/ticket";
 import type { TemplateField } from "@/types/template";
@@ -117,10 +117,9 @@ export function TicketManagement({ initialTicketId }: Props) {
 
   if (loading) {
     return (
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} variant="rounded" height={120} />
-        ))}
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+        <Skeleton variant="text" width={220} height={28} />
+        <Skeleton variant="rounded" height={400} sx={{ borderRadius: 1 }} />
       </Box>
     );
   }
@@ -138,37 +137,31 @@ export function TicketManagement({ initialTicketId }: Props) {
         </Alert>
       )}
 
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: selected ? "320px 1fr" : "1fr" }, gap: 2 }}>
-        <Box sx={{ maxHeight: { lg: "calc(100vh - 16rem)" }, overflow: "auto", pr: { lg: 0.5 } }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            lg: selected ? "minmax(0, 1fr) minmax(340px, 440px)" : "1fr",
+          },
+          gap: 2,
+          alignItems: "start",
+        }}
+      >
+        <Box sx={{ minWidth: 0, maxHeight: { lg: "calc(100vh - 16rem)" }, overflow: "auto", pr: { lg: 0.5 } }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             Chamados Recebidos ({tickets.length})
           </Typography>
-          {tickets.length === 0 ? (
-            <Alert severity="info">Nenhum chamado recebido no momento.</Alert>
-          ) : (
-            <Box
-              sx={{
-                display: "grid",
-                gap: 1.5,
-                /* Mesma lógica de Meus Chamados: cards com largura ~1/3 no lg; na sidebar (item selecionado) uma coluna ~320px */
-                gridTemplateColumns: selected
-                  ? "1fr"
-                  : { xs: "1fr", sm: "1fr 1fr", lg: "repeat(3, 1fr)" },
-              }}
-            >
-              {tickets.map((t) => (
-                <TicketCard
-                  key={t.id}
-                  ticket={t}
-                  onView={() => {
-                    setSelected(t);
-                    setError("");
-                    setSuccess("");
-                  }}
-                />
-              ))}
-            </Box>
-          )}
+          <TicketsTable
+            tickets={tickets}
+            selectedTicketId={selected?.id ?? null}
+            onRowActivate={(t) => {
+              setSelected(t);
+              setError("");
+              setSuccess("");
+            }}
+            emptyMessage="Nenhum chamado recebido no momento."
+          />
         </Box>
 
         {selected && (

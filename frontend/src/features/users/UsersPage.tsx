@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
+import Paper from "@mui/material/Paper";
+import Avatar from "@mui/material/Avatar";
+import { alpha, useTheme } from "@mui/material/styles";
 import Alert from "@mui/material/Alert";
 import Skeleton from "@mui/material/Skeleton";
 import Dialog from "@mui/material/Dialog";
@@ -34,7 +36,40 @@ const PERMISSAO_LABELS: Record<TicketPermissao, string> = {
   view_edit: "Ver e editar",
 };
 
+function getInitials(name: string | null | undefined): string {
+  if (!name?.trim()) return "?";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function UserNameCell({ label }: { label: string }) {
+  const trimmed = label.trim() || "?";
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, minWidth: 0 }}>
+      <Avatar
+        sx={{
+          width: 32,
+          height: 32,
+          fontSize: "0.75rem",
+          fontWeight: 600,
+          bgcolor: (t) => alpha(t.palette.primary.main, t.palette.mode === "dark" ? 0.35 : 0.14),
+          color: (t) => (t.palette.mode === "dark" ? t.palette.primary.light : t.palette.primary.dark),
+          border: 1,
+          borderColor: (t) => alpha(t.palette.primary.main, t.palette.mode === "dark" ? 0.45 : 0.22),
+        }}
+      >
+        {getInitials(trimmed)}
+      </Avatar>
+      <Typography variant="body2" fontWeight={600} noWrap title={trimmed} sx={{ fontSize: "0.8125rem" }}>
+        {trimmed}
+      </Typography>
+    </Box>
+  );
+}
+
 export function UsersPage() {
+  const theme = useTheme();
   const { refreshMe } = useAuth();
   const [users, setUsers] = useState<AuthUserListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -201,12 +236,57 @@ export function UsersPage() {
     }
   };
 
+  const isDark = theme.palette.mode === "dark";
+  const primary = theme.palette.primary.main;
+  const headerBg = alpha(primary, isDark ? 0.14 : 0.07);
+  const headerRule = alpha(primary, isDark ? 0.35 : 0.22);
+  const rowHoverBg = alpha(primary, isDark ? 0.08 : 0.05);
+  const rowStripe = alpha(primary, isDark ? 0.04 : 0.025);
+  const headLabelColor = isDark ? theme.palette.primary.light : theme.palette.primary.dark;
+
+  const headCellSx = {
+    py: 1.75,
+    px: 2,
+    borderBottom: 2,
+    borderColor: headerRule,
+    bgcolor: headerBg,
+    color: headLabelColor,
+    fontWeight: 700,
+    fontSize: "0.6875rem",
+    letterSpacing: "0.035em",
+    lineHeight: 1.35,
+    whiteSpace: "normal",
+    overflowWrap: "break-word",
+    wordBreak: "break-word",
+    verticalAlign: "bottom",
+  };
+
+  const bodyCellSx = {
+    py: 1.65,
+    px: 2,
+    borderBottom: 1,
+    borderColor: "divider",
+    verticalAlign: "middle" as const,
+  };
+
+  const emptyPaperSx = {
+    borderRadius: 2.5,
+    py: 4,
+    px: 2,
+    textAlign: "center" as const,
+    borderColor: alpha(primary, isDark ? 0.22 : 0.14),
+    bgcolor: alpha(primary, isDark ? 0.06 : 0.04),
+    backgroundImage: isDark
+      ? undefined
+      : (`linear-gradient(180deg, ${alpha(primary, 0.05)} 0%, transparent 42%)` as const),
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-        {[1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} variant="rounded" height={48} />
-        ))}
+        <Skeleton variant="text" width={200} height={32} />
+        <Skeleton variant="text" width="min(100%, 520px)" height={20} />
+        <Skeleton variant="rounded" height={380} sx={{ borderRadius: 2.5, mt: 1 }} />
       </Box>
     );
   }
@@ -233,37 +313,69 @@ export function UsersPage() {
         </Alert>
       )}
 
-      <Card>
-        <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
-          {users.length === 0 && !error ? (
-            <Alert severity="info" sx={{ m: 2 }}>
-              Nenhum usuário encontrado. Crie usuários no Supabase Auth (Authentication → Users → Add user) e
-              adicione SUPABASE_SERVICE_ROLE_KEY no .env.local do backend para listar aqui.
-            </Alert>
-          ) : users.length === 0 ? (
-            <Box sx={{ p: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                Não foi possível carregar a lista. Corrija o erro acima e recarregue a página.
-              </Typography>
-            </Box>
-          ) : (
-            <Table size="small" sx={{ minWidth: 360 }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Nome / Identificação</TableCell>
-                  <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Email</TableCell>
-                  <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>Departamento</TableCell>
-                  <TableCell align="right" sx={{ width: 120 }}>Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {users.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell fontWeight={500}>{u.nome || u.email || u.id}</TableCell>
-                    <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }} color="text.secondary">
-                      {u.email ?? "—"}
+      {users.length === 0 && !error ? (
+        <Paper variant="outlined" sx={emptyPaperSx}>
+          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 520, mx: "auto", textAlign: "left" }}>
+            Nenhum usuário encontrado. Crie usuários no Supabase Auth (Authentication → Users → Add user) e adicione
+            SUPABASE_SERVICE_ROLE_KEY no .env.local do backend para listar aqui.
+          </Typography>
+        </Paper>
+      ) : users.length === 0 ? (
+        <Paper variant="outlined" sx={emptyPaperSx}>
+          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 420, mx: "auto" }}>
+            Não foi possível carregar a lista. Corrija o erro acima e recarregue a página.
+          </Typography>
+        </Paper>
+      ) : (
+        <TableContainer
+          component={Paper}
+          variant="outlined"
+          sx={{
+            borderRadius: 2.5,
+            borderColor: alpha(primary, isDark ? 0.2 : 0.12),
+            bgcolor: "background.paper",
+            boxShadow: isDark ? "none" : `0 1px 2px ${alpha(primary, 0.07)}, 0 6px 20px ${alpha("#0f172a", 0.05)}`,
+            overflow: "auto",
+          }}
+        >
+          <Table
+            size="small"
+            sx={{
+              minWidth: 360,
+              "& .MuiTableBody-root .MuiTableRow-root:nth-of-type(even)": { bgcolor: rowStripe },
+              "& .MuiTableBody-root .MuiTableRow-root:last-of-type .MuiTableCell-root": { borderBottom: 0 },
+            }}
+          >
+            <TableHead>
+              <TableRow>
+                <TableCell sx={headCellSx}>Nome / Identificação</TableCell>
+                <TableCell sx={{ ...headCellSx, display: { xs: "none", sm: "table-cell" } }}>Email</TableCell>
+                <TableCell sx={{ ...headCellSx, display: { xs: "none", md: "table-cell" } }}>Departamento</TableCell>
+                <TableCell sx={{ ...headCellSx, width: 140, textAlign: "right" }} align="right">
+                  Ações
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {users.map((u) => {
+                const displayName = u.nome || u.email || u.id;
+                return (
+                  <TableRow
+                    key={u.id}
+                    sx={{
+                      transition: "background-color 0.15s ease",
+                      "&:hover": { bgcolor: `${rowHoverBg} !important` },
+                    }}
+                  >
+                    <TableCell sx={bodyCellSx}>
+                      <UserNameCell label={displayName} />
                     </TableCell>
-                    <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
+                    <TableCell sx={{ ...bodyCellSx, display: { xs: "none", sm: "table-cell" } }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8125rem" }}>
+                        {u.email ?? "—"}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ ...bodyCellSx, display: { xs: "none", md: "table-cell" } }}>
                       {savingDeptAuthId === u.id ? (
                         <CircularProgress size={20} />
                       ) : (
@@ -272,7 +384,7 @@ export function UsersPage() {
                           value={u.departamento ?? ""}
                           displayEmpty
                           onChange={(e) => handleDepartamentoChange(u, (e.target.value as string) || null)}
-                          sx={{ minWidth: 140, fontSize: "0.875rem" }}
+                          sx={{ minWidth: 160, fontSize: "0.875rem" }}
                         >
                           <MenuItem value="">—</MenuItem>
                           {departamentos.map((d) => (
@@ -283,23 +395,32 @@ export function UsersPage() {
                         </Select>
                       )}
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell sx={{ ...bodyCellSx, width: 140, textAlign: "right" }} align="right">
                       <Button
                         size="small"
                         variant="outlined"
+                        color="primary"
                         startIcon={<Shield style={{ width: 16, height: 16 }} />}
                         onClick={() => openPermissions(u)}
+                        sx={{
+                          borderColor: alpha(primary, isDark ? 0.4 : 0.28),
+                          bgcolor: alpha(primary, isDark ? 0.1 : 0.05),
+                          "&:hover": {
+                            borderColor: primary,
+                            bgcolor: alpha(primary, isDark ? 0.18 : 0.1),
+                          },
+                        }}
                       >
                         Permissões
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       <Dialog open={dialogOpen} onClose={() => { setDialogOpen(false); setSaveError(""); }} maxWidth="sm" fullWidth>
         <DialogTitle>Permissões — {selectedUser?.nome || selectedUser?.email || "Usuário"}</DialogTitle>
