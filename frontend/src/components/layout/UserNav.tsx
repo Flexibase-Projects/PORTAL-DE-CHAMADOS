@@ -7,9 +7,9 @@ import Tooltip from "@mui/material/Tooltip";
 import { useTheme, alpha } from "@mui/material/styles";
 import { useAuth } from "@/contexts/AuthContext";
 
-const SHELL_TITLE = "#1e3a5f";
+const NAV_IDLE_LIGHT = "#475569";
 
-const ICON_SIZE = 16;
+const ICON_SIZE = 20;
 
 interface UserNavProps {
   collapsed?: boolean;
@@ -18,7 +18,8 @@ interface UserNavProps {
 export function UserNav({ collapsed }: UserNavProps) {
   const muiTheme = useTheme();
   const isLight = muiTheme.palette.mode === "light";
-  const navHoverBg = isLight ? alpha(muiTheme.palette.secondary.main, 0.14) : alpha(muiTheme.palette.primary.main, 0.12);
+  const navHoverBg = isLight ? alpha("#2563eb", 0.06) : alpha(muiTheme.palette.primary.main, 0.1);
+  const navIdleColor = isLight ? NAV_IDLE_LIGHT : muiTheme.palette.text.secondary;
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -32,12 +33,12 @@ export function UserNav({ collapsed }: UserNavProps) {
       <ListItemButton
         onClick={handleSair}
         sx={{
-          borderRadius: 1,
-          py: 0.375,
-          minHeight: 32,
+          borderRadius: 3,
+          py: 1,
+          minHeight: 44,
           justifyContent: collapsed ? "center" : "flex-start",
           px: collapsed ? 1 : 1.25,
-          color: isLight ? alpha(SHELL_TITLE, 0.75) : "text.secondary",
+          color: navIdleColor,
           "&:hover": {
             bgcolor: navHoverBg,
             color: isLight ? alpha("#b91c1c", 0.95) : muiTheme.palette.error.light,
@@ -47,17 +48,16 @@ export function UserNav({ collapsed }: UserNavProps) {
       >
         <ListItemIcon
           sx={{
-            minWidth: collapsed ? "auto" : 28,
+            minWidth: collapsed ? "auto" : 40,
             color: "inherit",
-            "& .MuiSvgIcon-root": { fontSize: ICON_SIZE },
           }}
         >
-          <LogOut style={{ width: ICON_SIZE, height: ICON_SIZE }} />
+          <LogOut style={{ width: ICON_SIZE, height: ICON_SIZE }} strokeWidth={1.75} />
         </ListItemIcon>
         {!collapsed && (
           <ListItemText
             primary="Sair"
-            primaryTypographyProps={{ sx: { fontSize: "0.75rem", color: "inherit" } }}
+            primaryTypographyProps={{ sx: { fontSize: "0.875rem", fontWeight: 500, color: "inherit" } }}
           />
         )}
       </ListItemButton>

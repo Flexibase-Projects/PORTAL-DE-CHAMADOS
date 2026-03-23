@@ -476,29 +476,68 @@ interface PorSetorProps {
 }
 
 const SETOR_COLOR_MAP: Record<string, string> = {
-  Administrativo: "#A52CB0",
-  Industrial: "#89E14B",
-  Comercial: "#A52CB0",
+  Administrativo: "#8a00c4",
+  Industrial: "#32cd32",
+  Comercial: "#8a00c4",
+};
+
+/** Gradientes horizontais (esquerda → direita) por fatia da rosca. */
+const SETOR_GRADIENT_STOPS: Record<string, { from: string; to: string }> = {
+  Industrial: { from: "#7fff00", to: "#32cd32" },
+  Administrativo: { from: "#6c3baa", to: "#8a00c4" },
+  Comercial: { from: "#6c3baa", to: "#8a00c4" },
 };
 
 const SETORES_DONUT = ["Industrial", "Administrativo"];
+
+function setorGradientIdForRow(
+  setor: string,
+  ids: { industrial: string; administrativo: string; fallback: string }
+): string {
+  if (setor === "Industrial") return ids.industrial;
+  if (setor === "Administrativo" || setor === "Comercial") return ids.administrativo;
+  return ids.fallback;
+}
 
 function TicketsBySetorDonutPlot({
   filtered,
   heightSx,
   resizeKey,
+  industrialGradientId,
+  administrativoGradientId,
+  fallbackGradientId,
 }: {
   filtered: { setor: string; count: number }[];
   heightSx: SxProps<Theme>;
   resizeKey?: string | number | boolean;
+  industrialGradientId: string;
+  administrativoGradientId: string;
+  fallbackGradientId: string;
 }) {
   const theme = useTheme();
   const donutLegendStyle = { paddingTop: 4, lineHeight: 1.2 } as const;
+
+  const indStops = SETOR_GRADIENT_STOPS.Industrial;
+  const admStops = SETOR_GRADIENT_STOPS.Administrativo;
 
   return (
     <Box sx={[{ width: "100%", flexShrink: 0, minHeight: 0 }, heightSx] as SxProps<Theme>}>
       <ResponsiveContainer key={String(resizeKey ?? "a")} width="100%" height="100%">
         <PieChart margin={{ top: 8, right: 8, bottom: 4, left: 8 }}>
+          <defs>
+            <linearGradient id={industrialGradientId} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor={indStops.from} />
+              <stop offset="100%" stopColor={indStops.to} />
+            </linearGradient>
+            <linearGradient id={administrativoGradientId} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor={admStops.from} />
+              <stop offset="100%" stopColor={admStops.to} />
+            </linearGradient>
+            <linearGradient id={fallbackGradientId} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#46DCFA" />
+              <stop offset="100%" stopColor="#498DF2" />
+            </linearGradient>
+          </defs>
           <Pie
             data={filtered}
             dataKey="count"
@@ -510,9 +549,14 @@ function TicketsBySetorDonutPlot({
             paddingAngle={0}
             stroke="none"
           >
-            {filtered.map((row, i) => (
-              <Cell key={i} fill={SETOR_COLOR_MAP[row.setor] ?? "#888"} stroke="none" />
-            ))}
+            {filtered.map((row, i) => {
+              const gid = setorGradientIdForRow(row.setor, {
+                industrial: industrialGradientId,
+                administrativo: administrativoGradientId,
+                fallback: fallbackGradientId,
+              });
+              return <Cell key={i} fill={`url(#${gid})`} stroke="none" />;
+            })}
           </Pie>
           <Tooltip
             content={({ active, payload }) => {
@@ -520,7 +564,7 @@ function TicketsBySetorDonutPlot({
               const item = payload[0];
               const setor = item.payload?.setor ?? item.name ?? "";
               const count = item.payload?.count ?? item.value ?? 0;
-              const fillColor = (item as { fill?: string }).fill ?? SETOR_COLOR_MAP[setor] ?? "#666";
+              const fillColor = SETOR_COLOR_MAP[setor] ?? "#888";
               return (
                 <Box
                   sx={{
@@ -553,6 +597,12 @@ export function TicketsBySetorDonut({ data }: PorSetorProps) {
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const uid = useId().replace(/:/g, "");
   const dialogTitleId = `chart-fs-donut-${uid}`;
+  const gradIndCard = `setorInd-${uid}-card`;
+  const gradAdmCard = `setorAdm-${uid}-card`;
+  const gradFbCard = `setorFb-${uid}-card`;
+  const gradIndDlg = `setorInd-${uid}-dlg`;
+  const gradAdmDlg = `setorAdm-${uid}-dlg`;
+  const gradFbDlg = `setorFb-${uid}-dlg`;
 
   return (
     <Card
@@ -587,7 +637,13 @@ export function TicketsBySetorDonut({ data }: PorSetorProps) {
             Sem dados disponíveis.
           </Typography>
         ) : (
-          <TicketsBySetorDonutPlot filtered={filtered} heightSx={{ height: { xs: 220, sm: 260 } }} />
+          <TicketsBySetorDonutPlot
+            filtered={filtered}
+            heightSx={{ height: { xs: 220, sm: 260 } }}
+            industrialGradientId={gradIndCard}
+            administrativoGradientId={gradAdmCard}
+            fallbackGradientId={gradFbCard}
+          />
         )}
       </CardContent>
       <ChartFullscreenDialog
@@ -597,7 +653,14 @@ export function TicketsBySetorDonut({ data }: PorSetorProps) {
         titleId={dialogTitleId}
       >
         <Box sx={{ flex: 1, minHeight: 360, width: "100%" }}>
-          <TicketsBySetorDonutPlot filtered={filtered} heightSx={{ height: "100%" }} resizeKey={fullscreenOpen} />
+          <TicketsBySetorDonutPlot
+            filtered={filtered}
+            heightSx={{ height: "100%" }}
+            resizeKey={fullscreenOpen}
+            industrialGradientId={gradIndDlg}
+            administrativoGradientId={gradAdmDlg}
+            fallbackGradientId={gradFbDlg}
+          />
         </Box>
       </ChartFullscreenDialog>
     </Card>

@@ -66,7 +66,7 @@ export function TicketCard({
   const footer = statusFooterIcon(ticket.status);
   const { Icon: FooterIcon, fg: footerFg, bg: footerBg } = footer;
 
-  const ctaButtonSx = {
+  const ctaSx = {
     textTransform: "none" as const,
     fontWeight: 600,
     px: 1.25,
@@ -152,7 +152,7 @@ export function TicketCard({
                   disableElevation
                   startIcon={<Clock size={14} strokeWidth={2.5} />}
                   onClick={handleOpen}
-                  sx={ctaButtonSx}
+                  sx={ctaSx}
                 >
                   Iniciar
                 </Button>
@@ -165,7 +165,7 @@ export function TicketCard({
                   disableElevation
                   startIcon={<CheckCircle2 size={14} strokeWidth={2.5} />}
                   onClick={handleOpen}
-                  sx={ctaButtonSx}
+                  sx={ctaSx}
                 >
                   Encerrar
                 </Button>

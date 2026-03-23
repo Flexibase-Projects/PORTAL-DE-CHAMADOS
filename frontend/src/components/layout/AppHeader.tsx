@@ -16,8 +16,8 @@ import { notificationService } from "@/services/notificationService";
 import { formatDate } from "@/lib/utils";
 import type { NotificationItem } from "@/services/notificationService";
 
-/** Altura alinhada à linha do primeiro divider da sidebar (59px). */
-export const APP_HEADER_HEIGHT = 59;
+/** Altura alinhada à linha do primeiro divider da sidebar (cabeçalho com marca + subtítulo). */
+export const APP_HEADER_HEIGHT = 72;
 
 const PAGE_TITLE_BASE = "Portal de Chamados";
 
@@ -28,20 +28,24 @@ interface AppHeaderProps {
 export function AppHeader({ onMobileToggle }: AppHeaderProps) {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !user?.id) return;
+    const uid = user.id;
     const load = () => {
-      notificationService.list().then((r) => {
-        if (r.success) {
-          setUnreadCount(r.unreadCount ?? 0);
-          setNotifications(r.notifications ?? []);
-        }
-      }).catch(() => {});
+      notificationService
+        .list(false, uid)
+        .then((r) => {
+          if (r.success) {
+            setUnreadCount(r.unreadCount ?? 0);
+            setNotifications(r.notifications ?? []);
+          }
+        })
+        .catch(() => {});
     };
     load();
     const t = setInterval(load, 30 * 1000);
@@ -59,7 +63,7 @@ export function AppHeader({ onMobileToggle }: AppHeaderProps) {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.id]);
 
   useEffect(() => {
     if (!isAuthenticated || unreadCount <= 0) {
@@ -87,8 +91,8 @@ export function AppHeader({ onMobileToggle }: AppHeaderProps) {
     if (n.ticket_id) {
       setAnchorEl(null);
       navigate(`/meus-chamados/${n.ticket_id}`);
-      if (!n.lida) {
-        notificationService.markRead(n.id).then(() => {
+      if (!n.lida && user?.id) {
+        notificationService.markRead(n.id, user.id).then(() => {
           setUnreadCount((c) => Math.max(0, c - 1));
           setNotifications((prev) => prev.map((item) => (item.id === n.id ? { ...item, lida: true } : item)));
         });

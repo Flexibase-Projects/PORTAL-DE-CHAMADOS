@@ -98,14 +98,14 @@ export function TicketDetailPage() {
   }, [id, loadTicket]);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !user?.id) return;
     notificationService
-      .markReadByTicket(id)
+      .markReadByTicket(id, user.id)
       .then(() => {
         window.dispatchEvent(new CustomEvent("notifications-refresh"));
       })
       .catch(() => {});
-  }, [id]);
+  }, [id, user?.id]);
 
   useEffect(() => {
     if (!ticket?.area_destino) {

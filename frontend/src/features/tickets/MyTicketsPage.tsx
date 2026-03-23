@@ -101,12 +101,16 @@ export function MyTicketsPage() {
   const [unreadTicketIds, setUnreadTicketIds] = useState<Set<string>>(new Set());
 
   const loadByAuth = useCallback(async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError("");
     try {
       const [ticketsRes, notifRes] = await Promise.all([
-        ticketService.getMeusChamadosByAuth(user?.id, user?.email),
-        notificationService.list(true).catch(() => ({ success: false, notifications: [] as { ticket_id?: string }[] })),
+        ticketService.getMeusChamadosByAuth(user.id, user.email),
+        notificationService.list(true, user.id).catch(() => ({ success: false, notifications: [] as { ticket_id?: string }[] })),
       ]);
       if (ticketsRes.success) {
         setChamadosMeuDepartamento(ticketsRes.chamadosMeuDepartamento || []);

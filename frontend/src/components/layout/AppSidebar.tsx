@@ -35,18 +35,18 @@ interface NavItem {
 
 const navCategories: { label: string; items: NavItem[] }[] = [
   {
-    label: "Início",
+    label: "INÍCIO",
     items: [{ title: "Dashboard", icon: LayoutDashboard, path: "/" }],
   },
   {
-    label: "Chamados",
+    label: "CHAMADOS",
     items: [
       { title: "Enviar Chamado", icon: Send, path: "/criar-chamado" },
       { title: "Meus Chamados", icon: Inbox, path: "/meus-chamados" },
     ],
   },
   {
-    label: "Administração",
+    label: "ADMINISTRAÇÃO",
     items: [
       { title: "Gestão de Chamados", icon: TicketCheck, path: "/admin/chamados" },
       { title: "Calendário", icon: CalendarDays, path: "/admin/calendario" },
@@ -65,12 +65,23 @@ interface AppSidebarProps {
   onHeaderClick?: () => void;
 }
 
-const SIDEBAR_ACCENT = "#2563eb";
-/** Título e hierarquia — bom contraste em #F0F8FF */
-const SHELL_TITLE = "#1e3a5f";
-const SHELL_SECTION_MUTED = "#6b7c93";
-const ICON_SIZE = 18;
-const LOGO_SIZE = 28;
+const BRAND_BLUE = "#2563eb";
+const ACTIVE_PILL_BG_LIGHT = "#eff6ff";
+/** Título da marca (PDC) */
+const BRAND_TITLE = "#1e293b";
+/** Itens inativos — cinza-azulado */
+const NAV_IDLE_LIGHT = "#475569";
+/** Rótulos de seção (estilo SCV) */
+const SECTION_MUTED_LIGHT = "#94a3b8";
+const ICON_SIZE = 20;
+const LOGO_BOX = 40;
+const LOGO_ICON = 22;
+
+function pathIsActive(pathname: string, itemPath: string): boolean {
+  if (itemPath === "/") return pathname === "/";
+  if (pathname === itemPath) return true;
+  return pathname.startsWith(`${itemPath}/`);
+}
 
 export function AppSidebar({
   collapsed,
@@ -86,9 +97,12 @@ export function AppSidebar({
   const { theme, toggleTheme } = useTheme();
   const { isTiUser } = useAuth();
 
-  const navHoverBg = isLight ? alpha(muiTheme.palette.secondary.main, 0.14) : alpha(muiTheme.palette.primary.main, 0.12);
-  const navSelectedBg = isLight ? alpha(muiTheme.palette.primary.main, 0.12) : alpha(muiTheme.palette.primary.main, 0.22);
-  const navSelectedHoverBg = isLight ? alpha(muiTheme.palette.primary.main, 0.18) : alpha(muiTheme.palette.primary.main, 0.28);
+  const navHoverBg = isLight ? alpha(BRAND_BLUE, 0.06) : alpha(muiTheme.palette.primary.main, 0.1);
+  const navSelectedBg = isLight ? ACTIVE_PILL_BG_LIGHT : alpha(muiTheme.palette.primary.main, 0.2);
+  const navSelectedHoverBg = isLight ? alpha(BRAND_BLUE, 0.12) : alpha(muiTheme.palette.primary.main, 0.28);
+  const sectionMuted = isLight ? SECTION_MUTED_LIGHT : muiTheme.palette.text.secondary;
+  const navIdleColor = isLight ? NAV_IDLE_LIGHT : muiTheme.palette.text.secondary;
+  const activeNavColor = isLight ? BRAND_BLUE : muiTheme.palette.primary.light;
 
   const handleToggle = () => {
     if (isMobile) onHeaderClick?.();
@@ -134,59 +148,68 @@ export function AppSidebar({
             <Box
               sx={{
                 flex: 1,
-                px: 1.25,
-                py: 1.25,
+                px: 2,
+                py: 1.5,
                 display: "flex",
                 alignItems: "center",
-                gap: 1,
+                gap: 1.5,
                 minHeight: 0,
               }}
             >
               <Box
                 sx={{
-                  width: LOGO_SIZE,
-                  height: LOGO_SIZE,
-                  borderRadius: 1.25,
+                  width: LOGO_BOX,
+                  height: LOGO_BOX,
+                  borderRadius: 2,
+                  bgcolor: BRAND_BLUE,
                   color: "#fff",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
-                  boxShadow: isLight ? "0 2px 8px rgba(37, 99, 235, 0.25)" : "none",
-                  ...(isLight
-                    ? {
-                        background: "linear-gradient(145deg, #1d4ed8 0%, #0e7490 52%, #0891b2 100%)",
-                      }
-                    : { bgcolor: SIDEBAR_ACCENT }),
+                  boxShadow: isLight ? "0 2px 10px rgba(37, 99, 235, 0.28)" : "0 1px 4px rgba(0,0,0,0.35)",
                 }}
                 aria-hidden
               >
-                <TicketCheck style={{ width: 16, height: 16 }} />
+                <TicketCheck style={{ width: LOGO_ICON, height: LOGO_ICON }} strokeWidth={2} />
               </Box>
-              <Typography
-                variant="body2"
-                fontWeight={600}
-                noWrap
-                sx={{
-                  flex: 1,
-                  minWidth: 0,
-                  fontSize: "0.8125rem",
-                  color: isLight ? SHELL_TITLE : "text.primary",
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                Portal de Chamados
-              </Typography>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography
+                  component="div"
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: "1.0625rem",
+                    lineHeight: 1.2,
+                    color: isLight ? BRAND_TITLE : "text.primary",
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  PDC
+                </Typography>
+                <Typography
+                  component="div"
+                  variant="caption"
+                  sx={{
+                    display: "block",
+                    mt: 0.25,
+                    fontSize: "0.75rem",
+                    color: "text.secondary",
+                    lineHeight: 1.25,
+                  }}
+                >
+                  Portal de Chamados
+                </Typography>
+              </Box>
               <Tooltip title={toggleLabel} placement="right">
                 <IconButton
                   size="small"
                   onClick={handleToggle}
                   aria-label={toggleLabel}
                   sx={{
-                    color: isLight ? alpha(SHELL_TITLE, 0.65) : "text.secondary",
+                    color: isLight ? alpha(BRAND_TITLE, 0.45) : alpha(muiTheme.palette.common.white, 0.5),
                     "&:hover": {
                       bgcolor: navHoverBg,
-                      color: isLight ? SHELL_TITLE : "text.primary",
+                      color: isLight ? BRAND_TITLE : "text.primary",
                     },
                   }}
                 >
@@ -210,7 +233,7 @@ export function AppSidebar({
               sx={{
                 flex: 1,
                 px: 0,
-                py: 1.25,
+                py: 1.5,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -220,24 +243,20 @@ export function AppSidebar({
             >
               <Box
                 sx={{
-                  width: LOGO_SIZE,
-                  height: LOGO_SIZE,
-                  borderRadius: 1.25,
+                  width: LOGO_BOX - 4,
+                  height: LOGO_BOX - 4,
+                  borderRadius: 2,
+                  bgcolor: BRAND_BLUE,
                   color: "#fff",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
-                  boxShadow: isLight ? "0 2px 8px rgba(37, 99, 235, 0.25)" : "none",
-                  ...(isLight
-                    ? {
-                        background: "linear-gradient(145deg, #1d4ed8 0%, #0e7490 52%, #0891b2 100%)",
-                      }
-                    : { bgcolor: SIDEBAR_ACCENT }),
+                  boxShadow: isLight ? "0 2px 10px rgba(37, 99, 235, 0.28)" : "0 1px 4px rgba(0,0,0,0.35)",
                 }}
                 aria-hidden
               >
-                <TicketCheck style={{ width: 16, height: 16 }} />
+                <TicketCheck style={{ width: LOGO_ICON - 2, height: LOGO_ICON - 2 }} strokeWidth={2} />
               </Box>
             </Box>
             <Divider
@@ -260,10 +279,10 @@ export function AppSidebar({
               onClick={handleToggle}
               aria-label={toggleLabel}
               sx={{
-                color: isLight ? alpha(SHELL_TITLE, 0.65) : "text.secondary",
+                color: isLight ? alpha(BRAND_TITLE, 0.45) : "text.secondary",
                 "&:hover": {
                   bgcolor: navHoverBg,
-                  color: isLight ? SHELL_TITLE : "text.primary",
+                  color: isLight ? BRAND_TITLE : "text.primary",
                 },
               }}
             >
@@ -282,89 +301,108 @@ export function AppSidebar({
         />
       )}
 
-      {/* Navegação */}
-      <List sx={{ flex: 1, py: 0, px: 0.75, minHeight: 0 }} dense>
-        {navCategories.map((category) => {
+      {/* Navegação (estilo SCV: seções em caps, item ativo em pill + ponto) */}
+      <List sx={{ flex: 1, py: 0.5, px: 1.5, minHeight: 0 }} dense>
+        {navCategories.map((category, catIndex) => {
           const items = category.items.filter(
             (item) => item.path !== "/admin/usuarios" || isTiUser
           );
           if (items.length === 0) return null;
           return (
-          <Box key={category.label}>
-            {!collapsed && (
-              <Typography
-                variant="caption"
-                sx={{
-                  px: 1.25,
-                  py: 0.375,
-                  display: "block",
-                  color: isLight ? SHELL_SECTION_MUTED : "text.secondary",
-                  fontSize: "0.6875rem",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                }}
-              >
-                {category.label}
-              </Typography>
-            )}
-            {items.map((item) => {
-              const isActive = location.pathname === item.path;
-              const icon = <item.icon style={{ width: ICON_SIZE, height: ICON_SIZE }} />;
-              return (
-                <Tooltip key={item.path} title={collapsed ? item.title : ""} placement="right">
-                  <ListItemButton
-                    selected={isActive}
-                    onClick={() => handleNav(item.path)}
-                    sx={{
-                      borderRadius: 1,
-                      mb: 0.75,
-                      py: 0.5,
-                      minHeight: 36,
-                      justifyContent: collapsed ? "center" : "flex-start",
-                      px: collapsed ? 1 : 1.25,
-                      color: isLight ? alpha(SHELL_TITLE, 0.92) : "text.primary",
-                      "&:hover": { bgcolor: navHoverBg },
-                      "& .MuiListItemIcon-root": {
-                        color: isLight ? alpha(SHELL_TITLE, 0.72) : "inherit",
-                      },
-                      "&.Mui-selected": {
-                        backgroundColor: navSelectedBg,
-                        color: SIDEBAR_ACCENT,
-                        opacity: 1,
-                        "&:hover": {
-                          backgroundColor: navSelectedHoverBg,
-                          color: SIDEBAR_ACCENT,
-                          opacity: 1,
-                        },
-                        "& .MuiListItemIcon-root": { color: SIDEBAR_ACCENT, opacity: 1 },
-                        "& .MuiListItemText-primary": { color: SIDEBAR_ACCENT, opacity: 1, fontWeight: 600 },
-                      },
-                    }}
-                  >
-                    <ListItemIcon
+            <Box key={category.label}>
+              {!collapsed && (
+                <Typography
+                  variant="caption"
+                  component="div"
+                  sx={{
+                    px: 0.75,
+                    pt: catIndex === 0 ? 1 : 2.25,
+                    pb: 1,
+                    display: "block",
+                    color: sectionMuted,
+                    fontSize: "0.6875rem",
+                    fontWeight: 600,
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  {category.label}
+                </Typography>
+              )}
+              {items.map((item) => {
+                const isActive = pathIsActive(location.pathname, item.path);
+                const icon = <item.icon style={{ width: ICON_SIZE, height: ICON_SIZE }} strokeWidth={1.75} />;
+                return (
+                  <Tooltip key={item.path} title={collapsed ? item.title : ""} placement="right">
+                    <ListItemButton
+                      selected={isActive}
+                      onClick={() => handleNav(item.path)}
                       sx={{
-                        minWidth: collapsed ? "auto" : 32,
-                        color: "inherit",
-                        "& .MuiSvgIcon-root": { fontSize: ICON_SIZE },
+                        borderRadius: 3,
+                        mb: 0.5,
+                        py: 1,
+                        minHeight: 44,
+                        justifyContent: collapsed ? "center" : "flex-start",
+                        px: collapsed ? 1 : 1.25,
+                        color: navIdleColor,
+                        "&:hover": {
+                          bgcolor: navHoverBg,
+                          color: isLight ? BRAND_TITLE : "text.primary",
+                        },
+                        "& .MuiListItemIcon-root": {
+                          color: "inherit",
+                          minWidth: collapsed ? "auto" : 40,
+                        },
+                        "&.Mui-selected": {
+                          backgroundColor: `${navSelectedBg} !important`,
+                          color: `${activeNavColor} !important`,
+                          "&:hover": {
+                            backgroundColor: `${navSelectedHoverBg} !important`,
+                            color: `${activeNavColor} !important`,
+                          },
+                          "& .MuiListItemIcon-root": { color: `${activeNavColor} !important` },
+                          "& .MuiListItemText-primary": {
+                            color: `${activeNavColor} !important`,
+                            fontWeight: 600,
+                          },
+                        },
                       }}
                     >
-                      {icon}
-                    </ListItemIcon>
-                    {!collapsed && (
-                      <ListItemText
-                        primary={item.title}
-                        primaryTypographyProps={{
-                          variant: "body2",
-                          sx: { fontSize: "0.8125rem", color: "inherit" },
-                        }}
-                      />
-                    )}
-                  </ListItemButton>
-                </Tooltip>
-              );
-            })}
-          </Box>
+                      <ListItemIcon sx={{ color: "inherit" }}>{icon}</ListItemIcon>
+                      {!collapsed && (
+                        <>
+                          <ListItemText
+                            primary={item.title}
+                            primaryTypographyProps={{
+                              variant: "body2",
+                              sx: {
+                                fontSize: "0.875rem",
+                                fontWeight: isActive ? 600 : 500,
+                                color: "inherit",
+                              },
+                            }}
+                            sx={{ flex: "1 1 auto", minWidth: 0, my: 0 }}
+                          />
+                          {isActive && (
+                            <Box
+                              component="span"
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: "50%",
+                                bgcolor: activeNavColor,
+                                flexShrink: 0,
+                                ml: 0.5,
+                              }}
+                              aria-hidden
+                            />
+                          )}
+                        </>
+                      )}
+                    </ListItemButton>
+                  </Tooltip>
+                );
+              })}
+            </Box>
           );
         })}
       </List>
@@ -377,37 +415,39 @@ export function AppSidebar({
         }}
       />
 
-      <List sx={{ py: 0, px: 0.75 }} dense disablePadding>
-        <Tooltip title={theme === "light" ? "Alternar para escuro" : "Alternar para claro"} placement="right">
+      <List sx={{ py: 0.5, px: 1.5, pb: 1 }} dense disablePadding>
+        <Tooltip title={theme === "light" ? "Alternar para modo escuro" : "Alternar para modo claro"} placement="right">
           <ListItemButton
             onClick={toggleTheme}
             sx={{
-              borderRadius: 1,
-              py: 0.375,
-              minHeight: 32,
+              borderRadius: 3,
+              py: 1,
+              minHeight: 44,
               justifyContent: collapsed ? "center" : "flex-start",
               px: collapsed ? 1 : 1.25,
-              color: isLight ? alpha(SHELL_TITLE, 0.85) : "text.secondary",
-              "&:hover": { bgcolor: navHoverBg, color: isLight ? SHELL_TITLE : "text.primary" },
+              color: navIdleColor,
+              "&:hover": {
+                bgcolor: navHoverBg,
+                color: isLight ? BRAND_TITLE : "text.primary",
+              },
             }}
           >
             <ListItemIcon
               sx={{
-                minWidth: collapsed ? "auto" : 28,
+                minWidth: collapsed ? "auto" : 40,
                 color: "inherit",
-                "& .MuiSvgIcon-root": { fontSize: ICON_SIZE },
               }}
             >
               {theme === "light" ? (
-                <Moon style={{ width: ICON_SIZE, height: ICON_SIZE }} />
+                <Moon style={{ width: ICON_SIZE, height: ICON_SIZE }} strokeWidth={1.75} />
               ) : (
-                <Sun style={{ width: ICON_SIZE, height: ICON_SIZE }} />
+                <Sun style={{ width: ICON_SIZE, height: ICON_SIZE }} strokeWidth={1.75} />
               )}
             </ListItemIcon>
             {!collapsed && (
               <ListItemText
-                primary={theme === "light" ? "Escuro" : "Claro"}
-                primaryTypographyProps={{ sx: { fontSize: "0.75rem", color: "inherit" } }}
+                primary={theme === "light" ? "Modo escuro" : "Modo claro"}
+                primaryTypographyProps={{ sx: { fontSize: "0.875rem", fontWeight: 500, color: "inherit" } }}
               />
             )}
           </ListItemButton>
