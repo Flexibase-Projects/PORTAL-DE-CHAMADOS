@@ -1,10 +1,34 @@
 export const SETORES = ["Comercial", "Administrativo", "Industrial"] as const;
 
-/** Setores disponíveis no formulário de chamado (apenas Administrativo e Industrial). */
+export type SetorMacro = (typeof SETORES)[number];
+
+/** Título no picker de departamentos (UI). */
+export const SETOR_LABEL_PICKER: Record<SetorMacro, string> = {
+  Comercial: "Comercial",
+  Administrativo: "Administrativo",
+  Industrial: "Indústria",
+};
+
+/** Cor de destaque por macro-setor (picker de departamentos). */
+export const SETOR_ACCENT_PICKER: Record<SetorMacro, string> = {
+  Comercial: "#2563eb",
+  Administrativo: "#7c3aed",
+  Industrial: "#ea580c",
+};
+
+/**
+ * Setores usados em filtros legados onde só havia Admin + Industrial (ex.: algumas regras antigas).
+ * O picker de criar chamado usa `SETORES` completo (inclui Comercial).
+ */
 export const SETORES_CHAMADO = ["Administrativo", "Industrial"] as const;
 
+/** Fatias do donut e filtros globais do dashboard: só Administrativo e Industrial (Comercial agrega em Administrativo). */
+export const SETORES_DASHBOARD = ["Administrativo", "Industrial"] as const;
+export type SetorDashboard = (typeof SETORES_DASHBOARD)[number];
+
 export const DEPARTAMENTOS_POR_SETOR: Record<string, string[]> = {
-  Comercial: [], // departamentos ex-Comercial foram movidos para Administrativo
+  /** Vazio por enquanto; departamentos comerciais ficam em Administrativo (como antes da coluna Comercial). */
+  Comercial: [],
   Administrativo: [
     "ASSESSORIA COMERCIAL",
     "ASSESSORIA PRIVADO",
@@ -44,13 +68,26 @@ export function getAllDepartamentos(): string[] {
   return [...new Set([...comercial, ...admin, ...ind])].sort();
 }
 
-/** Retorna o setor (Comercial, Administrativo, Industrial) do departamento, ou null. */
+/** Retorna o setor real (Comercial, Administrativo, Industrial) do departamento, ou null. */
 export function getSetorByDepartamento(departamento: string): string | null {
   if (!departamento?.trim()) return null;
   const d = departamento.trim().toUpperCase();
-  for (const [setor, depts] of Object.entries(DEPARTAMENTOS_POR_SETOR)) {
+  const ordem: SetorMacro[] = ["Comercial", "Administrativo", "Industrial"];
+  for (const setor of ordem) {
+    const depts = DEPARTAMENTOS_POR_SETOR[setor] ?? [];
     if (depts.some((x) => x.toUpperCase() === d)) return setor;
   }
+  return null;
+}
+
+/**
+ * Para dashboard e filtros “por setor” com duas categorias: Comercial conta junto com Administrativo.
+ */
+export function getSetorParaDashboard(departamento: string): SetorDashboard | null {
+  const s = getSetorByDepartamento(departamento);
+  if (!s) return null;
+  if (s === "Industrial") return "Industrial";
+  if (s === "Administrativo" || s === "Comercial") return "Administrativo";
   return null;
 }
 

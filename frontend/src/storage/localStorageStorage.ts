@@ -4,7 +4,7 @@
  */
 
 import { generateProtocol } from "@/lib/utils";
-import { getSetorByDepartamento } from "@/constants/departamentos";
+import { getSetorParaDashboard } from "@/constants/departamentos";
 import type { Ticket } from "@/types/ticket";
 import type { User, Role } from "@/types/user";
 import type { TemplateField } from "@/types/template";
@@ -294,7 +294,7 @@ export const localStorageStorage = {
           const filtered =
             filterSetor === null
               ? list
-              : list.filter((t) => getSetorByDepartamento(t.area_destino ?? "") === filterSetor);
+              : list.filter((t) => getSetorParaDashboard(t.area_destino ?? "") === filterSetor);
           const count = filtered.filter((t) =>
             (t.created_at ?? "").toString().startsWith(dateStr)
           ).length;
@@ -318,7 +318,7 @@ export const localStorageStorage = {
           const filtered =
             filterSetor === null
               ? list
-              : list.filter((t) => getSetorByDepartamento(t.area_destino ?? "") === filterSetor);
+              : list.filter((t) => getSetorParaDashboard(t.area_destino ?? "") === filterSetor);
           const count = filtered.filter((t) =>
             (t.created_at ?? "").toString().startsWith(dateStr)
           ).length;
@@ -340,7 +340,7 @@ export const localStorageStorage = {
     ): { mes: string; count: number }[] => {
       const byMonth: Record<string, number> = {};
       list.forEach((t) => {
-        const setor = getSetorByDepartamento(t.area_destino ?? "");
+        const setor = getSetorParaDashboard(t.area_destino ?? "");
         if (filterSetor !== null && setor !== filterSetor) return;
         const created = (t.created_at ?? "").toString().slice(0, 7);
         if (!created) return;
@@ -367,7 +367,7 @@ export const localStorageStorage = {
       });
       const byMonth: Record<string, number> = {};
       filtered.forEach((t) => {
-        const setor = getSetorByDepartamento(t.area_destino ?? "");
+        const setor = getSetorParaDashboard(t.area_destino ?? "");
         if (filterSetor !== null && setor !== filterSetor) return;
         const created = (t.created_at ?? "").toString().slice(0, 7);
         if (!created) return;
@@ -386,12 +386,12 @@ export const localStorageStorage = {
         });
     };
     const aggregateBySetor = (): { setor: string; count: number }[] => {
-      const counts: Record<string, number> = { Comercial: 0, Administrativo: 0, Industrial: 0 };
+      const counts: Record<string, number> = { Administrativo: 0, Industrial: 0 };
       tickets.forEach((t) => {
-        const setor = getSetorByDepartamento(t.area_destino ?? "");
+        const setor = getSetorParaDashboard(t.area_destino ?? "");
         if (setor && setor in counts) counts[setor]++;
       });
-      return (["Comercial", "Administrativo", "Industrial"] as const)
+      return (["Administrativo", "Industrial"] as const)
         .map((setor) => ({ setor, count: counts[setor] }))
         .filter((x) => x.count > 0);
     };

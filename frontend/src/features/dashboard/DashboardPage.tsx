@@ -24,7 +24,7 @@ import {
   PERIOD_LABELS,
   type PeriodKey,
 } from "./dashboardPeriod";
-import { getSetorByDepartamento } from "@/constants/departamentos";
+import { getSetorParaDashboard } from "@/constants/departamentos";
 import { ticketService, type DashboardStats } from "@/services/ticketService";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -462,14 +462,14 @@ export function DashboardPage() {
           <DepartmentBarChart
             data={stats.por_departamento ?? []}
             filterSetor={filterSetorGlobal}
-            getSetor={getSetorByDepartamento}
+            getSetor={getSetorParaDashboard}
           />
         </Box>
         <Box sx={{ minWidth: 0, width: "100%", display: "flex", flexDirection: "column" }}>
           <TopTicketCreatorsCard
             data={stats.top_solicitantes ?? []}
             filterSetor={filterSetorGlobal}
-            getSetor={getSetorByDepartamento}
+            getSetor={getSetorParaDashboard}
           />
         </Box>
       </Box>

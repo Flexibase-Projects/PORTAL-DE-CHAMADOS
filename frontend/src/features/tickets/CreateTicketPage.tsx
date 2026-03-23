@@ -11,6 +11,8 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import Alert from "@mui/material/Alert";
 import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
+import Stack from "@mui/material/Stack";
 import CircularProgress from "@mui/material/CircularProgress";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
@@ -19,23 +21,23 @@ import { ticketService } from "@/services/ticketService";
 import { templateService } from "@/services/templateService";
 import { useAuth } from "@/contexts/AuthContext";
 import { validateTicketForm, type FormErrors } from "@/utils/validation";
-import {
-  SETORES_CHAMADO,
-  DEPARTAMENTOS_POR_SETOR,
-  TIPOS_SUPORTE_TI,
-  getSetorByDepartamento,
-} from "@/constants/departamentos";
+import { TIPOS_SUPORTE_TI } from "@/constants/departamentos";
 import { TemplateFieldRenderer } from "./components/TemplateFieldRenderer";
 import type { TemplateField } from "@/types/template";
+import {
+  readCreateTicketDepartmentsDraft,
+  clearCreateTicketDepartmentsDraft,
+} from "./createTicketDepartmentsStorage";
 
 export function CreateTicketPage() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const { user, departamento: userDepartamento } = useAuth();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [ticketId, setTicketId] = useState<string | null>(null);
+  const [formReady, setFormReady] = useState(false);
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
@@ -51,6 +53,22 @@ export function CreateTicketPage() {
   const [templateFields, setTemplateFields] = useState<TemplateField[]>([]);
   const [dadosExtras, setDadosExtras] = useState<Record<string, unknown>>({});
   const [errors, setErrors] = useState<FormErrors>({});
+
+  useEffect(() => {
+    const draft = readCreateTicketDepartmentsDraft();
+    if (!draft) {
+      navigate("/criar-chamado", { replace: true });
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      area_origem: draft.area_origem,
+      setor_origem: draft.setor_origem,
+      area_destino: draft.area_destino,
+      setor_destino: draft.setor_destino,
+    }));
+    setFormReady(true);
+  }, [navigate]);
 
   useEffect(() => {
     if (formData.area_destino) {
@@ -75,27 +93,19 @@ export function CreateTicketPage() {
     }
   }, [formData.area_destino]);
 
-  // Pré-preenche email, nome e departamento de origem quando logado
   useEffect(() => {
     if (!user) return;
     setFormData((prev) => {
       const updates: Partial<typeof prev> = {};
       if (prev.email === "" && user.email) updates.email = user.email;
       if (prev.nome === "" && user.nome) updates.nome = user.nome;
-      if (userDepartamento?.trim() && (prev.area_origem === "" || !prev.area_origem)) {
-        updates.area_origem = userDepartamento.trim();
-        const setor = getSetorByDepartamento(userDepartamento);
-        if (setor) updates.setor_origem = setor;
-      }
       return Object.keys(updates).length > 0 ? { ...prev, ...updates } : prev;
     });
-  }, [user?.id, user?.email, user?.nome, userDepartamento]);
+  }, [user?.id, user?.email, user?.nome]);
 
   const handleChange = (name: string, value: string) => {
     setFormData((prev) => {
       const next = { ...prev, [name]: value };
-      if (name === "setor_origem") next.area_origem = "";
-      if (name === "setor_destino") next.area_destino = "";
       if (name === "area_destino" && value !== "TI") next.tipoSuporte = "";
       return next;
     });
@@ -112,6 +122,14 @@ export function CreateTicketPage() {
     const validation = validateTicketForm(formData);
     if (!validation.isValid) {
       setErrors(validation.errors);
+      if (
+        validation.errors.area_origem ||
+        validation.errors.setor_origem ||
+        validation.errors.area_destino ||
+        validation.errors.setor_destino
+      ) {
+        navigate("/criar-chamado", { replace: true });
+      }
       return;
     }
     const dynErrors: FormErrors = {};
@@ -142,6 +160,7 @@ export function CreateTicketPage() {
       };
       const response = await ticketService.create(payload);
       if (response.success) {
+        clearCreateTicketDepartmentsDraft();
         setTicketId(response.ticket.id || response.ticket.numero_protocolo);
         setSuccess(true);
       }
@@ -151,6 +170,14 @@ export function CreateTicketPage() {
       setLoading(false);
     }
   };
+
+  if (!formReady) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+        <CircularProgress aria-label="Carregando formulário" />
+      </Box>
+    );
+  }
 
   if (success && ticketId) {
     return (
@@ -190,6 +217,8 @@ export function CreateTicketPage() {
                   });
                   setDadosExtras({});
                   setTemplateFields([]);
+                  setFormReady(false);
+                  navigate("/criar-chamado", { replace: true });
                 }}
               >
                 Novo Chamado
@@ -202,18 +231,36 @@ export function CreateTicketPage() {
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 2, md: 2.5 }, maxWidth: 720, mx: "auto", width: "100%" }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        gap: { xs: 2, md: 2.5 },
+        maxWidth: { xs: "100%", md: 720 },
+        mx: "auto",
+        width: "100%",
+      }}
+    >
       <Box>
         <Typography variant="h5" gutterBottom sx={{ mb: 0.25 }}>
-          Enviar um Chamado
+          Dados do chamado
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Preencha os dados abaixo para criar um novo chamado.
+          Revise origem e destino, depois preencha assunto e mensagem.
         </Typography>
       </Box>
 
       {errors.submit && (
-        <Alert severity="error" onClose={() => setErrors((p) => ({ ...p, submit: undefined }))}>
+        <Alert
+          severity="error"
+          onClose={() =>
+            setErrors((p) => {
+              const next = { ...p };
+              delete next.submit;
+              return next;
+            })
+          }
+        >
           {errors.submit}
         </Alert>
       )}
@@ -221,6 +268,19 @@ export function CreateTicketPage() {
       <Card>
         <CardContent>
           <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Box>
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                Origem e destino
+              </Typography>
+              <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center" sx={{ mb: 1 }}>
+                <Chip size="small" variant="outlined" label={`Origem: ${formData.area_origem}`} />
+                <Chip size="small" variant="outlined" label={`Destino: ${formData.area_destino}`} />
+              </Stack>
+              <Button size="small" variant="text" onClick={() => navigate("/criar-chamado")}>
+                Alterar departamentos
+              </Button>
+            </Box>
+
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
               <TextField
                 label="Nome *"
@@ -239,58 +299,6 @@ export function CreateTicketPage() {
                 helperText={errors.email}
                 fullWidth
               />
-              <FormControl fullWidth error={Boolean(errors.setor_origem)}>
-                <InputLabel>Setor de origem *</InputLabel>
-                <Select
-                  value={formData.setor_origem}
-                  label="Setor de origem *"
-                  onChange={(e) => handleChange("setor_origem", e.target.value)}
-                >
-                  {SETORES_CHAMADO.map((setor) => (
-                    <MenuItem key={setor} value={setor}>{setor}</MenuItem>
-                  ))}
-                </Select>
-                {errors.setor_origem && <Typography variant="caption" color="error">{errors.setor_origem}</Typography>}
-              </FormControl>
-              <FormControl fullWidth disabled={!formData.setor_origem} error={Boolean(errors.area_origem)}>
-                <InputLabel>Departamento de origem *</InputLabel>
-                <Select
-                  value={formData.area_origem}
-                  label="Departamento de origem *"
-                  onChange={(e) => handleChange("area_origem", e.target.value)}
-                >
-                  {(DEPARTAMENTOS_POR_SETOR[formData.setor_origem] || []).map((dept) => (
-                    <MenuItem key={dept} value={dept}>{dept}</MenuItem>
-                  ))}
-                </Select>
-                {errors.area_origem && <Typography variant="caption" color="error">{errors.area_origem}</Typography>}
-              </FormControl>
-              <FormControl fullWidth error={Boolean(errors.setor_destino)}>
-                <InputLabel>Setor destinatário *</InputLabel>
-                <Select
-                  value={formData.setor_destino}
-                  label="Setor destinatário *"
-                  onChange={(e) => handleChange("setor_destino", e.target.value)}
-                >
-                  {SETORES_CHAMADO.map((setor) => (
-                    <MenuItem key={setor} value={setor}>{setor}</MenuItem>
-                  ))}
-                </Select>
-                {errors.setor_destino && <Typography variant="caption" color="error">{errors.setor_destino}</Typography>}
-              </FormControl>
-              <FormControl fullWidth disabled={!formData.setor_destino} error={Boolean(errors.area_destino)}>
-                <InputLabel>Departamento destinatário *</InputLabel>
-                <Select
-                  value={formData.area_destino}
-                  label="Departamento destinatário *"
-                  onChange={(e) => handleChange("area_destino", e.target.value)}
-                >
-                  {(DEPARTAMENTOS_POR_SETOR[formData.setor_destino] || []).map((dept) => (
-                    <MenuItem key={dept} value={dept}>{dept}</MenuItem>
-                  ))}
-                </Select>
-                {errors.area_destino && <Typography variant="caption" color="error">{errors.area_destino}</Typography>}
-              </FormControl>
               <TextField
                 label="Ramal"
                 type="number"
@@ -299,9 +307,10 @@ export function CreateTicketPage() {
                 error={Boolean(errors.ramal)}
                 helperText={errors.ramal}
                 fullWidth
+                sx={{ gridColumn: { xs: "1", sm: "1 / -1" } }}
               />
               {formData.area_destino === "TI" && (
-                <FormControl fullWidth>
+                <FormControl fullWidth sx={{ gridColumn: { xs: "1", sm: "1 / -1" } }}>
                   <InputLabel>Tipo de Suporte</InputLabel>
                   <Select
                     value={formData.tipoSuporte}
@@ -309,7 +318,9 @@ export function CreateTicketPage() {
                     onChange={(e) => handleChange("tipoSuporte", e.target.value)}
                   >
                     {TIPOS_SUPORTE_TI.map((opt) => (
-                      <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                      <MenuItem key={opt} value={opt}>
+                        {opt}
+                      </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -363,7 +374,7 @@ export function CreateTicketPage() {
               </Box>
             )}
 
-            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, pt: 1 }}>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, pt: 1, flexWrap: "wrap" }}>
               <Button variant="outlined" onClick={() => navigate("/")} disabled={loading}>
                 Cancelar
               </Button>

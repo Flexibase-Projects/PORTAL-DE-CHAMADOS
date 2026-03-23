@@ -7,6 +7,7 @@ import { AppLoader } from "@/components/AppLoader";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { CreateTicketPage } from "@/features/tickets/CreateTicketPage";
+import CreateTicketSelectDepartmentsPage from "@/features/tickets/CreateTicketSelectDepartmentsPage";
 import { MyTicketsPage } from "@/features/tickets/MyTicketsPage";
 import { TicketDetailPage } from "@/features/tickets/TicketDetailPage";
 import { AdminChamadosPage } from "@/features/admin/AdminChamadosPage";
@@ -41,7 +42,8 @@ function AppRoutes() {
     <AppShell>
       <Routes>
         <Route path="/" element={<DashboardPage />} />
-        <Route path="/criar-chamado" element={<CreateTicketPage />} />
+        <Route path="/criar-chamado" element={<CreateTicketSelectDepartmentsPage />} />
+        <Route path="/criar-chamado/formulario" element={<CreateTicketPage />} />
         <Route path="/meus-chamados" element={<MyTicketsPage />} />
         <Route path="/meus-chamados/:id" element={<TicketDetailPage />} />
         <Route path="/admin/chamados" element={<AdminChamadosPage />} />

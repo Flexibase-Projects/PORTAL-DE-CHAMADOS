@@ -9,18 +9,44 @@ const rootDir = join(dirname(fileURLToPath(import.meta.url)), '../../..');
 const LOG_DIR = join(rootDir, '.cursor');
 const LOG_PATH = join(LOG_DIR, 'debug.log');
 
-/** Mapa departamento -> setor. Ex-Comercial alinhado ao frontend (em Administrativo). */
+/** Alinhado ao frontend: Comercial vazio no picker; deptos comerciais em Administrativo; dashboard agrega Comercial em Administrativo. */
 const DEPARTAMENTOS_POR_SETOR = {
-  Administrativo: ['ASSESSORIA COMERCIAL', 'ASSESSORIA PRIVADO', 'CASAS DAS ATAS', 'COMPRAS', 'FINANCEIRO', 'GESTÃO COMERCIAL', 'LICITAÇÃO', 'MAP', 'MARKETING', 'RECEPÇÃO', 'REPRESENTANTES', 'RH', 'TI'],
+  Comercial: [],
+  Administrativo: [
+    'ASSESSORIA COMERCIAL',
+    'ASSESSORIA PRIVADO',
+    'CASAS DAS ATAS',
+    'COMPRAS',
+    'FINANCEIRO',
+    'GESTÃO COMERCIAL',
+    'LICITAÇÃO',
+    'MAP',
+    'MARKETING',
+    'RECEPÇÃO',
+    'REPRESENTANTES',
+    'RH',
+    'TI',
+  ],
   Industrial: ['ALMOXARIFADO', 'ENGENHARIA', 'EXPEDIÇÃO', 'GESTÃO INDUSTRIAL', 'MARCENARIA', 'MANUTENÇÃO', 'NOVOS PRODUTOS', 'PCP', 'QUALIDADE', 'RH', 'SEG. DO TRABALHO', 'SERRALHERIA', 'TAPEÇARIA'],
 };
+
+const ORDEM_SETOR = ['Comercial', 'Administrativo', 'Industrial'];
 
 function getSetorByArea(area) {
   if (!area || typeof area !== 'string') return null;
   const d = area.trim().toUpperCase();
-  for (const [setor, depts] of Object.entries(DEPARTAMENTOS_POR_SETOR)) {
+  for (const setor of ORDEM_SETOR) {
+    const depts = DEPARTAMENTOS_POR_SETOR[setor] || [];
     if (depts.some((x) => x.toUpperCase() === d)) return setor;
   }
+  return null;
+}
+
+/** Donut e filtros globais: só Administrativo + Industrial (Comercial soma em Administrativo). */
+function getSetorParaDashboard(area) {
+  const s = getSetorByArea(area);
+  if (s === 'Industrial') return 'Industrial';
+  if (s === 'Administrativo' || s === 'Comercial') return 'Administrativo';
   return null;
 }
 
@@ -31,7 +57,7 @@ function aggregateByMonth(ticketList, filterSetor = null) {
   const byMonthAbertos = {};
   const byMonthFechados = {};
   ticketList.forEach((t) => {
-    const setor = getSetorByArea(t.solicitante?.departamento ?? t.area_destino);
+    const setor = getSetorParaDashboard(t.solicitante?.departamento ?? t.area_destino);
     if (filterSetor !== null && setor !== filterSetor) return;
     const created = t.created_at ? String(t.created_at).slice(0, 7) : null;
     if (created) {
@@ -72,12 +98,12 @@ function aggregateByMonthInRange(ticketList, filterSetor, dateFrom, dateTo) {
 
 /** Contagem por setor para o donut. Usa departamento de origem (solicitante). */
 function aggregateBySetor(ticketList) {
-  const counts = { Comercial: 0, Administrativo: 0, Industrial: 0 };
+  const counts = { Administrativo: 0, Industrial: 0 };
   ticketList.forEach((t) => {
-    const setor = getSetorByArea(t.solicitante?.departamento ?? t.area_destino);
+    const setor = getSetorParaDashboard(t.solicitante?.departamento ?? t.area_destino);
     if (setor && counts[setor] !== undefined) counts[setor]++;
   });
-  return ['Comercial', 'Administrativo', 'Industrial']
+  return ['Administrativo', 'Industrial']
     .map((setor) => ({ setor, count: counts[setor] }))
     .filter((x) => x.count > 0);
 }
@@ -192,7 +218,7 @@ export const dashboardService = {
     /** Por dia: "abertos" = saldo de abertos ao fim do dia (criados até o dia - fechados até o dia); "fechados" = quantidade fechada naquele dia. */
     const buildPorDia = (list, filterSetor = null) => {
       const base = filterSetor
-        ? list.filter(t => getSetorByArea(t.solicitante?.departamento ?? t.area_destino) === filterSetor)
+        ? list.filter(t => getSetorParaDashboard(t.solicitante?.departamento ?? t.area_destino) === filterSetor)
         : list;
       const out = [];
       const toDateStr = (x) => (x || '').toString().slice(0, 10);
