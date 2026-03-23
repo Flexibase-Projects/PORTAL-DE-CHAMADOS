@@ -103,6 +103,9 @@ export function AppSidebar({
   const sectionMuted = isLight ? SECTION_MUTED_LIGHT : muiTheme.palette.text.secondary;
   const navIdleColor = isLight ? NAV_IDLE_LIGHT : muiTheme.palette.text.secondary;
   const activeNavColor = isLight ? BRAND_BLUE : muiTheme.palette.primary.light;
+  const selectedItemShadow = isLight
+    ? "0 1px 4px rgba(37, 99, 235, 0.12), 0 1px 2px rgba(15, 23, 42, 0.04)"
+    : "0 1px 4px rgba(0, 0, 0, 0.28), 0 0 1px rgba(255, 255, 255, 0.06)";
 
   const handleToggle = () => {
     if (isMobile) onHeaderClick?.();
@@ -355,9 +358,11 @@ export function AppSidebar({
                         "&.Mui-selected": {
                           backgroundColor: `${navSelectedBg} !important`,
                           color: `${activeNavColor} !important`,
+                          boxShadow: selectedItemShadow,
                           "&:hover": {
                             backgroundColor: `${navSelectedHoverBg} !important`,
                             color: `${activeNavColor} !important`,
+                            boxShadow: selectedItemShadow,
                           },
                           "& .MuiListItemIcon-root": { color: `${activeNavColor} !important` },
                           "& .MuiListItemText-primary": {
