@@ -140,6 +140,10 @@ export function TopTicketCreatorsCard({
   return (
     <Card
       sx={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
         "&:hover": {
           boxShadow: `0 0 24px ${alpha(secondaryColor, 0.28)}, 0 0 48px ${alpha(secondaryColor, 0.12)}`,
         },
@@ -162,18 +166,21 @@ export function TopTicketCreatorsCard({
             <Maximize2 size={18} />
           </IconButton>
         }
-        sx={{ "& .MuiCardHeader-action": { m: 0, alignSelf: "center" } }}
+        sx={{ flexShrink: 0, "& .MuiCardHeader-action": { m: 0, alignSelf: "center" } }}
       />
-      <CardContent sx={{ pt: 0 }}>
+      <CardContent sx={{ pt: 0, flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         {filtered.length === 0 ? (
-          <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
-            Sem dados no período.
-          </Typography>
+          <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: { xs: 220, sm: 250 } }}>
+            <Typography variant="body2" color="text.secondary" textAlign="center">
+              Sem dados no período.
+            </Typography>
+          </Box>
         ) : (
-          <>
+          <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: { xs: 220, sm: 250 } }}>
             <TopListRows rows={slice} startRank={safePage * ITEMS_PER_PAGE + 1} />
+            <Box sx={{ flex: 1, minHeight: 0 }} />
             {pageCount > 1 && (
-              <Box sx={{ display: "flex", justifyContent: "center", gap: 0.75, mt: 2 }}>
+              <Box sx={{ display: "flex", justifyContent: "center", gap: 0.75, pt: 2, flexShrink: 0 }}>
                 {Array.from({ length: pageCount }, (_, i) => (
                   <Box
                     key={i}
@@ -196,7 +203,7 @@ export function TopTicketCreatorsCard({
                 ))}
               </Box>
             )}
-          </>
+          </Box>
         )}
       </CardContent>
       <ChartFullscreenDialog

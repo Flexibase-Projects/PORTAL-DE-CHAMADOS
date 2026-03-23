@@ -454,18 +454,18 @@ export function DashboardPage() {
         sx={{
           display: "grid",
           gap: 1.5,
-          alignItems: "start",
-          gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1.65fr) minmax(280px, 1fr)" },
+          alignItems: "stretch",
+          gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" },
         }}
       >
-        <Box sx={{ minWidth: 0, width: "100%" }}>
+        <Box sx={{ minWidth: 0, width: "100%", display: "flex", flexDirection: "column" }}>
           <DepartmentBarChart
             data={stats.por_departamento ?? []}
             filterSetor={filterSetorGlobal}
             getSetor={getSetorByDepartamento}
           />
         </Box>
-        <Box sx={{ minWidth: 0, width: "100%" }}>
+        <Box sx={{ minWidth: 0, width: "100%", display: "flex", flexDirection: "column" }}>
           <TopTicketCreatorsCard
             data={stats.top_solicitantes ?? []}
             filterSetor={filterSetorGlobal}
