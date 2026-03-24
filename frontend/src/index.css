@@ -98,8 +98,7 @@
   body {
     @apply bg-background text-foreground;
     /* Mesma pilha que src/theme/fontFamily.ts */
-    font-family: "Century Gothic", CenturyGothic, "AppleGothic", "Trebuchet MS", "Arial Narrow", Arial,
-      sans-serif;
+    font-family: "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
 }
 
@@ -120,7 +119,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: "Century Gothic", CenturyGothic, "AppleGothic", "Trebuchet MS", "Arial Narrow", Arial,
-      sans-serif;
+    font-family: "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
 }

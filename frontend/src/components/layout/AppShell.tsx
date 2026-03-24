@@ -4,7 +4,7 @@ import Drawer from "@mui/material/Drawer";
 import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
 
-const DRAWER_WIDTH = 220;
+const DRAWER_WIDTH = 252;
 const DRAWER_WIDTH_COLLAPSED = 52;
 
 interface AppShellProps {

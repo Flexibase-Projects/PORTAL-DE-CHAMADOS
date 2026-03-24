@@ -77,6 +77,9 @@ const SECTION_MUTED_LIGHT = "#94a3b8";
 const ICON_SIZE = 20;
 const LOGO_BOX = 40;
 const LOGO_ICON = 22;
+// Mesmo arredondamento base dos cards/graficos (theme.shape.borderRadius = 10px)
+const NAV_ITEM_RADIUS = 1;
+const NAV_ICON_STROKE = 2.2;
 
 function pathIsActive(pathname: string, itemPath: string): boolean {
   if (itemPath === "/") return pathname === "/";
@@ -183,24 +186,12 @@ export function AppSidebar({
                 <Typography
                   component="div"
                   sx={{
+                    display: "block",
                     fontWeight: 700,
-                    fontSize: "1.0625rem",
+                    fontSize: "0.95rem",
                     lineHeight: 1.2,
                     color: isLight ? BRAND_TITLE : "text.primary",
-                    letterSpacing: "-0.02em",
-                  }}
-                >
-                  PDC
-                </Typography>
-                <Typography
-                  component="div"
-                  variant="caption"
-                  sx={{
-                    display: "block",
-                    mt: 0.25,
-                    fontSize: "0.75rem",
-                    color: "text.secondary",
-                    lineHeight: 1.25,
+                    letterSpacing: "-0.01em",
                   }}
                 >
                   Portal de Chamados
@@ -335,14 +326,14 @@ export function AppSidebar({
               )}
               {items.map((item) => {
                 const isActive = pathIsActive(location.pathname, item.path);
-                const icon = <item.icon style={{ width: ICON_SIZE, height: ICON_SIZE }} strokeWidth={1.75} />;
+                const icon = <item.icon style={{ width: ICON_SIZE, height: ICON_SIZE }} strokeWidth={NAV_ICON_STROKE} />;
                 return (
                   <Tooltip key={item.path} title={collapsed ? item.title : ""} placement="right">
                     <ListItemButton
                       selected={isActive}
                       onClick={() => handleNav(item.path)}
                       sx={{
-                        borderRadius: 3,
+                        borderRadius: NAV_ITEM_RADIUS,
                         mb: 0.5,
                         py: 1,
                         minHeight: 44,
@@ -412,9 +403,10 @@ export function AppSidebar({
                                 fontSize: "0.875rem",
                                 fontWeight: isActive ? 600 : 500,
                                 color: "inherit",
+                                whiteSpace: "nowrap",
                               },
                             }}
-                            sx={{ flex: "1 1 auto", minWidth: 0, my: 0 }}
+                            sx={{ flex: "1 1 auto", minWidth: 0, my: 0, mr: 0.75 }}
                           />
                           {isActive && (
                             <Box
@@ -425,7 +417,7 @@ export function AppSidebar({
                                 borderRadius: "50%",
                                 bgcolor: activeNavColor,
                                 flexShrink: 0,
-                                ml: 0.5,
+                                ml: 0.75,
                               }}
                               aria-hidden
                             />
@@ -454,7 +446,7 @@ export function AppSidebar({
           <ListItemButton
             onClick={toggleTheme}
             sx={{
-              borderRadius: 3,
+              borderRadius: NAV_ITEM_RADIUS,
               py: 1,
               minHeight: 44,
               justifyContent: collapsed ? "center" : "flex-start",
@@ -473,9 +465,9 @@ export function AppSidebar({
               }}
             >
               {theme === "light" ? (
-                <Moon style={{ width: ICON_SIZE, height: ICON_SIZE }} strokeWidth={1.75} />
+                <Moon style={{ width: ICON_SIZE, height: ICON_SIZE }} strokeWidth={NAV_ICON_STROKE} />
               ) : (
-                <Sun style={{ width: ICON_SIZE, height: ICON_SIZE }} strokeWidth={1.75} />
+                <Sun style={{ width: ICON_SIZE, height: ICON_SIZE }} strokeWidth={NAV_ICON_STROKE} />
               )}
             </ListItemIcon>
             {!collapsed && (
