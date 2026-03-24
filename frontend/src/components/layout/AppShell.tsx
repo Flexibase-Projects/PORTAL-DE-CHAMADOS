@@ -87,6 +87,7 @@ export function AppShell({ children }: AppShellProps) {
           flexDirection: "column",
           minHeight: "100vh",
           minWidth: 0,
+          bgcolor: "background.default",
         }}
       >
         <AppHeader onMobileToggle={handleDrawerToggle} />
@@ -95,6 +96,7 @@ export function AppShell({ children }: AppShellProps) {
             flex: 1,
             overflow: "auto",
             p: { xs: 1, sm: 1.5, md: 2, lg: 3 },
+            bgcolor: "background.default",
           }}
         >
           {children}

@@ -465,7 +465,8 @@ export function ChamadosLeadTimeCalendar() {
   ];
 
   const dark = theme.palette.mode === "dark";
-  const primaryC = theme.palette.primary;
+  const dashboardBlue = dark ? "#4f86ff" : "#111184";
+  const dashboardBlueDark = dark ? "#60a5fa" : "#132937";
   const secondaryC = theme.palette.secondary;
 
   /** Botões da barra do calendário: borda primary suave, hover com secondary (harmonia com o restante do portal). */
@@ -478,13 +479,13 @@ export function ChamadosLeadTimeCalendar() {
     boxShadow: "none",
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: alpha(primaryC.main, dark ? 0.42 : 0.22),
-    color: dark ? primaryC.light : primaryC.main,
-    bgcolor: alpha(primaryC.main, dark ? 0.12 : 0.06),
+    borderColor: alpha(dashboardBlue, dark ? 0.42 : 0.22),
+    color: dark ? dashboardBlueDark : dashboardBlue,
+    bgcolor: alpha(dashboardBlue, dark ? 0.12 : 0.06),
     "&:hover": {
       borderColor: secondaryC.main,
       bgcolor: alpha(secondaryC.main, dark ? 0.2 : 0.12),
-      color: dark ? primaryC.light : primaryC.dark,
+      color: dark ? dashboardBlueDark : dashboardBlueDark,
     },
   };
 
@@ -582,7 +583,7 @@ export function ChamadosLeadTimeCalendar() {
         <Box
           sx={{
             height: 10,
-            background: `linear-gradient(90deg, ${theme.palette.primary.dark ?? theme.palette.primary.main} 0%, ${theme.palette.primary.light} 100%)`,
+            background: `linear-gradient(90deg, ${dashboardBlue} 0%, ${dashboardBlueDark} 100%)`,
           }}
         />
         <Box
@@ -602,7 +603,7 @@ export function ChamadosLeadTimeCalendar() {
               variant="caption"
               fontWeight={800}
               textAlign="center"
-              sx={{ color: theme.palette.primary.main, fontSize: "0.72rem", letterSpacing: "0.02em" }}
+              sx={{ color: dashboardBlue, fontSize: "0.72rem", letterSpacing: "0.02em" }}
             >
               {d}
             </Typography>
@@ -691,7 +692,7 @@ export function ChamadosLeadTimeCalendar() {
                               : theme.palette.mode === "dark"
                                 ? alpha(theme.palette.background.default, 0.35)
                                 : theme.palette.background.paper,
-                          outline: isToday ? `2px solid ${theme.palette.primary.main}` : "none",
+                          outline: isToday ? `2px solid ${dashboardBlue}` : "none",
                           outlineOffset: -1,
                           borderRadius: isToday ? 0.5 : 0,
                           cursor: dayItems.length > 0 ? "pointer" : "default",
@@ -702,7 +703,7 @@ export function ChamadosLeadTimeCalendar() {
                             }),
                           ...(dayItems.length > 0 && {
                             "&:hover": {
-                              bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.12 : 0.08),
+                              bgcolor: alpha(dashboardBlue, theme.palette.mode === "dark" ? 0.12 : 0.08),
                             },
                           }),
                         }}
@@ -815,11 +816,11 @@ export function ChamadosLeadTimeCalendar() {
                                 alignItems: "center",
                                 justifyContent: "center",
                                 cursor: "pointer",
-                                bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.14 : 0.08),
-                                border: `1px dashed ${alpha(theme.palette.primary.main, 0.38)}`,
+                                bgcolor: alpha(dashboardBlue, theme.palette.mode === "dark" ? 0.14 : 0.08),
+                                border: `1px dashed ${alpha(dashboardBlue, 0.38)}`,
                                 transition: "background-color 0.12s ease",
                                 "&:hover": {
-                                  bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.2 : 0.12),
+                                  bgcolor: alpha(dashboardBlue, theme.palette.mode === "dark" ? 0.2 : 0.12),
                                 },
                               }}
                               aria-label={`Mais ${plus} chamados neste dia`}

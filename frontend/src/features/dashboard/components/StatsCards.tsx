@@ -3,12 +3,6 @@ import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
-import {
-  DASHBOARD_TOTAL_BLUE,
-  STATUS_COLOR_ABERTO,
-  STATUS_COLOR_CONCLUIDO,
-  STATUS_COLOR_EM_ANDAMENTO,
-} from "@/constants/ticketStatusColors";
 import { FONT_STACK_PERCENT_SYMBOL } from "@/theme/fontFamily";
 
 interface StatsCardsProps {
@@ -20,11 +14,20 @@ interface StatsCardsProps {
 
 type StatKey = "total" | "abertos" | "emAndamento" | "concluidos";
 
-const stats: readonly { key: StatKey; label: string; color: string }[] = [
-  { key: "total", label: "Total", color: DASHBOARD_TOTAL_BLUE },
-  { key: "abertos", label: "Abertos", color: STATUS_COLOR_ABERTO },
-  { key: "emAndamento", label: "Em Andamento", color: STATUS_COLOR_EM_ANDAMENTO },
-  { key: "concluidos", label: "Concluidos", color: STATUS_COLOR_CONCLUIDO },
+const CARD_ACCENT: Record<StatKey, string> = {
+  total: "#00072d",
+  abertos: "#051650",
+  emAndamento: "#0A2472",
+  concluidos: "#123499",
+};
+const CARD_TEXT_COLOR_LIGHT = "#111184";
+const CARD_TEXT_COLOR_DARK = "#60a5fa";
+
+const stats: readonly { key: StatKey; label: string }[] = [
+  { key: "total", label: "Total" },
+  { key: "abertos", label: "Abertos" },
+  { key: "emAndamento", label: "Em Andamento" },
+  { key: "concluidos", label: "Concluidos" },
 ];
 
 function percentForCard(key: StatKey, count: number, totalAll: number): number {
@@ -35,6 +38,7 @@ function percentForCard(key: StatKey, count: number, totalAll: number): number {
 
 export function StatsCards({ total, abertos, emAndamento, concluidos }: StatsCardsProps) {
   const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
   const values: Record<StatKey, number> = { total, abertos, emAndamento, concluidos };
 
   return (
@@ -51,7 +55,7 @@ export function StatsCards({ total, abertos, emAndamento, concluidos }: StatsCar
     >
       {stats.map((s) => {
         const count = values[s.key];
-        const color = s.color;
+        const color = isDark ? CARD_TEXT_COLOR_DARK : CARD_TEXT_COLOR_LIGHT;
         const pct = percentForCard(s.key, count, total);
         const barWidth = s.key === "total" ? 100 : pct;
 
@@ -72,14 +76,7 @@ export function StatsCards({ total, abertos, emAndamento, concluidos }: StatsCar
               sx={{
                 py: "14px !important",
                 px: 2,
-                background:
-                  s.key === "abertos"
-                    ? `linear-gradient(90deg, ${alpha(STATUS_COLOR_ABERTO, 0.22)} 0%, ${alpha(STATUS_COLOR_ABERTO, 0.07)} 46%, transparent 74%)`
-                    : s.key === "emAndamento"
-                      ? `linear-gradient(90deg, ${alpha(STATUS_COLOR_EM_ANDAMENTO, 0.22)} 0%, ${alpha(STATUS_COLOR_EM_ANDAMENTO, 0.07)} 46%, transparent 74%)`
-                      : s.key === "concluidos"
-                        ? `linear-gradient(90deg, ${alpha(STATUS_COLOR_CONCLUIDO, 0.22)} 0%, ${alpha(STATUS_COLOR_CONCLUIDO, 0.07)} 46%, transparent 74%)`
-                        : `linear-gradient(90deg, ${alpha(color, 0.14)} 0%, transparent 72%)`,
+                background: "transparent",
               }}
             >
               <Box
@@ -141,7 +138,7 @@ export function StatsCards({ total, abertos, emAndamento, concluidos }: StatsCar
                     flex: 1,
                     height: 5,
                     borderRadius: 2.5,
-                    bgcolor: alpha(theme.palette.divider, 0.9),
+                    bgcolor: "background.default",
                     overflow: "hidden",
                   }}
                 >

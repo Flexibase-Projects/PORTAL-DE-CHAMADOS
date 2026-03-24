@@ -96,12 +96,14 @@ export function TicketsTable({
   /** Bootstrap sm/md: compactar células entre 576px e 767px. */
   const isCompactTable = useMediaQuery(theme.breakpoints.between("sm", "md"));
   const isDark = theme.palette.mode === "dark";
-  const primary = theme.palette.primary.main;
+  const dashboardBlue = isDark ? "#4f86ff" : "#111184";
+  const dashboardBlueDark = isDark ? "#60a5fa" : "#132937";
+  const primary = dashboardBlue;
   const headerBg = alpha(primary, isDark ? 0.14 : 0.07);
   const headerRule = alpha(primary, isDark ? 0.35 : 0.22);
   const rowHoverBg = alpha(primary, isDark ? 0.08 : 0.05);
   const rowStripe = alpha(primary, isDark ? 0.04 : 0.025);
-  const headLabelColor = isDark ? theme.palette.primary.light : theme.palette.primary.dark;
+  const headLabelColor = isDark ? dashboardBlueDark : dashboardBlueDark;
 
   const headCellSx = {
     py: { sm: 1.35, md: 1.65, lg: 1.75 },

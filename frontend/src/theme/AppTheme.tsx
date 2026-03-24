@@ -7,7 +7,7 @@ const PRIMARY_BLUE = "#2563eb";
 const LIGHT = {
   primary: { main: PRIMARY_BLUE, light: "#3b82f6", dark: "#1d4ed8", contrastText: "#fff" },
   secondary: { main: "#0ea5e9", light: "#38bdf8", dark: "#0284c7", contrastText: "#fff" },
-  background: { default: "#F0F8FF", paper: "#ffffff" },
+  background: { default: "#f6f7f9", paper: "#ffffff" },
   divider: "rgba(0, 0, 0, 0.08)",
   action: {
     hover: "rgba(0, 0, 0, 0.04)",

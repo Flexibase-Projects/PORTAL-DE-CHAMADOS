@@ -251,10 +251,24 @@ export function DashboardPage() {
     display: "flex",
     flexDirection: "column",
     gap: { xs: 1.5, sm: 2, md: 2.5 },
+    p: { xs: 1, sm: 1.25, md: 1.5 },
+    borderRadius: 2,
+    bgcolor: theme.palette.mode === "dark" ? alpha(theme.palette.background.paper, 0.28) : alpha("#ffffff", 0.32),
     "& .MuiCard-root": {
       border: "none",
       borderWidth: 0,
       outline: "none",
+      boxShadow:
+        theme.palette.mode === "dark"
+          ? "0 6px 18px rgba(0,0,0,0.38)"
+          : "0 6px 18px rgba(15, 23, 42, 0.1), 0 2px 6px rgba(15, 23, 42, 0.08)",
+      transition: "box-shadow 0.22s ease, transform 0.18s ease",
+      "&:hover": {
+        boxShadow:
+          theme.palette.mode === "dark"
+            ? `0 0 26px ${alpha(theme.palette.primary.main, 0.32)}, 0 0 52px ${alpha(theme.palette.primary.main, 0.16)}`
+            : `0 0 26px ${alpha("#111184", 0.22)}, 0 0 52px ${alpha("#111184", 0.1)}`,
+      },
     },
   } as const;
 

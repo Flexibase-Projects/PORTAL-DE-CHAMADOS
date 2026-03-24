@@ -34,10 +34,11 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import { Maximize2 } from "lucide-react";
 import { ChartFullscreenDialog } from "./ChartFullscreenDialog";
 import type { PeriodKey } from "../dashboardPeriod";
-import { DASHBOARD_GAUGE_GREEN_END, DASHBOARD_GAUGE_GREEN_START } from "@/constants/ticketStatusColors";
 
 type PorDiaItem = { date: string; dateKey?: string; abertos?: number; fechados?: number; count?: number };
 type PorMesItem = { mes: string; mesKey?: string; abertos?: number; fechados?: number; count?: number };
+const DASHBOARD_BAR_GRADIENT_LIGHT = { from: "#111184", to: "#132937" } as const;
+const DASHBOARD_BAR_GRADIENT_DARK = { from: "#4f86ff", to: "#60a5fa" } as const;
 
 function ChartExpandButton({ onClick, ariaLabel }: { onClick: () => void; ariaLabel: string }) {
   return (
@@ -54,8 +55,8 @@ function ChartExpandButton({ onClick, ariaLabel }: { onClick: () => void; ariaLa
 
 /** Glow no hover dos cards de gráfico do dashboard (tom do card “Chamados por período”). */
 function dashboardChartCardHoverShadow(theme: Theme) {
-  const c = theme.palette.secondary.main;
-  return `0 0 24px ${alpha(c, 0.28)}, 0 0 48px ${alpha(c, 0.12)}`;
+  const c = theme.palette.mode === "dark" ? theme.palette.secondary.main : "#111184";
+  return `0 0 28px ${alpha(c, 0.34)}, 0 0 56px ${alpha(c, 0.16)}`;
 }
 
 function ChamadosPorPeriodoPlot({
@@ -84,9 +85,11 @@ function ChamadosPorPeriodoPlot({
   resizeKey?: string | number | boolean;
 }) {
   const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+  const barGradient = isDark ? DASHBOARD_BAR_GRADIENT_DARK : DASHBOARD_BAR_GRADIENT_LIGHT;
   const fillFechados = `url(#${fechadosGradientId})`;
   const colorFechadosLabel = "#498DF2";
-  const colorAbertos = "#dc2626";
+  const colorAbertos = "#FA9E00";
   const legendWrapperStyle = { paddingTop: 4, lineHeight: 1.2 } as const;
 
   return (
@@ -95,8 +98,8 @@ function ChamadosPorPeriodoPlot({
         <ComposedChart data={chartData} margin={chartMargin as { top: number; right: number; bottom: number; left: number }}>
           <defs>
             <linearGradient id={fechadosGradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#46DCFA" />
-              <stop offset="100%" stopColor="#498DF2" />
+              <stop offset="0%" stopColor={barGradient.from} />
+              <stop offset="100%" stopColor={barGradient.to} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -345,8 +348,9 @@ interface BarChartProps {
   getSetor: (area: string) => string | null;
 }
 
-/** Mesmas cores do gradiente "Fechados" (#46DCFA → #498DF2, invertido no eixo da barra). */
-const DEPT_BAR_GRADIENT = { from: "#46DCFA", to: "#498DF2" } as const;
+/** Mesmas cores de barras do dashboard (#111184 -> #132937). */
+const DEPT_BAR_GRADIENT_LIGHT = { from: "#111184", to: "#132937" } as const;
+const DEPT_BAR_GRADIENT_DARK = { from: "#4f86ff", to: "#60a5fa" } as const;
 
 function DepartmentBarPlot({
   filteredData,
@@ -362,6 +366,8 @@ function DepartmentBarPlot({
   barGradientId: string;
 }) {
   const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+  const deptBarGradient = isDark ? DEPT_BAR_GRADIENT_DARK : DEPT_BAR_GRADIENT_LIGHT;
   const fillDept = `url(#${barGradientId})`;
   return (
     <Box sx={[{ width: "100%", minHeight: 0 }, heightSx] as SxProps<Theme>}>
@@ -369,8 +375,8 @@ function DepartmentBarPlot({
         <BarChart data={filteredData} layout="vertical" margin={{ left: 8, right: 8 }}>
           <defs>
             <linearGradient id={barGradientId} x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor={DEPT_BAR_GRADIENT.from} />
-              <stop offset="100%" stopColor={DEPT_BAR_GRADIENT.to} />
+              <stop offset="0%" stopColor={deptBarGradient.from} />
+              <stop offset="100%" stopColor={deptBarGradient.to} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" horizontal={false} />
@@ -481,16 +487,21 @@ interface PorSetorProps {
 }
 
 const SETOR_COLOR_MAP: Record<string, string> = {
-  Administrativo: "#8a00c4",
-  Industrial: "#32cd32",
-  Comercial: "#8a00c4",
+  Administrativo: "#111184",
+  Industrial: "#FAD500",
+  Comercial: "#111184",
 };
 
 /** Gradientes horizontais (esquerda → direita) por fatia da rosca. */
 const SETOR_GRADIENT_STOPS: Record<string, { from: string; to: string }> = {
-  Industrial: { from: "#7fff00", to: "#32cd32" },
-  Administrativo: { from: "#6c3baa", to: "#8a00c4" },
-  Comercial: { from: "#6c3baa", to: "#8a00c4" },
+  Industrial: { from: "#FAD500", to: "#FAB700" },
+  Administrativo: { from: "#111184", to: "#132937" },
+  Comercial: { from: "#111184", to: "#132937" },
+};
+const SETOR_GRADIENT_STOPS_DARK: Record<string, { from: string; to: string }> = {
+  Industrial: { from: "#FAD500", to: "#FAB700" },
+  Administrativo: { from: "#4f86ff", to: "#60a5fa" },
+  Comercial: { from: "#4f86ff", to: "#60a5fa" },
 };
 
 const SETORES_DONUT = ["Industrial", "Administrativo"];
@@ -520,10 +531,11 @@ function TicketsBySetorDonutPlot({
   fallbackGradientId: string;
 }) {
   const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
   const donutLegendStyle = { paddingTop: 4, lineHeight: 1.2 } as const;
-
-  const indStops = SETOR_GRADIENT_STOPS.Industrial;
-  const admStops = SETOR_GRADIENT_STOPS.Administrativo;
+  const gradientStops = isDark ? SETOR_GRADIENT_STOPS_DARK : SETOR_GRADIENT_STOPS;
+  const indStops = gradientStops.Industrial;
+  const admStops = gradientStops.Administrativo;
 
   return (
     <Box sx={[{ width: "100%", flexShrink: 0, minHeight: 0 }, heightSx] as SxProps<Theme>}>
@@ -769,8 +781,8 @@ function ResolvidosGaugePlot({
           <PolarAngleAxis type="number" domain={[0, 100]} tick={false} angleAxisId={0} />
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor={DASHBOARD_GAUGE_GREEN_START} />
-              <stop offset="100%" stopColor={DASHBOARD_GAUGE_GREEN_END} />
+              <stop offset="0%" stopColor="#FAD500" />
+              <stop offset="100%" stopColor="#FAB700" />
             </linearGradient>
           </defs>
           <RadialBar
