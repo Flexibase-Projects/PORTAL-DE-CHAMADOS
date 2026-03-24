@@ -9,6 +9,7 @@ import {
   STATUS_COLOR_CONCLUIDO,
   STATUS_COLOR_EM_ANDAMENTO,
 } from "@/constants/ticketStatusColors";
+import { FONT_STACK_PERCENT_SYMBOL } from "@/theme/fontFamily";
 
 interface StatsCardsProps {
   total: number;
@@ -120,8 +121,20 @@ export function StatsCards({ total, abertos, emAndamento, concluidos }: StatsCar
                 </Typography>
               </Box>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
-                <Typography variant="caption" fontWeight={600} sx={{ color, flexShrink: 0 }}>
-                  {pct}%
+                <Typography variant="caption" fontWeight={600} sx={{ color, flexShrink: 0 }} component="span">
+                  <Box component="span" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                    {pct}
+                  </Box>
+                  <Box
+                    component="span"
+                    sx={{
+                      fontFamily: FONT_STACK_PERCENT_SYMBOL,
+                      fontWeight: 600,
+                      marginLeft: "0.05em",
+                    }}
+                  >
+                    %
+                  </Box>
                 </Typography>
                 <Box
                   sx={{

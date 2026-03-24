@@ -3,11 +3,10 @@ import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
-import IconButton from "@mui/material/IconButton";
 import Avatar from "@mui/material/Avatar";
 import Divider from "@mui/material/Divider";
 import { alpha, useTheme } from "@mui/material/styles";
-import { Pencil, Clock, CheckCircle2, HelpCircle } from "lucide-react";
+import { Clock, CheckCircle2, HelpCircle } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import type { Ticket, TicketStatus } from "@/types/ticket";
 
@@ -59,7 +58,6 @@ export function TicketCard({
 }: TicketCardProps) {
   const theme = useTheme();
   const dark = theme.palette.mode === "dark";
-  const primary = theme.palette.primary.main;
   const handleOpen = () => onView?.(ticket);
   const subtitle = subtitleLine(ticket);
   const displayName = ticket.solicitante_nome?.trim() || ticket.solicitante_email || "Solicitante";
@@ -119,59 +117,49 @@ export function TicketCard({
           <Typography variant="caption" color="text.secondary" fontFamily="monospace" sx={{ fontSize: "0.7rem", pt: 0.25 }}>
             {protocolCompact(ticket.numero_protocolo)}
           </Typography>
-          {showActions && onView && (
-            <Box
-              sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end", gap: 0.75, flexShrink: 0, maxWidth: "100%" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <IconButton
-                size="small"
-                color="primary"
-                aria-label="Abrir chamado"
-                onClick={handleOpen}
+          {showActions &&
+            onView &&
+            (ticket.status === "Aberto" || ticket.status === "Em Andamento") && (
+              <Box
                 sx={{
-                  width: 32,
-                  height: 32,
-                  border: 1,
-                  borderColor: alpha(primary, dark ? 0.4 : 0.28),
-                  borderRadius: 1,
-                  bgcolor: alpha(primary, dark ? 0.12 : 0.06),
-                  "&:hover": {
-                    bgcolor: alpha(primary, dark ? 0.22 : 0.12),
-                    borderColor: primary,
-                  },
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: 0.75,
+                  flexShrink: 0,
+                  maxWidth: "100%",
                 }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <Pencil size={16} strokeWidth={2} />
-              </IconButton>
-              {ticket.status === "Aberto" && (
-                <Button
-                  size="small"
-                  variant="contained"
-                  color="primary"
-                  disableElevation
-                  startIcon={<Clock size={14} strokeWidth={2.5} />}
-                  onClick={handleOpen}
-                  sx={ctaSx}
-                >
-                  Iniciar
-                </Button>
-              )}
-              {ticket.status === "Em Andamento" && (
-                <Button
-                  size="small"
-                  variant="contained"
-                  color="success"
-                  disableElevation
-                  startIcon={<CheckCircle2 size={14} strokeWidth={2.5} />}
-                  onClick={handleOpen}
-                  sx={ctaSx}
-                >
-                  Encerrar
-                </Button>
-              )}
-            </Box>
-          )}
+                {ticket.status === "Aberto" && (
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="primary"
+                    disableElevation
+                    startIcon={<Clock size={14} strokeWidth={2.5} />}
+                    onClick={handleOpen}
+                    sx={ctaSx}
+                  >
+                    Iniciar
+                  </Button>
+                )}
+                {ticket.status === "Em Andamento" && (
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="success"
+                    disableElevation
+                    startIcon={<CheckCircle2 size={14} strokeWidth={2.5} />}
+                    onClick={handleOpen}
+                    sx={ctaSx}
+                  >
+                    Encerrar
+                  </Button>
+                )}
+              </Box>
+            )}
         </Box>
 
         <Typography

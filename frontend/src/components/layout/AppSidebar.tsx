@@ -8,7 +8,7 @@ import {
   Sun,
   TicketCheck,
   ChevronLeft,
-  Menu,
+  ChevronRight,
   FileEdit,
   Users,
   CalendarDays,
@@ -103,9 +103,10 @@ export function AppSidebar({
   const sectionMuted = isLight ? SECTION_MUTED_LIGHT : muiTheme.palette.text.secondary;
   const navIdleColor = isLight ? NAV_IDLE_LIGHT : muiTheme.palette.text.secondary;
   const activeNavColor = isLight ? BRAND_BLUE : muiTheme.palette.primary.light;
+  const selectedGlow = isLight ? alpha(BRAND_BLUE, 0.1) : alpha(BRAND_BLUE, 0.14);
   const selectedItemShadow = isLight
-    ? "0 1px 4px rgba(37, 99, 235, 0.12), 0 1px 2px rgba(15, 23, 42, 0.04)"
-    : "0 1px 4px rgba(0, 0, 0, 0.28), 0 0 1px rgba(255, 255, 255, 0.06)";
+    ? `0 2px 8px rgba(37, 99, 235, 0.18), 0 1px 3px rgba(15, 23, 42, 0.07), 0 0 0 1px rgba(37, 99, 235, 0.06), 0 0 20px ${selectedGlow}`
+    : `0 2px 10px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 26px ${selectedGlow}`;
 
   const handleToggle = () => {
     if (isMobile) onHeaderClick?.();
@@ -122,7 +123,8 @@ export function AppSidebar({
     : collapsed
       ? "Expandir menu"
       : "Retrair menu";
-  const ToggleIcon = isMobile || !collapsed ? ChevronLeft : Menu;
+  /** Expandido / mobile: fecha ou retrai (seta para a esquerda). Retraído no desktop: expande (seta para a direita). */
+  const ToggleIcon = isMobile || !collapsed ? ChevronLeft : ChevronRight;
 
   return (
     <Box
@@ -216,7 +218,7 @@ export function AppSidebar({
                     },
                   }}
                 >
-                  <ToggleIcon style={{ width: ICON_SIZE, height: ICON_SIZE }} />
+                  <ToggleIcon style={{ width: ICON_SIZE, height: ICON_SIZE }} strokeWidth={2} />
                 </IconButton>
               </Tooltip>
             </Box>
@@ -273,7 +275,6 @@ export function AppSidebar({
         )}
       </Box>
 
-      {/* Botão expandir (só no modo retraído) */}
       {collapsed && (
         <Box sx={{ display: "flex", justifyContent: "center", py: 0.5 }}>
           <Tooltip title={toggleLabel} placement="right">
@@ -289,7 +290,7 @@ export function AppSidebar({
                 },
               }}
             >
-              <Menu style={{ width: ICON_SIZE, height: ICON_SIZE }} />
+              <ChevronRight style={{ width: ICON_SIZE, height: ICON_SIZE }} strokeWidth={2} />
             </IconButton>
           </Tooltip>
         </Box>
@@ -347,6 +348,19 @@ export function AppSidebar({
                         justifyContent: collapsed ? "center" : "flex-start",
                         px: collapsed ? 1 : 1.25,
                         color: navIdleColor,
+                        transform: "translateX(0) scale(1)",
+                        transition: (t) =>
+                          t.transitions.create(["background-color", "box-shadow", "color", "transform"], {
+                            duration: 280,
+                            easing: t.transitions.easing.easeOut,
+                          }),
+                        "@media (prefers-reduced-motion: reduce)": {
+                          transition: (t) =>
+                            t.transitions.create(["background-color", "color"], {
+                              duration: 160,
+                              easing: t.transitions.easing.easeInOut,
+                            }),
+                        },
                         "&:hover": {
                           bgcolor: navHoverBg,
                           color: isLight ? BRAND_TITLE : "text.primary",
@@ -359,6 +373,20 @@ export function AppSidebar({
                           backgroundColor: `${navSelectedBg} !important`,
                           color: `${activeNavColor} !important`,
                           boxShadow: selectedItemShadow,
+                          transition: (t) =>
+                            t.transitions.create(["background-color", "box-shadow", "color", "transform"], {
+                              duration: 320,
+                              easing: t.transitions.easing.easeOut,
+                            }),
+                          transform: collapsed ? "scale(1.05)" : "translateX(3px)",
+                          "@media (prefers-reduced-motion: reduce)": {
+                            transform: "none",
+                            transition: (t) =>
+                              t.transitions.create(["background-color", "color"], {
+                                duration: 160,
+                                easing: t.transitions.easing.easeInOut,
+                              }),
+                          },
                           "&:hover": {
                             backgroundColor: `${navSelectedHoverBg} !important`,
                             color: `${activeNavColor} !important`,

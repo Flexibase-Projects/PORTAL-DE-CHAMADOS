@@ -28,6 +28,7 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import IconButton from "@mui/material/IconButton";
+import { FONT_STACK_PERCENT_SYMBOL } from "@/theme/fontFamily";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import { Maximize2 } from "lucide-react";
@@ -49,6 +50,12 @@ function ChartExpandButton({ onClick, ariaLabel }: { onClick: () => void; ariaLa
       <Maximize2 size={18} />
     </IconButton>
   );
+}
+
+/** Glow no hover dos cards de gráfico do dashboard (tom do card “Chamados por período”). */
+function dashboardChartCardHoverShadow(theme: Theme) {
+  const c = theme.palette.secondary.main;
+  return `0 0 24px ${alpha(c, 0.28)}, 0 0 48px ${alpha(c, 0.12)}`;
 }
 
 function ChamadosPorPeriodoPlot({
@@ -166,7 +173,6 @@ export function ChamadosPorPeriodoChart({
   onCustomViewModeChange,
 }: ChamadosPorPeriodoChartProps) {
   const theme = useTheme();
-  const secondaryColor = theme.palette.secondary.main;
   const [viewMode, setViewMode] = useState<"dia" | "mes">(customViewMode);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const uid = useId().replace(/:/g, "");
@@ -264,7 +270,7 @@ export function ChamadosPorPeriodoChart({
         display: "flex",
         flexDirection: "column",
         "&:hover": {
-          boxShadow: `0 0 24px ${alpha(secondaryColor, 0.28)}, 0 0 48px ${alpha(secondaryColor, 0.12)}`,
+          boxShadow: dashboardChartCardHoverShadow(theme),
         },
       }}
     >
@@ -398,7 +404,6 @@ function DepartmentBarPlot({
 
 export function DepartmentBarChart({ data, filterSetor, getSetor }: BarChartProps) {
   const theme = useTheme();
-  const secondaryColor = theme.palette.secondary.main;
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const uid = useId().replace(/:/g, "");
   const dialogTitleId = `chart-fs-dept-${uid}`;
@@ -417,7 +422,7 @@ export function DepartmentBarChart({ data, filterSetor, getSetor }: BarChartProp
         flexDirection: "column",
         minHeight: 0,
         "&:hover": {
-          boxShadow: `0 0 24px ${alpha(secondaryColor, 0.28)}, 0 0 48px ${alpha(secondaryColor, 0.12)}`,
+          boxShadow: dashboardChartCardHoverShadow(theme),
         },
       }}
     >
@@ -593,7 +598,6 @@ function TicketsBySetorDonutPlot({
 export function TicketsBySetorDonut({ data }: PorSetorProps) {
   const theme = useTheme();
   const filtered = data.filter((d) => SETORES_DONUT.includes(d.setor));
-  const glowColor = theme.palette.primary.main;
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const uid = useId().replace(/:/g, "");
   const dialogTitleId = `chart-fs-donut-${uid}`;
@@ -613,7 +617,7 @@ export function TicketsBySetorDonut({ data }: PorSetorProps) {
         display: "flex",
         flexDirection: "column",
         "&:hover": {
-          boxShadow: `0 0 24px ${alpha(glowColor, 0.28)}, 0 0 48px ${alpha(glowColor, 0.12)}`,
+          boxShadow: dashboardChartCardHoverShadow(theme),
         },
       }}
     >
@@ -675,6 +679,18 @@ const GAUGE_INNER_FRAC = 0.35;
 const GAUGE_OUTER_FRAC = 0.9;
 const GAUGE_POINTER_RADIUS_FACTOR = 0.72;
 
+const percentGlyphSx = {
+  fontFamily: FONT_STACK_PERCENT_SYMBOL,
+  fontWeight: 700,
+  marginLeft: "0.05em",
+} as const;
+
+function safeNonNegativeNumber(n: unknown): number {
+  const x = typeof n === "number" ? n : Number(n);
+  if (!Number.isFinite(x) || x < 0) return 0;
+  return x;
+}
+
 function gaugePointerLengthPx(width: number, height: number): number {
   if (width <= 0 || height <= 0) return 0;
   const minSide = Math.min(width, height);
@@ -697,7 +713,9 @@ function ResolvidosGaugePlot({
 }) {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
-  const percent = total > 0 ? Math.min(100, (concluidos / total) * 100) : 0;
+  const totalN = safeNonNegativeNumber(total);
+  const conclN = safeNonNegativeNumber(concluidos);
+  const percent = totalN > 0 ? Math.min(100, (conclN / totalN) * 100) : 0;
   const data = [{ name: "resolvidos", value: percent, fill: `url(#${gradientId})` }];
   const gaugeBg = isDark ? GAUGE_BG_DARK : GAUGE_BG_LIGHT;
   const pointerAngle = -90 + (percent / 100) * 180;
@@ -801,8 +819,9 @@ interface ResolvidosGaugeProps {
 
 export function ResolvidosGauge({ total, concluidos }: ResolvidosGaugeProps) {
   const theme = useTheme();
-  const glowColor = theme.palette.primary.main;
-  const percentRounded = Math.round(total > 0 ? Math.min(100, (concluidos / total) * 100) : 0);
+  const totalN = safeNonNegativeNumber(total);
+  const conclN = safeNonNegativeNumber(concluidos);
+  const percentRounded = Math.round(totalN > 0 ? Math.min(100, (conclN / totalN) * 100) : 0);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const uid = useId().replace(/:/g, "");
   const dialogTitleId = `chart-fs-gauge-${uid}`;
@@ -818,7 +837,7 @@ export function ResolvidosGauge({ total, concluidos }: ResolvidosGaugeProps) {
         display: "flex",
         flexDirection: "column",
         "&:hover": {
-          boxShadow: `0 0 24px ${alpha(glowColor, 0.28)}, 0 0 48px ${alpha(glowColor, 0.12)}`,
+          boxShadow: dashboardChartCardHoverShadow(theme),
         },
       }}
     >
@@ -855,6 +874,9 @@ export function ResolvidosGauge({ total, concluidos }: ResolvidosGaugeProps) {
         />
         <Typography
           variant="h4"
+          component="div"
+          role="status"
+          aria-label={`${percentRounded} por cento`}
           fontWeight={700}
           textAlign="center"
           sx={{
@@ -863,7 +885,12 @@ export function ResolvidosGauge({ total, concluidos }: ResolvidosGaugeProps) {
             fontSize: { xs: "1.5rem", sm: "2rem" },
           }}
         >
-          {percentRounded}%
+          <Box component="span" aria-hidden="true" sx={{ fontVariantNumeric: "tabular-nums" }}>
+            {percentRounded}
+          </Box>
+          <Box component="span" aria-hidden="true" sx={percentGlyphSx}>
+            %
+          </Box>
         </Typography>
       </CardContent>
       <ChartFullscreenDialog
@@ -891,8 +918,20 @@ export function ResolvidosGauge({ total, concluidos }: ResolvidosGaugeProps) {
               resizeKey={fullscreenOpen}
             />
           </Box>
-          <Typography variant="h4" fontWeight={700} sx={{ mt: 1 }}>
-            {percentRounded}%
+          <Typography
+            variant="h4"
+            component="div"
+            role="status"
+            aria-label={`${percentRounded} por cento`}
+            fontWeight={700}
+            sx={{ mt: 1 }}
+          >
+            <Box component="span" aria-hidden="true" sx={{ fontVariantNumeric: "tabular-nums" }}>
+              {percentRounded}
+            </Box>
+            <Box component="span" aria-hidden="true" sx={percentGlyphSx}>
+              %
+            </Box>
           </Typography>
         </Box>
       </ChartFullscreenDialog>

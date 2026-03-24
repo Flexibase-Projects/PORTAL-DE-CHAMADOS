@@ -8,9 +8,9 @@ import Alert from "@mui/material/Alert";
 import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
 import { alpha, useTheme } from "@mui/material/styles";
-import type { Theme } from "@mui/material/styles";
+import type { SxProps, Theme } from "@mui/material/styles";
 import { ChartFullscreenDialog } from "@/features/dashboard/components/ChartFullscreenDialog";
 import { formatDate } from "@/lib/utils";
 import { ticketService } from "@/services/ticketService";
@@ -38,6 +38,9 @@ const MAX_VISIBLE_LEAD_BARS = 15;
 const LEAD_TRACK_CELL_INSET = 1;
 
 const LEAD_BAR_HEIGHT_PX = 28;
+/** Modo retraído: traços mínimos só para indicar presença de leads. */
+const COLLAPSED_LEAD_BAR_HEIGHT_PX = 6;
+const COLLAPSED_VISIBLE_LEAD_CAP = 10;
 
 function startOfDay(d: Date): Date {
   const x = new Date(d);
@@ -270,15 +273,19 @@ function LeadBarTrack({
   b,
   onOpen,
   gridRow,
+  compact,
 }: {
   b: BarSlice;
   onOpen: (id: string) => void;
   gridRow: number;
+  /** Sem título; altura mínima (modo calendário retraído). */
+  compact?: boolean;
 }) {
   const theme = useTheme();
   const gridStart = b.startCol + 1;
   const gridEnd = b.endCol + 2;
-  const pillR = LEAD_BAR_HEIGHT_PX / 2;
+  const h = compact ? COLLAPSED_LEAD_BAR_HEIGHT_PX : LEAD_BAR_HEIGHT_PX;
+  const pillR = h / 2;
 
   return (
     <Box
@@ -298,7 +305,7 @@ function LeadBarTrack({
       sx={{
         gridColumn: `${gridStart} / ${gridEnd}`,
         gridRow,
-        height: LEAD_BAR_HEIGHT_PX,
+        height: h,
         borderRadius: `${pillR}px`,
         mx: LEAD_TRACK_CELL_INSET,
         justifySelf: "stretch",
@@ -307,13 +314,22 @@ function LeadBarTrack({
         boxSizing: "border-box",
         display: "flex",
         alignItems: "center",
-        px: 0.85,
+        px: compact ? 0 : 0.85,
         cursor: "pointer",
         overflow: "hidden",
-        border: `1px solid ${leadBarOuterBorder(b.color, theme)}`,
+        border: compact
+          ? `1px solid ${alpha(leadBarOuterBorder(b.color, theme), theme.palette.mode === "dark" ? 0.65 : 0.55)}`
+          : `1px solid ${leadBarOuterBorder(b.color, theme)}`,
         backgroundImage: leadBarBodyBackground(theme, b.color),
         bgcolor: "transparent",
-        transition: "filter 0.12s ease",
+        transition: (t) =>
+          t.transitions.create(["height", "padding", "border-radius", "filter"], {
+            duration: 260,
+            easing: t.transitions.easing.easeInOut,
+          }),
+        "@media (prefers-reduced-motion: reduce)": {
+          transition: "filter 0.12s ease",
+        },
         "&:hover": {
           filter: "brightness(1.03)",
         },
@@ -321,9 +337,11 @@ function LeadBarTrack({
       aria-label={`Chamado: ${b.label}`}
       title={b.label}
     >
-      <Typography variant="caption" fontWeight={600} noWrap sx={barLabelSx(b.color, theme)}>
-        {b.label}
-      </Typography>
+      {!compact && (
+        <Typography variant="caption" fontWeight={600} noWrap sx={barLabelSx(b.color, theme)}>
+          {b.label}
+        </Typography>
+      )}
     </Box>
   );
 }
@@ -338,6 +356,7 @@ export function ChamadosLeadTimeCalendar() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [detailDayKey, setDetailDayKey] = useState<string | null>(null);
+  const [cellsCollapsed, setCellsCollapsed] = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.id && !USE_LOCAL_STORAGE) {
@@ -445,6 +464,43 @@ export function ChamadosLeadTimeCalendar() {
     { color: STATUS_COLOR_CONCLUIDO, label: statusLabelForLegend("Concluído") },
   ];
 
+  const dark = theme.palette.mode === "dark";
+  const primaryC = theme.palette.primary;
+  const secondaryC = theme.palette.secondary;
+
+  /** Botões da barra do calendário: borda primary suave, hover com secondary (harmonia com o restante do portal). */
+  const calendarToolbarOutlinedSx: SxProps<Theme> = {
+    textTransform: "none",
+    fontWeight: 600,
+    fontSize: "0.8125rem",
+    borderRadius: "10px",
+    py: 0.5,
+    boxShadow: "none",
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: alpha(primaryC.main, dark ? 0.42 : 0.22),
+    color: dark ? primaryC.light : primaryC.main,
+    bgcolor: alpha(primaryC.main, dark ? 0.12 : 0.06),
+    "&:hover": {
+      borderColor: secondaryC.main,
+      bgcolor: alpha(secondaryC.main, dark ? 0.2 : 0.12),
+      color: dark ? primaryC.light : primaryC.dark,
+    },
+  };
+
+  const calendarToolbarTodaySx: SxProps<Theme> = {
+    textTransform: "none",
+    fontWeight: 600,
+    fontSize: "0.8125rem",
+    borderRadius: "10px",
+    py: 0.5,
+    px: 1.5,
+    color: dark ? secondaryC.light : secondaryC.dark,
+    "&:hover": {
+      bgcolor: alpha(secondaryC.main, dark ? 0.16 : 0.1),
+    },
+  };
+
   const periodTitle = formatMonthYearLabel(monthFirst);
 
   return (
@@ -456,9 +512,9 @@ export function ChamadosLeadTimeCalendar() {
             variant="outlined"
             onClick={goPrev}
             aria-label="Mês anterior"
-            sx={{ minWidth: 40, px: 1, borderRadius: "10px" }}
+            sx={[calendarToolbarOutlinedSx, { minWidth: 40, px: 0.75 }] as SxProps<Theme>}
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={20} strokeWidth={2} />
           </Button>
           <Typography variant="subtitle1" fontWeight={700} sx={{ minWidth: 200, textAlign: "center", textTransform: "capitalize" }}>
             {periodTitle}
@@ -468,12 +524,21 @@ export function ChamadosLeadTimeCalendar() {
             variant="outlined"
             onClick={goNext}
             aria-label="Próximo mês"
-            sx={{ minWidth: 40, px: 1, borderRadius: "10px" }}
+            sx={[calendarToolbarOutlinedSx, { minWidth: 40, px: 0.75 }] as SxProps<Theme>}
           >
-            <ChevronRight size={20} />
+            <ChevronRight size={20} strokeWidth={2} />
           </Button>
-          <Button size="small" variant="text" onClick={goToday} sx={{ borderRadius: "10px" }}>
+          <Button size="small" variant="text" onClick={goToday} sx={calendarToolbarTodaySx}>
             Hoje
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => setCellsCollapsed((v) => !v)}
+            startIcon={cellsCollapsed ? <Maximize2 size={16} strokeWidth={2} /> : <Minimize2 size={16} strokeWidth={2} />}
+            sx={[calendarToolbarOutlinedSx, { px: 1.25 }] as SxProps<Theme>}
+          >
+            {cellsCollapsed ? "Expandir células" : "Retrair células"}
           </Button>
         </Box>
 
@@ -562,12 +627,15 @@ export function ChamadosLeadTimeCalendar() {
             {weeksWithBars.map(({ weekKey, row, bars }) => {
               const visibleBars =
                 bars.length > MAX_VISIBLE_LEAD_BARS ? bars.slice(-MAX_VISIBLE_LEAD_BARS) : bars;
+              const barsForRender = cellsCollapsed
+                ? visibleBars.slice(-Math.min(COLLAPSED_VISIBLE_LEAD_CAP, visibleBars.length))
+                : visibleBars;
               const dayOverflowCounts = row.map((cell) => {
                 const n = dayTicketsMap.get(dateKey(cell.date))?.length ?? 0;
                 return n > MAX_VISIBLE_LEAD_BARS ? n - MAX_VISIBLE_LEAD_BARS : 0;
               });
               const hasDayOverflowRow = dayOverflowCounts.some((c) => c > 0);
-              const trackRows = visibleBars.length + (hasDayOverflowRow ? 1 : 0);
+              const trackRows = barsForRender.length + (hasDayOverflowRow ? 1 : 0);
               const showLeadOverlay = bars.length > 0 || hasDayOverflowRow;
 
               return (
@@ -576,10 +644,19 @@ export function ChamadosLeadTimeCalendar() {
                   sx={{
                     display: "grid",
                     gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
-                    gridTemplateRows: { xs: "minmax(96px, auto)", sm: "minmax(112px, auto)" },
+                    gridTemplateRows: { xs: "minmax(0, auto)", sm: "minmax(0, auto)" },
                     columnGap: 0,
                     rowGap: 0,
                     isolation: "isolate",
+                    minHeight: cellsCollapsed ? { xs: 72, sm: 78 } : { xs: 96, sm: 112 },
+                    transition: (t) =>
+                      t.transitions.create("min-height", {
+                        duration: 320,
+                        easing: t.transitions.easing.easeInOut,
+                      }),
+                    "@media (prefers-reduced-motion: reduce)": {
+                      transition: "none",
+                    },
                   }}
                 >
                   {row.map(({ date, inMonth }, colIdx) => {
@@ -601,7 +678,7 @@ export function ChamadosLeadTimeCalendar() {
                           gridRow: 1,
                           borderRight: isLastCol ? "none" : `1px solid ${theme.palette.divider}`,
                           borderBottom: `1px solid ${theme.palette.divider}`,
-                          p: 0.5,
+                          p: cellsCollapsed ? 0.35 : 0.5,
                           display: "flex",
                           flexDirection: "column",
                           minWidth: 0,
@@ -618,7 +695,11 @@ export function ChamadosLeadTimeCalendar() {
                           outlineOffset: -1,
                           borderRadius: isToday ? 0.5 : 0,
                           cursor: dayItems.length > 0 ? "pointer" : "default",
-                          transition: "background-color 0.15s ease",
+                          transition: (t) =>
+                            t.transitions.create(["background-color", "padding"], {
+                              duration: 220,
+                              easing: t.transitions.easing.easeInOut,
+                            }),
                           ...(dayItems.length > 0 && {
                             "&:hover": {
                               bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.12 : 0.08),
@@ -635,9 +716,20 @@ export function ChamadosLeadTimeCalendar() {
                           variant="caption"
                           fontWeight={700}
                           sx={{
-                            alignSelf: "flex-end",
+                            // Retraído: número no topo para não competir com os micro-leads no rodapé da célula.
+                            alignSelf: cellsCollapsed ? "flex-start" : "flex-end",
+                            ml: cellsCollapsed ? "auto" : 0,
                             color: inMonth ? "text.primary" : "text.disabled",
                             lineHeight: 1.2,
+                            fontSize: cellsCollapsed ? "0.78rem" : "0.75rem",
+                            transition: (t) =>
+                              t.transitions.create("font-size", {
+                                duration: 220,
+                                easing: t.transitions.easing.easeInOut,
+                              }),
+                            "@media (prefers-reduced-motion: reduce)": {
+                              transition: "none",
+                            },
                           }}
                         >
                           {date.getDate()}
@@ -659,24 +751,33 @@ export function ChamadosLeadTimeCalendar() {
                         },
                         gridTemplateRows: `repeat(${Math.max(trackRows, 1)}, auto)`,
                         columnGap: 0,
-                        rowGap: 0.65,
+                        rowGap: cellsCollapsed ? 0.35 : 0.65,
                         alignSelf: "stretch",
                         minHeight: 0,
                         alignContent: "end",
                         justifyItems: "stretch",
                         px: 0,
-                        pt: 2.25,
-                        pb: 0.5,
+                        pt: cellsCollapsed ? 1.75 : 2.25,
+                        pb: cellsCollapsed ? 0.35 : 0.5,
                         pointerEvents: "none",
                         "& > *": { pointerEvents: "auto" },
+                        transition: (t) =>
+                          t.transitions.create(["padding-top", "padding-bottom", "row-gap"], {
+                            duration: 260,
+                            easing: t.transitions.easing.easeInOut,
+                          }),
+                        "@media (prefers-reduced-motion: reduce)": {
+                          transition: "none",
+                        },
                       }}
                     >
-                      {visibleBars.map((b, i) => (
+                      {barsForRender.map((b, i) => (
                         <LeadBarTrack
                           key={`${b.ticket.id}-${weekKey}`}
                           b={b}
                           onOpen={openTicket}
-                          gridRow={visibleBars.length - i}
+                          gridRow={barsForRender.length - i}
+                          compact={cellsCollapsed}
                         />
                       ))}
                       {hasDayOverflowRow &&
@@ -707,9 +808,9 @@ export function ChamadosLeadTimeCalendar() {
                                 minWidth: 0,
                                 mx: LEAD_TRACK_CELL_INSET,
                                 boxSizing: "border-box",
-                                height: LEAD_BAR_HEIGHT_PX,
-                                borderRadius: `${LEAD_BAR_HEIGHT_PX / 2}px`,
-                                px: 0.65,
+                                height: cellsCollapsed ? COLLAPSED_LEAD_BAR_HEIGHT_PX + 4 : LEAD_BAR_HEIGHT_PX,
+                                borderRadius: `${(cellsCollapsed ? COLLAPSED_LEAD_BAR_HEIGHT_PX + 4 : LEAD_BAR_HEIGHT_PX) / 2}px`,
+                                px: cellsCollapsed ? 0.35 : 0.65,
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
@@ -723,8 +824,13 @@ export function ChamadosLeadTimeCalendar() {
                               }}
                               aria-label={`Mais ${plus} chamados neste dia`}
                             >
-                              <Typography variant="caption" fontWeight={700} sx={{ fontSize: "0.68rem" }} noWrap>
-                                +{plus} mais
+                              <Typography
+                                variant="caption"
+                                fontWeight={700}
+                                sx={{ fontSize: cellsCollapsed ? "0.58rem" : "0.68rem" }}
+                                noWrap
+                              >
+                                {cellsCollapsed ? `+${plus}` : `+${plus} mais`}
                               </Typography>
                             </Box>
                           );
@@ -741,8 +847,9 @@ export function ChamadosLeadTimeCalendar() {
       <Typography variant="caption" color="text.secondary">
         Lead time (só chamados recebidos pelo seu departamento): cada faixa atravessa os dias em que o chamado esteve
         aberto (até conclusão ou até hoje).
+        Com células retraídas, as faixas ficam bem finas e sem título (passe o mouse para ver o assunto).
         Em cada coluna do dia, “+N mais” aparece só naquele dia quando há mais de {MAX_VISIBLE_LEAD_BARS} chamados
-        ativos nele; toque no dia ou no botão para ver a lista completa daquele dia.
+        ativos nele; toque na célula do dia ou em “+N mais” para ver a lista completa daquele dia.
       </Typography>
 
       <ChartFullscreenDialog

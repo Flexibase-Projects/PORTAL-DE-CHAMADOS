@@ -15,7 +15,7 @@ import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import CircularProgress from "@mui/material/CircularProgress";
 import useMediaQuery from "@mui/material/useMediaQuery";
-import { useTheme } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import { CheckCircle2 } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
 import { templateService } from "@/services/templateService";
@@ -235,10 +235,11 @@ export function CreateTicketPage() {
       sx={{
         display: "flex",
         flexDirection: "column",
-        gap: { xs: 2, md: 2.5 },
-        maxWidth: { xs: "100%", md: 720 },
+        gap: { xs: 1.5, md: 2 },
+        maxWidth: { xs: "100%", md: 760 },
         mx: "auto",
         width: "100%",
+        py: { xs: 0.5, md: 1 },
       }}
     >
       <Box>
@@ -265,10 +266,25 @@ export function CreateTicketPage() {
         </Alert>
       )}
 
-      <Card>
-        <CardContent>
-          <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <Box>
+      <Card
+        sx={{
+          borderRadius: 2,
+          borderTop: "4px solid",
+          borderTopColor: "primary.main",
+          boxShadow: `0 10px 28px ${alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.16 : 0.1)}`,
+        }}
+      >
+        <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
+          <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2.25 }}>
+            <Box
+              sx={{
+                bgcolor: "action.hover",
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1.5,
+                p: { xs: 1.25, sm: 1.5 },
+              }}
+            >
               <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
                 Origem e destino
               </Typography>
@@ -281,70 +297,100 @@ export function CreateTicketPage() {
               </Button>
             </Box>
 
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
-              <TextField
-                label="Nome *"
-                value={formData.nome}
-                onChange={(e) => handleChange("nome", e.target.value)}
-                error={Boolean(errors.nome)}
-                helperText={errors.nome}
-                fullWidth
-              />
-              <TextField
-                label="Email *"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-                error={Boolean(errors.email)}
-                helperText={errors.email}
-                fullWidth
-              />
-              <TextField
-                label="Ramal"
-                type="number"
-                value={formData.ramal}
-                onChange={(e) => handleChange("ramal", e.target.value)}
-                error={Boolean(errors.ramal)}
-                helperText={errors.ramal}
-                fullWidth
-                sx={{ gridColumn: { xs: "1", sm: "1 / -1" } }}
-              />
-              {formData.area_destino === "TI" && (
-                <FormControl fullWidth sx={{ gridColumn: { xs: "1", sm: "1 / -1" } }}>
-                  <InputLabel>Tipo de Suporte</InputLabel>
-                  <Select
-                    value={formData.tipoSuporte}
-                    label="Tipo de Suporte"
-                    onChange={(e) => handleChange("tipoSuporte", e.target.value)}
-                  >
-                    {TIPOS_SUPORTE_TI.map((opt) => (
-                      <MenuItem key={opt} value={opt}>
-                        {opt}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
+            <Box
+              sx={{
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1.5,
+                p: { xs: 1.25, sm: 1.5 },
+                display: "flex",
+                flexDirection: "column",
+                gap: 1.5,
+              }}
+            >
+              <Typography variant="subtitle2" fontWeight={600}>
+                Dados de contato
+              </Typography>
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+                <TextField
+                  label="Nome *"
+                  value={formData.nome}
+                  onChange={(e) => handleChange("nome", e.target.value)}
+                  error={Boolean(errors.nome)}
+                  helperText={errors.nome}
+                  fullWidth
+                />
+                <TextField
+                  label="Email *"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleChange("email", e.target.value)}
+                  error={Boolean(errors.email)}
+                  helperText={errors.email}
+                  fullWidth
+                />
+                <TextField
+                  label="Ramal"
+                  type="number"
+                  value={formData.ramal}
+                  onChange={(e) => handleChange("ramal", e.target.value)}
+                  error={Boolean(errors.ramal)}
+                  helperText={errors.ramal}
+                  fullWidth
+                  sx={{ gridColumn: { xs: "1", sm: "1 / -1" } }}
+                />
+                {formData.area_destino === "TI" && (
+                  <FormControl fullWidth sx={{ gridColumn: { xs: "1", sm: "1 / -1" } }}>
+                    <InputLabel>Tipo de Suporte</InputLabel>
+                    <Select
+                      value={formData.tipoSuporte}
+                      label="Tipo de Suporte"
+                      onChange={(e) => handleChange("tipoSuporte", e.target.value)}
+                    >
+                      {TIPOS_SUPORTE_TI.map((opt) => (
+                        <MenuItem key={opt} value={opt}>
+                          {opt}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              </Box>
             </Box>
 
-            <TextField
-              label="Assunto *"
-              value={formData.assunto}
-              onChange={(e) => handleChange("assunto", e.target.value)}
-              error={Boolean(errors.assunto)}
-              helperText={errors.assunto}
-              fullWidth
-            />
-            <TextField
-              label="Mensagem *"
-              multiline
-              rows={isMobile ? 4 : 5}
-              value={formData.mensagem}
-              onChange={(e) => handleChange("mensagem", e.target.value)}
-              error={Boolean(errors.mensagem)}
-              helperText={errors.mensagem}
-              fullWidth
-            />
+            <Box
+              sx={{
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1.5,
+                p: { xs: 1.25, sm: 1.5 },
+                display: "flex",
+                flexDirection: "column",
+                gap: 1.5,
+              }}
+            >
+              <Typography variant="subtitle2" fontWeight={600}>
+                Detalhes do chamado
+              </Typography>
+              <TextField
+                label="Assunto *"
+                value={formData.assunto}
+                onChange={(e) => handleChange("assunto", e.target.value)}
+                error={Boolean(errors.assunto)}
+                helperText={errors.assunto}
+                fullWidth
+              />
+              <TextField
+                label="Mensagem *"
+                multiline
+                rows={isMobile ? 4 : 5}
+                value={formData.mensagem}
+                onChange={(e) => handleChange("mensagem", e.target.value)}
+                error={Boolean(errors.mensagem)}
+                helperText={errors.mensagem}
+                fullWidth
+              />
+            </Box>
 
             {templateFields.length > 0 && (
               <Box

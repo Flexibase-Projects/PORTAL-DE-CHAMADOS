@@ -4,3 +4,7 @@
  */
 export const APP_FONT_FAMILY =
   '"Century Gothic", CenturyGothic, "AppleGothic", "Trebuchet MS", "Arial Narrow", Arial, sans-serif';
+
+/** Pilha sem Century Gothic: o `%` na principal pode aparecer “quebrado”; use só no símbolo de porcentagem. */
+export const FONT_STACK_PERCENT_SYMBOL =
+  'system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
