@@ -16,6 +16,7 @@ router.get('/meus-chamados-by-auth', ticketController.getMeusChamadosByAuthUser)
 router.get('/meus-chamados', ticketController.getTicketsByNome);
 
 // Buscar chamados recebidos (Painel Administrativo)
+router.get('/recebidos/concluidos', ticketController.getReceivedConcludedTickets);
 router.get('/recebidos', ticketController.getReceivedTickets);
 
 // Buscar chamados por área

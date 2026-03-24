@@ -1,18 +1,15 @@
-import { useState } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
-import CircularProgress from "@mui/material/CircularProgress";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Avatar from "@mui/material/Avatar";
 import { useTheme } from "@mui/material/styles";
-import { Reply, MessageSquare, GitBranch, FilePlus } from "lucide-react";
+import { MessageSquare, GitBranch, FilePlus } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import type { Ticket } from "@/types/ticket";
 import type { TemplateField } from "@/types/template";
 import { TicketStatusPill } from "./TicketStatusPill";
+import { TicketChatThread, TicketChatComposer } from "./TicketChatPanel";
 
 export interface TicketDetailContentProps {
   ticket: Ticket;
@@ -142,14 +139,6 @@ export function TicketDetailContent({
   currentUserEmail = null,
 }: TicketDetailContentProps) {
   const theme = useTheme();
-  const [responseText, setResponseText] = useState("");
-  const normalizedCurrentEmail = (currentUserEmail || "").trim().toLowerCase();
-
-  const handleSendReply = async () => {
-    if (!responseText.trim()) return;
-    await onReply(responseText.trim());
-    setResponseText("");
-  };
 
   const hasExtras = ticket.dados_extras && Object.keys(ticket.dados_extras).length > 0;
 
@@ -255,103 +244,7 @@ export function TicketDetailContent({
             </SectionCard>
           ) : null}
 
-          {ticket.respostas && ticket.respostas.length > 0 ? (
-            <SectionCard title={`Conversa (${ticket.respostas.length})`}>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 1.5,
-                  p: 2,
-                  borderRadius: 2,
-                  bgcolor: "action.hover",
-                }}
-              >
-                {ticket.respostas.map((r) => {
-                  const isOwn =
-                    normalizedCurrentEmail && (r.autor_email || "").trim().toLowerCase() === normalizedCurrentEmail;
-                  return (
-                    <Box
-                      key={r.id}
-                      sx={{
-                        display: "flex",
-                        justifyContent: isOwn ? "flex-end" : "flex-start",
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          display: "flex",
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 0.75,
-                          maxWidth: "min(85%, 400px)",
-                          "& .message-time": { opacity: 0 },
-                          "&:hover .message-time": { opacity: 1 },
-                        }}
-                      >
-                        {isOwn && (
-                          <Typography
-                            className="message-time"
-                            variant="caption"
-                            sx={{
-                              flexShrink: 0,
-                              transition: "opacity 0.15s ease",
-                              fontSize: "0.7rem",
-                              color: "text.secondary",
-                            }}
-                          >
-                            {formatDate(r.created_at)}
-                          </Typography>
-                        )}
-                        <Box
-                          sx={{
-                            minWidth: 0,
-                            p: 1.5,
-                            borderRadius: 2,
-                            ...(isOwn
-                              ? {
-                                  background: "linear-gradient(180deg, #405de6 0%, #5851d8 100%)",
-                                  color: "#fff",
-                                }
-                              : {
-                                  bgcolor: "background.paper",
-                                  color: "text.primary",
-                                }),
-                          }}
-                        >
-                          {!isOwn && (
-                            <Typography
-                              variant="caption"
-                              sx={{ fontWeight: 700, fontSize: "0.875rem", opacity: 0.9, display: "block", mb: 0.25 }}
-                            >
-                              {r.autor_nome || "—"}
-                            </Typography>
-                          )}
-                          <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                            {r.mensagem}
-                          </Typography>
-                        </Box>
-                        {!isOwn && (
-                          <Typography
-                            className="message-time"
-                            variant="caption"
-                            sx={{
-                              flexShrink: 0,
-                              transition: "opacity 0.15s ease",
-                              fontSize: "0.7rem",
-                              color: "text.secondary",
-                            }}
-                          >
-                            {formatDate(r.created_at)}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
-                  );
-                })}
-              </Box>
-            </SectionCard>
-          ) : null}
+          <TicketChatThread ticket={ticket} currentUserEmail={currentUserEmail} />
 
           {ticket.atividades && ticket.atividades.length > 0 ? (
             <SectionCard title="Histórico">
@@ -411,31 +304,12 @@ export function TicketDetailContent({
             </SectionCard>
           ) : null}
 
-          {canComment && ticket.status !== "Concluído" ? (
-            <SectionCard title="Nova mensagem">
-              <TextField
-                multiline
-                rows={3}
-                value={responseText}
-                onChange={(e) => setResponseText(e.target.value)}
-                placeholder="Adicionar comentário..."
-                fullWidth
-                size="small"
-              />
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={
-                  replyLoading ? <CircularProgress size={16} /> : <Reply style={{ width: 16, height: 16 }} />
-                }
-                onClick={handleSendReply}
-                disabled={replyLoading || !responseText.trim()}
-                sx={{ mt: 1.5 }}
-              >
-                Enviar comentário
-              </Button>
-            </SectionCard>
-          ) : null}
+          <TicketChatComposer
+            ticket={ticket}
+            canComment={canComment}
+            onReply={onReply}
+            replyLoading={replyLoading}
+          />
         </Stack>
       </Box>
     </Box>

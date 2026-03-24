@@ -264,6 +264,24 @@ export const ticketService = {
     return merged;
   },
 
+  /**
+   * Mesma visibilidade de getReceivedTickets, apenas chamados Concluído (gestão: histórico).
+   */
+  async getReceivedConcludedTickets(authUserId, authUserEmail = null) {
+    if (!authUserId) return [];
+    const result = await this.getMeusChamadosByAuthUser(authUserId, authUserEmail);
+    const seen = new Set();
+    const merged = [];
+    for (const t of [...(result.chamadosMeuDepartamento || []), ...(result.chamadosQueAbriOutros || [])]) {
+      if (t.status !== 'Concluído') continue;
+      if (seen.has(t.id)) continue;
+      seen.add(t.id);
+      merged.push(t);
+    }
+    merged.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return merged;
+  },
+
   async _resolveAutorId(client, authUserId, authUserEmail) {
     let autorId = null;
     if (authUserId) {

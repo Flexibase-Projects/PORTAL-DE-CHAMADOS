@@ -6,6 +6,7 @@ import ListItemText from "@mui/material/ListItemText";
 import Tooltip from "@mui/material/Tooltip";
 import { useTheme, alpha } from "@mui/material/styles";
 import { useAuth } from "@/contexts/AuthContext";
+import { getTicketStatusAccent } from "@/features/tickets/ticketStatusAccent";
 
 const NAV_IDLE_LIGHT = "#475569";
 
@@ -20,6 +21,8 @@ export function UserNav({ collapsed }: UserNavProps) {
   const isLight = muiTheme.palette.mode === "light";
   const navHoverBg = isLight ? alpha("#2563eb", 0.06) : alpha(muiTheme.palette.primary.main, 0.1);
   const navIdleColor = isLight ? NAV_IDLE_LIGHT : muiTheme.palette.text.secondary;
+  /** Mesma cor do texto "Aberto" no pill (sem alpha) para hover legível. */
+  const sairHoverColor = getTicketStatusAccent("Aberto").fg;
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -41,7 +44,10 @@ export function UserNav({ collapsed }: UserNavProps) {
           color: navIdleColor,
           "&:hover": {
             bgcolor: navHoverBg,
-            color: isLight ? alpha("#b91c1c", 0.95) : muiTheme.palette.error.light,
+            color: sairHoverColor,
+          },
+          "&:hover .MuiListItemText-primary": {
+            fontWeight: 600,
           },
         }}
         aria-label="Sair"

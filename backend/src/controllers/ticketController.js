@@ -66,7 +66,33 @@ export const ticketController = {
       const tickets = await ticketService.getReceivedTickets(authUserId, authUserEmail);
       res.json({ success: true, tickets });
     } catch (error) {
-      res.status(500).json({ success: false, error: 'Erro ao buscar chamados recebidos', message: error.message });
+      console.error('[tickets] recebidos:', error?.message || error);
+      res.status(200).json({
+        success: true,
+        tickets: [],
+        degraded: true,
+        message: error?.message || String(error),
+      });
+    }
+  },
+
+  async getReceivedConcludedTickets(req, res) {
+    try {
+      const authUserId = req.headers['x-auth-user-id'] || req.query.auth_user_id || null;
+      const authUserEmail = (req.query.auth_user_email || '').trim() || null;
+      if (!authUserId) {
+        return res.status(400).json({ success: false, error: 'auth_user_id obrigatório para listar chamados concluídos' });
+      }
+      const tickets = await ticketService.getReceivedConcludedTickets(authUserId, authUserEmail);
+      res.json({ success: true, tickets });
+    } catch (error) {
+      console.error('[tickets] recebidos/concluidos:', error?.message || error);
+      res.status(200).json({
+        success: true,
+        tickets: [],
+        degraded: true,
+        message: error?.message || String(error),
+      });
     }
   },
 

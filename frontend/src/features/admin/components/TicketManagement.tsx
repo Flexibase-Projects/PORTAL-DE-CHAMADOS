@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -8,15 +7,20 @@ import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import Alert from "@mui/material/Alert";
 import Skeleton from "@mui/material/Skeleton";
+import Collapse from "@mui/material/Collapse";
+import Fade from "@mui/material/Fade";
 import Typography from "@mui/material/Typography";
-import { Reply, CheckCircle2, ArrowLeft } from "lucide-react";
+import { useTheme } from "@mui/material/styles";
+import { CheckCircle2, ArrowLeft, Archive } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
+import { notificationService } from "@/services/notificationService";
 import { useAuth } from "@/contexts/AuthContext";
 import { templateService } from "@/services/templateService";
 import { TicketsTable } from "@/features/tickets/components/TicketsTable";
 import { formatDate } from "@/lib/utils";
 import type { Ticket } from "@/types/ticket";
 import type { TemplateField } from "@/types/template";
+import { TicketChatThread, TicketChatComposer } from "@/features/tickets/components/TicketChatPanel";
 
 interface Props {
   initialTicketId?: string;
@@ -34,15 +38,38 @@ function statusColor(status: string): "default" | "primary" | "warning" | "succe
 }
 
 export function TicketManagement({ initialTicketId }: Props) {
-  const navigate = useNavigate();
+  const theme = useTheme();
   const { user, loading: authLoading } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [concludedTickets, setConcludedTickets] = useState<Ticket[]>([]);
+  const [concludedSectionOpen, setConcludedSectionOpen] = useState(false);
+  const [concludedLoading, setConcludedLoading] = useState(false);
   const [selected, setSelected] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [replyLoading, setReplyLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [templateFields, setTemplateFields] = useState<TemplateField[]>([]);
+  const threadScrollRef = useRef<HTMLDivElement>(null);
+
+  const lastRespostaKey =
+    selected?.respostas?.length && selected.respostas.length > 0
+      ? `${selected.respostas.length}-${selected.respostas[selected.respostas.length - 1].id}`
+      : "0";
+
+  useLayoutEffect(() => {
+    const el = threadScrollRef.current;
+    if (!el) return;
+    const scrollToEnd = () => {
+      el.scrollTop = el.scrollHeight;
+    };
+    scrollToEnd();
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(scrollToEnd);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [selected?.id, lastRespostaKey]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -68,11 +95,34 @@ export function TicketManagement({ initialTicketId }: Props) {
   }, [selected?.area_destino]);
 
   useEffect(() => {
-    if (initialTicketId && tickets.length > 0) {
-      const found = tickets.find((t) => t.id === initialTicketId);
-      if (found) setSelected(found);
-    }
-  }, [initialTicketId, tickets]);
+    if (!initialTicketId) return;
+    const found =
+      tickets.find((t) => t.id === initialTicketId) ??
+      concludedTickets.find((t) => t.id === initialTicketId);
+    if (found) setSelected(found);
+  }, [initialTicketId, tickets, concludedTickets]);
+
+  /** Lista / meus-chamados não trazem `respostas`; só o GET por id monta o chat. */
+  useEffect(() => {
+    const id = selected?.id;
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await ticketService.getById(id);
+        if (cancelled || !res.success || !res.ticket) return;
+        const full = res.ticket;
+        setSelected((prev) => (prev?.id === id ? full : prev));
+        setTickets((prev) => prev.map((t) => (t.id === id ? full : t)));
+        setConcludedTickets((prev) => prev.map((t) => (t.id === id ? full : t)));
+      } catch {
+        /* mantém o ticket da listagem */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selected?.id]);
 
   const loadTickets = async () => {
     if (!user?.id) return;
@@ -87,15 +137,39 @@ export function TicketManagement({ initialTicketId }: Props) {
     }
   };
 
-  const handleResponderNoChat = () => {
-    if (!selected) return;
-    navigate(`/meus-chamados/${selected.id}`, {
-      state: {
-        ticket: selected,
-        canEdit: true,
-        canComment: true,
-      },
-    });
+  const loadConcludedTickets = async () => {
+    if (!user?.id) return;
+    setConcludedLoading(true);
+    try {
+      const res = await ticketService.getReceivedConcluded(user.id, user.email);
+      if (res.success) setConcludedTickets(res.tickets || []);
+    } catch {
+      setError("Erro ao carregar chamados concluídos.");
+    } finally {
+      setConcludedLoading(false);
+    }
+  };
+
+  const handleReply = async (mensagem: string) => {
+    if (!selected || !user?.id) return;
+    setReplyLoading(true);
+    try {
+      const res = await ticketService.addResponse(selected.id, {
+        mensagem,
+        autor_id: "current",
+        auth_user_id: user.id,
+        auth_user_email: user.email ?? undefined,
+      });
+      if (res.success && res.ticket) {
+        setSelected(res.ticket);
+        setTickets((prev) => prev.map((t) => (t.id === res.ticket!.id ? res.ticket! : t)));
+        setConcludedTickets((prev) => prev.map((t) => (t.id === res.ticket!.id ? res.ticket! : t)));
+        notificationService.markReadByTicket(selected.id, user.id).catch(() => {});
+        window.dispatchEvent(new CustomEvent("notifications-refresh"));
+      }
+    } finally {
+      setReplyLoading(false);
+    }
   };
 
   const handleConclude = async () => {
@@ -107,6 +181,7 @@ export function TicketManagement({ initialTicketId }: Props) {
         setSuccess("Chamado concluído!");
         setSelected(null);
         await loadTickets();
+        if (concludedSectionOpen) await loadConcludedTickets();
       }
     } catch {
       setError("Erro ao concluir chamado.");
@@ -148,7 +223,7 @@ export function TicketManagement({ initialTicketId }: Props) {
           alignItems: "start",
         }}
       >
-        <Box sx={{ minWidth: 0, maxHeight: { lg: "calc(100vh - 16rem)" }, overflow: "auto", pr: { lg: 0.5 } }}>
+        <Box sx={{ minWidth: 0, pr: { lg: 0.5 } }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             Chamados Recebidos ({tickets.length})
           </Typography>
@@ -162,6 +237,50 @@ export function TicketManagement({ initialTicketId }: Props) {
             }}
             emptyMessage="Nenhum chamado recebido no momento."
           />
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Archive style={{ width: 18, height: 18 }} />}
+            onClick={() => {
+              setConcludedSectionOpen((open) => {
+                const next = !open;
+                if (next) void loadConcludedTickets();
+                return next;
+              });
+            }}
+            sx={{ mt: 2, alignSelf: "flex-start" }}
+          >
+            {concludedSectionOpen ? "Ocultar chamados concluídos" : "Ver chamados concluídos"}
+          </Button>
+          <Collapse
+            in={concludedSectionOpen}
+            timeout={{ enter: 440, exit: 300 }}
+            easing={theme.transitions.easing.easeInOut}
+            unmountOnExit
+            sx={{ width: "100%" }}
+          >
+            <Fade in={concludedSectionOpen} timeout={360} easing={theme.transitions.easing.easeOut}>
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Chamados concluídos ({concludedTickets.length})
+                </Typography>
+                {concludedLoading ? (
+                  <Skeleton variant="rounded" height={280} sx={{ borderRadius: 1 }} />
+                ) : (
+                  <TicketsTable
+                    tickets={concludedTickets}
+                    selectedTicketId={selected?.id ?? null}
+                    onRowActivate={(t) => {
+                      setSelected(t);
+                      setError("");
+                      setSuccess("");
+                    }}
+                    emptyMessage="Nenhum chamado concluído encontrado."
+                  />
+                )}
+              </Box>
+            </Fade>
+          </Collapse>
         </Box>
 
         {selected && (
@@ -248,50 +367,53 @@ export function TicketManagement({ initialTicketId }: Props) {
                 </>
               )}
 
-              {selected.respostas && selected.respostas.length > 0 && (
-                <>
-                  <Divider sx={{ my: 2 }} />
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Respostas ({selected.respostas.length})
-                  </Typography>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                    {selected.respostas.map((r) => (
-                      <Box
-                        key={r.id}
-                        sx={{
-                          p: 1.5,
-                          borderRadius: 1,
-                          bgcolor: "action.hover",
-                          border: 1,
-                          borderColor: "divider",
-                        }}
-                      >
-                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                          <Typography variant="caption" fontWeight={600}>
-                            {r.autor_nome || "Administrador"}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {formatDate(r.created_at)}
-                          </Typography>
-                        </Box>
-                        <Typography variant="body2">{r.mensagem}</Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                </>
-              )}
+              <Divider sx={{ my: 2 }} />
+
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                Conversa
+              </Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 0,
+                  minWidth: 0,
+                }}
+              >
+                <Box
+                  ref={threadScrollRef}
+                  sx={{
+                    maxHeight: { xs: "min(45vh, 400px)", sm: "min(42vh, 440px)" },
+                    minHeight: 120,
+                    overflow: "auto",
+                    pr: 0.5,
+                  }}
+                >
+                  <TicketChatThread ticket={selected} currentUserEmail={user?.email} plain />
+                </Box>
+                <Box
+                  sx={{
+                    flexShrink: 0,
+                    pt: 1.5,
+                    mt: 1,
+                    borderTop: 1,
+                    borderColor: "divider",
+                  }}
+                >
+                  <TicketChatComposer
+                    ticket={selected}
+                    canComment
+                    onReply={handleReply}
+                    replyLoading={replyLoading}
+                    plain
+                    allowReplyWhenConcluded
+                  />
+                </Box>
+              </Box>
 
               <Divider sx={{ my: 2 }} />
 
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                <Button
-                  variant="contained"
-                  startIcon={<Reply style={{ width: 18, height: 18 }} />}
-                  onClick={handleResponderNoChat}
-                  disabled={actionLoading || selected.status === "Concluído"}
-                >
-                  Responder
-                </Button>
                 <Button
                   variant="contained"
                   color="success"

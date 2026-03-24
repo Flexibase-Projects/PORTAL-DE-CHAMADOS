@@ -16,7 +16,15 @@ export const meController = {
       });
     } catch (error) {
       console.error('[me] getMe:', error.message);
-      res.status(500).json({ success: false, error: error.message });
+      // 200 degradado: front continua utilizável (RLS/Supabase indisponível na demo).
+      res.status(200).json({
+        success: true,
+        departamento: null,
+        permissions: {},
+        templateDepartamentos: [],
+        degraded: true,
+        message: error.message,
+      });
     }
   },
 };

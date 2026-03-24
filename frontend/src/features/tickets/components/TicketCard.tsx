@@ -8,6 +8,7 @@ import Divider from "@mui/material/Divider";
 import { alpha, useTheme } from "@mui/material/styles";
 import { Clock, CheckCircle2, HelpCircle } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { getTicketStatusAccent } from "@/features/tickets/ticketStatusAccent";
 import type { Ticket, TicketStatus } from "@/types/ticket";
 
 export interface TicketCardProps {
@@ -40,14 +41,9 @@ function protocolCompact(numero: string): string {
 }
 
 function statusFooterIcon(status: TicketStatus): { Icon: typeof HelpCircle; fg: string; bg: string } {
-  switch (status) {
-    case "Concluído":
-      return { Icon: CheckCircle2, fg: "#16a34a", bg: alpha("#16a34a", 0.14) };
-    case "Em Andamento":
-      return { Icon: Clock, fg: "#d97706", bg: alpha("#f59e0b", 0.2) };
-    default:
-      return { Icon: HelpCircle, fg: "#dc2626", bg: alpha("#ef4444", 0.14) };
-  }
+  const { fg, iconBg } = getTicketStatusAccent(status);
+  const Icon = status === "Concluído" ? CheckCircle2 : status === "Em Andamento" ? Clock : HelpCircle;
+  return { Icon, fg, bg: iconBg };
 }
 
 export function TicketCard({

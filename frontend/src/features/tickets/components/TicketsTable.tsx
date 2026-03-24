@@ -1,3 +1,4 @@
+import { useRef, useState, useLayoutEffect } from "react";
 import { alpha, useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import Typography from "@mui/material/Typography";
@@ -41,6 +42,36 @@ function chamadoSubtitle(ticket: Ticket): string {
 function updatedAtDisplay(ticket: Ticket): string {
   const raw = ticket.updated_at?.trim() ? ticket.updated_at : ticket.created_at;
   return formatDate(raw);
+}
+
+/** Largura do slot da tabela (não do viewport) — colunas somem quando o painel ao lado encolhe. */
+function useTableContainerWidth() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w != null) setWidth(Math.round(w));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return { containerRef: ref, containerWidth: width };
+}
+
+/** Quais colunas extras mostrar conforme a largura útil (px). */
+function columnVisibility(containerWidth: number | null) {
+  const w = containerWidth ?? 960;
+  return {
+    showUpdated: w >= 640,
+    showResponsavel: w >= 600,
+    showSolicitante: w >= 460,
+    /** Status + Ação + Protocolo + Chamado sempre que houver tabela. */
+  };
 }
 
 function PersonCell({
@@ -91,6 +122,8 @@ export function TicketsTable({
   emptyMessage = "Nenhum chamado encontrado.",
 }: TicketsTableProps) {
   const theme = useTheme();
+  const { containerRef, containerWidth } = useTableContainerWidth();
+  const cols = columnVisibility(containerWidth);
   /** Bootstrap xs: &lt;576px — lista em cards, sem scroll horizontal. */
   const isNarrow = useMediaQuery(theme.breakpoints.down("sm"));
   /** Bootstrap sm/md: compactar células entre 576px e 767px. */
@@ -263,40 +296,73 @@ export function TicketsTable({
     );
   }
 
+  const hideCell = { display: "none" } as const;
+  const showCell = { display: "table-cell" } as const;
+
   return (
-    <TableContainer component={Paper} variant="outlined" sx={tableContainerSx}>
-      <Table
-        size="small"
-        sx={{
-          width: "100%",
-          maxWidth: "100%",
-          tableLayout: "fixed",
-          "& .MuiTableBody-root .MuiTableRow-root:nth-of-type(even):not(.Mui-selected)": {
-            bgcolor: rowStripe,
-          },
-          "& .MuiTableBody-root .MuiTableRow-root:last-of-type .MuiTableCell-root": {
-            borderBottom: 0,
-          },
-        }}
-      >
-        <TableHead>
-          <TableRow>
-            <TableCell sx={{ ...headCellSx, display: { xs: "none", sm: "table-cell" }, width: { sm: "14%", md: "13%", lg: "12%" } }}>
-              Atualizado em
-            </TableCell>
-            <TableCell sx={{ ...headCellSx, width: { sm: "16%", md: "14%", lg: "13%" } }}>Protocolo</TableCell>
-            <TableCell sx={{ ...headCellSx, width: { sm: "26%", md: "22%", lg: "24%" } }}>Chamado</TableCell>
-            <TableCell sx={{ ...headCellSx, width: { sm: "22%", md: "18%", lg: "17%" } }}>Solicitante</TableCell>
-            <TableCell sx={{ ...headCellSx, display: { xs: "none", md: "table-cell" }, width: { md: "18%", lg: "17%" } }}>
-              Responsável
-            </TableCell>
-            <TableCell sx={{ ...headCellSx, width: { sm: "14%", md: "13%", lg: "13%" } }}>Status</TableCell>
-            <TableCell sx={{ ...headCellSx, width: 56, minWidth: 56, maxWidth: 56, px: { sm: 0.75, lg: 1 }, textAlign: "right" }} align="right">
-              Ação
-            </TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
+    <Box ref={containerRef} sx={{ width: "100%", minWidth: 0 }}>
+      <TableContainer component={Paper} variant="outlined" sx={tableContainerSx}>
+        <Table
+          size="small"
+          sx={{
+            width: "100%",
+            maxWidth: "100%",
+            tableLayout: "fixed",
+            "& .MuiTableBody-root .MuiTableRow-root:nth-of-type(even):not(.Mui-selected)": {
+              bgcolor: rowStripe,
+            },
+            "& .MuiTableBody-root .MuiTableRow-root:last-of-type .MuiTableCell-root": {
+              borderBottom: 0,
+            },
+          }}
+        >
+          <TableHead>
+            <TableRow>
+              <TableCell
+                sx={{
+                  ...headCellSx,
+                  ...(cols.showUpdated ? showCell : hideCell),
+                  width: cols.showUpdated ? { sm: "14%", md: "13%", lg: "12%" } : 0,
+                }}
+              >
+                Atualizado em
+              </TableCell>
+              <TableCell sx={{ ...headCellSx, width: { sm: "16%", md: "14%", lg: "13%" } }}>Protocolo</TableCell>
+              <TableCell sx={{ ...headCellSx, width: { sm: "26%", md: "22%", lg: "28%" } }}>Chamado</TableCell>
+              <TableCell
+                sx={{
+                  ...headCellSx,
+                  ...(cols.showSolicitante ? showCell : hideCell),
+                  width: cols.showSolicitante ? { sm: "22%", md: "18%", lg: "17%" } : 0,
+                }}
+              >
+                Solicitante
+              </TableCell>
+              <TableCell
+                sx={{
+                  ...headCellSx,
+                  ...(cols.showResponsavel ? showCell : hideCell),
+                  width: cols.showResponsavel ? { md: "18%", lg: "17%" } : 0,
+                }}
+              >
+                Responsável
+              </TableCell>
+              <TableCell
+                sx={{
+                  ...headCellSx,
+                  minWidth: 158,
+                  width: { sm: "18%", md: "16%", lg: "15%" },
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Status
+              </TableCell>
+              <TableCell sx={{ ...headCellSx, width: 56, minWidth: 56, maxWidth: 56, px: { sm: 0.75, lg: 1 }, textAlign: "right" }} align="right">
+                Ação
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
           {tickets.map((ticket) => {
             const subtitle = chamadoSubtitle(ticket);
             const selected = selectedTicketId != null && ticket.id === selectedTicketId;
@@ -321,7 +387,7 @@ export function TicketsTable({
                   },
                 }}
               >
-                <TableCell sx={{ ...bodyCellSx, display: { xs: "none", sm: "table-cell" } }}>
+                <TableCell sx={{ ...bodyCellSx, ...(cols.showUpdated ? showCell : hideCell) }}>
                   <Typography variant="body2" color="text.secondary" sx={{ fontSize: { sm: "0.75rem", lg: "0.8125rem" }, wordBreak: "break-word" }}>
                     {updatedAtDisplay(ticket)}
                   </Typography>
@@ -378,17 +444,51 @@ export function TicketsTable({
                       {subtitle}
                     </Typography>
                   ) : null}
+                  {!cols.showUpdated ? (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.35, display: "block", fontSize: "0.7rem" }}>
+                      Atualizado: {updatedAtDisplay(ticket)}
+                    </Typography>
+                  ) : null}
+                  {!cols.showSolicitante && ticket.solicitante_nome?.trim() ? (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ mt: 0.25, display: "block" }}
+                      noWrap
+                      title={ticket.solicitante_nome}
+                    >
+                      Solicitante: {ticket.solicitante_nome}
+                    </Typography>
+                  ) : null}
+                  {!cols.showResponsavel && ticket.responsavel_nome?.trim() ? (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ mt: 0.25, display: "block" }}
+                      noWrap
+                      title={ticket.responsavel_nome}
+                    >
+                      Responsável: {ticket.responsavel_nome}
+                    </Typography>
+                  ) : null}
                 </TableCell>
-                <TableCell sx={{ ...bodyCellSx, overflow: "hidden" }}>
+                <TableCell sx={{ ...bodyCellSx, overflow: "hidden", ...(cols.showSolicitante ? showCell : hideCell) }}>
                   <PersonCell name={ticket.solicitante_nome} avatarSize={avatarSz} />
                 </TableCell>
-                <TableCell sx={{ ...bodyCellSx, display: { xs: "none", md: "table-cell" }, overflow: "hidden" }}>
+                <TableCell sx={{ ...bodyCellSx, overflow: "hidden", ...(cols.showResponsavel ? showCell : hideCell) }}>
                   <PersonCell name={ticket.responsavel_nome} avatarSize={avatarSz} />
                 </TableCell>
-                <TableCell sx={{ ...bodyCellSx, verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
-                  <Box sx={{ transform: { sm: "scale(0.92)", lg: "none" }, transformOrigin: "left center" }}>
-                    <TicketStatusPill status={ticket.status} />
-                  </Box>
+                <TableCell
+                  sx={{
+                    ...bodyCellSx,
+                    verticalAlign: "middle",
+                    minWidth: 158,
+                    width: { sm: "18%", md: "16%", lg: "15%" },
+                    overflow: "visible",
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <TicketStatusPill status={ticket.status} variant="tableCell" />
                 </TableCell>
                 <TableCell sx={{ ...bodyCellSx, width: 56, minWidth: 56, maxWidth: 56, px: { sm: 0.5, lg: 1 }, textAlign: "right" }} align="right" onClick={(e) => e.stopPropagation()}>
                   <Tooltip title="Abrir">
@@ -417,8 +517,9 @@ export function TicketsTable({
               </TableRow>
             );
           })}
-        </TableBody>
-      </Table>
-    </TableContainer>
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
   );
 }

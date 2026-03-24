@@ -18,12 +18,13 @@ export const notificationService = {
     const { data, error } = await q;
     if (error) throw new Error(error.message);
     const list = data || [];
-    const { count } = await db
+    const { count, error: countErr } = await db
       .from('PDC_notifications')
       .select('*', { count: 'exact', head: true })
       .eq('auth_user_id', authUserId)
       .eq('lida', false);
-    return { list, unreadCount: count ?? 0 };
+    const unreadCount = countErr ? list.filter((n) => n.lida === false).length : count ?? 0;
+    return { list, unreadCount };
   },
 
   async markAsRead(id, authUserId) {

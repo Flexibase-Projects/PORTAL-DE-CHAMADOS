@@ -9,6 +9,7 @@ import Alert from "@mui/material/Alert";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import Skeleton from "@mui/material/Skeleton";
+import { alpha, useTheme } from "@mui/material/styles";
 import { Search, Inbox, Send } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
 import { notificationService } from "@/services/notificationService";
@@ -41,6 +42,12 @@ function getPermissionsForTicket(
 /** Ordem das seções: aberto → em atendimento → encerrado. */
 const STATUS_SECTION_ORDER: TicketStatus[] = ["Aberto", "Em Andamento", "Concluído"];
 
+const STATUS_SECTION_ARIA: Record<TicketStatus, string> = {
+  Aberto: "Chamados abertos",
+  "Em Andamento": "Chamados em atendimento",
+  Concluído: "Chamados concluídos",
+};
+
 function groupTicketsByStatus(tickets: Ticket[]): Record<TicketStatus, Ticket[]> {
   const map: Record<TicketStatus, Ticket[]> = { "Em Andamento": [], Aberto: [], Concluído: [] };
   for (const t of tickets) {
@@ -58,16 +65,47 @@ function TicketGridByStatus({
   onView: (t: Ticket) => void;
   unreadIds: Set<string>;
 }) {
+  const theme = useTheme();
   const grouped = groupTicketsByStatus(tickets);
+  const sections = STATUS_SECTION_ORDER.filter((status) => grouped[status].length > 0);
+  const lineAlpha = theme.palette.mode === "dark" ? 0.32 : 0.18;
+
   return (
     <>
-      {STATUS_SECTION_ORDER.map((status) => {
+      {sections.map((status, index) => {
         const list = grouped[status];
-        if (list.length === 0) return null;
         return (
-          <Box key={status} sx={{ mb: 2.75 }}>
-            <Box sx={{ mb: 1.25, display: "inline-flex" }}>
-              <TicketStatusPill status={status} />
+          <Box
+            key={status}
+            component="section"
+            aria-label={STATUS_SECTION_ARIA[status]}
+            sx={{ mb: index < sections.length - 1 ? 0.5 : 0 }}
+          >
+            <Box
+              sx={{
+                mb: 1.75,
+                mt: index > 0 ? { xs: 2.25, sm: 2.75 } : 0,
+                display: "flex",
+                alignItems: "center",
+                gap: { xs: 1.25, sm: 1.75 },
+                minWidth: 0,
+              }}
+            >
+              <Box sx={{ flexShrink: 0 }}>
+                <TicketStatusPill status={status} />
+              </Box>
+              <Box
+                role="presentation"
+                sx={{
+                  flex: 1,
+                  minWidth: 48,
+                  height: 2,
+                  borderRadius: 1,
+                  bgcolor: alpha(theme.palette.primary.main, lineAlpha),
+                  boxShadow: (t) =>
+                    `0 0 0 1px ${alpha(t.palette.primary.main, t.palette.mode === "dark" ? 0.12 : 0.08)}`,
+                }}
+              />
             </Box>
             <Box
               sx={{

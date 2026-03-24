@@ -12,7 +12,19 @@ export default defineConfig(({ mode }) => {
 
   return {
     envDir,
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      {
+        name: "log-api-proxy",
+        configureServer() {
+          console.info(
+            `\n[vite] Proxy /api -> http://127.0.0.1:${backendPort}\n` +
+              `    Se aparecer 500 nas chamadas /api, suba o backend (ex.: na raiz do repo: npm run dev).\n`
+          );
+        },
+      },
+    ],
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),

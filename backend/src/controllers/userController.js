@@ -64,11 +64,11 @@ export const userController = {
       res.json({ success: true, user });
     } catch (error) {
       console.error('[userController] syncAuth fallback:', error?.message || error);
-      res.json({
+      res.status(200).json({
         success: true,
         user: null,
         degraded: true,
-        message: 'Sincronização temporariamente indisponível',
+        message: error?.message || 'Sincronização temporariamente indisponível',
       });
     }
   },
