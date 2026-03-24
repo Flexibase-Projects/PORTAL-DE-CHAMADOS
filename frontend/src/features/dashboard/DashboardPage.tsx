@@ -258,16 +258,25 @@ export function DashboardPage() {
       border: "none",
       borderWidth: 0,
       outline: "none",
+      transform: "perspective(900px) translateZ(0) scale(1)",
+      transformOrigin: "center center",
+      willChange: "transform, box-shadow",
       boxShadow:
         theme.palette.mode === "dark"
           ? "0 6px 18px rgba(0,0,0,0.38)"
           : "0 6px 18px rgba(15, 23, 42, 0.1), 0 2px 6px rgba(15, 23, 42, 0.08)",
-      transition: "box-shadow 0.22s ease, transform 0.18s ease",
+      transition: "box-shadow 0.26s ease, transform 0.26s ease",
       "&:hover": {
+        transform: "perspective(900px) translateY(-2px) translateZ(10px) scale(1.01)",
         boxShadow:
           theme.palette.mode === "dark"
             ? `0 0 26px ${alpha(theme.palette.primary.main, 0.32)}, 0 0 52px ${alpha(theme.palette.primary.main, 0.16)}`
             : `0 0 26px ${alpha("#111184", 0.22)}, 0 0 52px ${alpha("#111184", 0.1)}`,
+      },
+      "@media (prefers-reduced-motion: reduce)": {
+        transition: "box-shadow 0.12s ease",
+        transform: "none",
+        "&:hover": { transform: "none" },
       },
     },
   } as const;
