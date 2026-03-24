@@ -1,13 +1,6 @@
 import supabase from '../config/supabase.js';
 import { supabaseAdmin } from '../config/supabaseAdmin.js';
 import { permissionService } from './permissionService.js';
-import { appendFileSync, mkdirSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const rootDir = join(dirname(fileURLToPath(import.meta.url)), '../../..');
-const LOG_DIR = join(rootDir, '.cursor');
-const LOG_PATH = join(LOG_DIR, 'debug.log');
 
 /** Alinhado ao frontend: Comercial vazio no picker; deptos comerciais em Administrativo; dashboard agrega Comercial em Administrativo. */
 const DEPARTAMENTOS_POR_SETOR = {
@@ -123,16 +116,10 @@ function aggregateTopSolicitantes(ticketList, limit = 25) {
   });
   return [...map.values()].sort((a, b) => b.count - a.count).slice(0, limit);
 }
-const DBG = (msg, data, hypothesisId) => {
-  const payload = { location: 'dashboardService.js', message: msg, data: data || {}, hypothesisId, timestamp: Date.now() };
-  const line = JSON.stringify(payload) + '\n';
-  try { if (!existsSync(LOG_DIR)) mkdirSync(LOG_DIR, { recursive: true }); appendFileSync(LOG_PATH, line); } catch (_) {}
-  if (process.env.DEBUG_DASHBOARD) console.log('[DBG]', payload);
-  fetch('http://127.0.0.1:7242/ingest/176f700b-f851-4563-bfe2-b8f27d41c301', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ location: 'dashboardService.js', message: msg, data: data || {}, hypothesisId, timestamp: Date.now() }),
-  }).catch(() => {});
+const DBG = (msg, data) => {
+  if (process.env.DEBUG_DASHBOARD) {
+    console.log('[dashboardService]', msg, data || {});
+  }
 };
 
 /** Retorna Set com o departamento do usuário (PDC_users.departamento). Visibilidade sem exigir PDC_user_permissions. */
@@ -163,9 +150,7 @@ export const dashboardService = {
       return statsCache.value;
     }
 
-    // #region agent log
-    DBG('getStats entry', {}, 'H1');
-    // #endregion
+    DBG('getStats entry', {});
 
     const dateFrom = options.dateFrom ? String(options.dateFrom).slice(0, 10) : null;
     const dateTo = options.dateTo ? String(options.dateTo).slice(0, 10) : null;
@@ -176,7 +161,7 @@ export const dashboardService = {
       .from('PDC_tickets')
       .select('id, status, area_destino, created_at, closed_at, solicitante_id, solicitante:PDC_users!solicitante_id(nome, departamento)');
 
-    DBG('queries done', { error: error?.message, ticketsLen: (tickets || []).length }, 'H1,H2,H3,H4');
+    DBG('queries done', { error: error?.message, ticketsLen: (tickets || []).length });
 
     if (error) throw new Error(error.message);
 

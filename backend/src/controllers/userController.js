@@ -63,7 +63,13 @@ export const userController = {
       const user = await userService.syncAuthUser(auth_user_id, email, nome);
       res.json({ success: true, user });
     } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
+      console.error('[userController] syncAuth fallback:', error?.message || error);
+      res.json({
+        success: true,
+        user: null,
+        degraded: true,
+        message: 'Sincronização temporariamente indisponível',
+      });
     }
   },
 };

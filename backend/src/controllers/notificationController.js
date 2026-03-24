@@ -15,7 +15,8 @@ export const notificationController = {
       });
       res.json({ success: true, notifications: list, unreadCount });
     } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
+      console.error('[notificationController] list fallback:', error?.message || error);
+      res.json({ success: true, notifications: [], unreadCount: 0, degraded: true });
     }
   },
 

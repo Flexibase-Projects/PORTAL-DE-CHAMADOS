@@ -90,34 +90,40 @@ export const userService = {
    */
   async syncAuthUser(authUserId, email, nome) {
     if (!authUserId || !email) return null;
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('PDC_users')
-      .select('id')
+      .select('id, nome')
       .eq('email', email)
       .single();
+    if (existingError && existingError.code !== 'PGRST116') {
+      throw new Error(existingError.message);
+    }
 
     if (existing) {
-      const { data: updated } = await supabase
+      const { data: updated, error: updateError } = await supabase
         .from('PDC_users')
         .update({ auth_user_id: authUserId, nome: nome || existing.nome, updated_at: new Date().toISOString() })
         .eq('id', existing.id)
         .select()
         .single();
+      if (updateError) throw new Error(updateError.message);
       return updated;
     }
-    const { data: roles } = await supabase.from('PDC_roles').select('id').eq('nome', 'usuario').single();
-    const { data: created } = await supabase
+    const { data: roles } = await supabase.from('PDC_roles').select('id').eq('nome', 'usuario').maybeSingle();
+    const insertPayload = {
+      nome: nome || email.split('@')[0],
+      email,
+      auth_user_id: authUserId,
+      setor: 'Administrativo',
+      departamento: '',
+      ...(roles?.id ? { role_id: roles.id } : {}),
+    };
+    const { data: created, error: createError } = await supabase
       .from('PDC_users')
-      .insert({
-        nome: nome || email.split('@')[0],
-        email,
-        auth_user_id: authUserId,
-        setor: 'Administrativo',
-        departamento: '',
-        role_id: roles?.id,
-      })
+      .insert(insertPayload)
       .select()
       .single();
+    if (createError) throw new Error(createError.message);
     return created;
   },
 };

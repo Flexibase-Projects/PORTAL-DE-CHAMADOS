@@ -66,7 +66,8 @@ interface AppSidebarProps {
 }
 
 const BRAND_BLUE = "#2563eb";
-const ACTIVE_PILL_BG_LIGHT = "#eff6ff";
+const ACTIVE_PILL_BG_LIGHT = "#dbeafe";
+const ACTIVE_PILL_HOVER_BG_LIGHT = "#bfdbfe";
 /** Título da marca (PDC) */
 const BRAND_TITLE = "#1e293b";
 /** Itens inativos — cinza-azulado */
@@ -97,9 +98,9 @@ export function AppSidebar({
   const { theme, toggleTheme } = useTheme();
   const { isTiUser } = useAuth();
 
-  const navHoverBg = isLight ? alpha(BRAND_BLUE, 0.06) : alpha(muiTheme.palette.primary.main, 0.1);
+  const navHoverBg = isLight ? ACTIVE_PILL_BG_LIGHT : alpha(muiTheme.palette.primary.main, 0.1);
   const navSelectedBg = isLight ? ACTIVE_PILL_BG_LIGHT : alpha(muiTheme.palette.primary.main, 0.2);
-  const navSelectedHoverBg = isLight ? alpha(BRAND_BLUE, 0.12) : alpha(muiTheme.palette.primary.main, 0.28);
+  const navSelectedHoverBg = isLight ? ACTIVE_PILL_HOVER_BG_LIGHT : alpha(muiTheme.palette.primary.main, 0.28);
   const sectionMuted = isLight ? SECTION_MUTED_LIGHT : muiTheme.palette.text.secondary;
   const navIdleColor = isLight ? NAV_IDLE_LIGHT : muiTheme.palette.text.secondary;
   const activeNavColor = isLight ? BRAND_BLUE : muiTheme.palette.primary.light;
