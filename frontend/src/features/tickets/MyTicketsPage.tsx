@@ -181,6 +181,12 @@ export function MyTicketsPage() {
     return () => window.removeEventListener("notifications-refresh", onRefresh);
   }, [loadByAuth]);
 
+  useEffect(() => {
+    const onRealtime = () => loadByAuth();
+    window.addEventListener("tickets-realtime-update", onRealtime);
+    return () => window.removeEventListener("tickets-realtime-update", onRealtime);
+  }, [loadByAuth]);
+
   const handleViewTicket = useCallback(
     (ticket: Ticket) => {
       const { canEdit, canComment } = getPermissionsForTicket(

@@ -36,6 +36,10 @@ export interface DashboardStats {
 const DASHBOARD_CACHE_TTL_MS = 60 * 1000;
 let dashboardCache: { key: string; result: { success: boolean; stats: DashboardStats }; expiresAt: number } | null = null;
 
+export function clearDashboardStatsCache() {
+  dashboardCache = null;
+}
+
 function getDashboardCacheKey(options?: { dateFrom?: string; dateTo?: string; auth_user_id?: string | null }): string {
   const range =
     options?.dateFrom && options?.dateTo && options.dateFrom <= options.dateTo

@@ -143,6 +143,12 @@ function getStatsCacheKey(options) {
 }
 
 export const dashboardService = {
+  clearStatsCache() {
+    statsCache.key = null;
+    statsCache.value = null;
+    statsCache.expiresAt = 0;
+  },
+
   async getStats(options = {}) {
     const cacheKey = getStatsCacheKey(options);
     const now = Date.now();

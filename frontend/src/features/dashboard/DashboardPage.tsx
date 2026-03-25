@@ -109,6 +109,21 @@ export function DashboardPage() {
     if (range) loadStats(range);
   }, [authLoading, periodKey, customRangeApplied, appliedDateFrom, appliedDateTo, user?.id]);
 
+  useEffect(() => {
+    if (!user?.id || authLoading) return;
+    const onRealtime = () => {
+      if (periodKey === "custom") {
+        if (!customRangeApplied || !appliedDateFrom || !appliedDateTo || appliedDateFrom > appliedDateTo) return;
+        loadStats({ dateFrom: appliedDateFrom, dateTo: appliedDateTo });
+        return;
+      }
+      const range = getDateRangeForPeriod(periodKey);
+      if (range) loadStats(range);
+    };
+    window.addEventListener("tickets-realtime-update", onRealtime);
+    return () => window.removeEventListener("tickets-realtime-update", onRealtime);
+  }, [user?.id, authLoading, periodKey, customRangeApplied, appliedDateFrom, appliedDateTo]);
+
   const handlePeriodChange = (key: PeriodKey) => {
     setPeriodKey(key);
   };

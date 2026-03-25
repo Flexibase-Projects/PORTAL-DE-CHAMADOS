@@ -16,6 +16,7 @@ import dashboardRoutes from './routes/dashboard.js';
 import permissionRoutes from './routes/permissions.js';
 import meRoutes from './routes/me.js';
 import notificationRoutes from './routes/notifications.js';
+import realtimeRoutes from './routes/realtime.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -37,6 +38,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin/permissions', permissionRoutes);
 app.use('/api/me', meRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/realtime', realtimeRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

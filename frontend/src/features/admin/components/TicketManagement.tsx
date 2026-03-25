@@ -95,6 +95,29 @@ export function TicketManagement({ initialTicketId }: Props) {
   }, [selected?.area_destino]);
 
   useEffect(() => {
+    if (!user?.id) return;
+    const onRealtime = (event: Event) => {
+      const custom = event as CustomEvent<{ ticketIds?: string[] }>;
+      void loadTickets();
+      if (concludedSectionOpen) void loadConcludedTickets();
+      if (!selected?.id) return;
+      const ids = custom.detail?.ticketIds || [];
+      if (ids.length > 0 && !ids.includes(selected.id)) return;
+      ticketService
+        .getById(selected.id)
+        .then((res) => {
+          if (!res.success || !res.ticket) return;
+          setSelected(res.ticket);
+          setTickets((prev) => prev.map((t) => (t.id === res.ticket.id ? res.ticket : t)));
+          setConcludedTickets((prev) => prev.map((t) => (t.id === res.ticket.id ? res.ticket : t)));
+        })
+        .catch(() => {});
+    };
+    window.addEventListener("tickets-realtime-update", onRealtime as EventListener);
+    return () => window.removeEventListener("tickets-realtime-update", onRealtime as EventListener);
+  }, [user?.id, selected?.id, concludedSectionOpen, user?.email]);
+
+  useEffect(() => {
     if (!initialTicketId) return;
     const found =
       tickets.find((t) => t.id === initialTicketId) ??

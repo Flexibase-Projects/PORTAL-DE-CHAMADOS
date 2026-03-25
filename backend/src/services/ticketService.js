@@ -1,5 +1,7 @@
 import supabase from '../config/supabase.js';
 import { supabaseAdmin } from '../config/supabaseAdmin.js';
+import { realtimeService } from './realtimeService.js';
+import { dashboardService } from './dashboardService.js';
 
 function generateProtocol() {
   const now = new Date();
@@ -58,6 +60,7 @@ async function notifyPdcUsersInDestinationDepartment(client, {
   }));
   const { error } = await client.from('PDC_notifications').insert(rows);
   if (error) console.error('[notifyPdcUsersInDestinationDepartment]', error.message);
+  return authIds;
 }
 
 export const ticketService = {
@@ -137,7 +140,7 @@ export const ticketService = {
       detalhes: {},
     });
 
-    await notifyPdcUsersInDestinationDepartment(client, {
+    const newTicketRecipients = await notifyPdcUsersInDestinationDepartment(client, {
       areaDestino: created.area_destino,
       ticketId: created.id,
       numeroProtocolo: created.numero_protocolo,
@@ -146,6 +149,25 @@ export const ticketService = {
       tipo: 'novo_chamado',
       titulo: 'Novo chamado',
     });
+
+    realtimeService.publish('ticket_created', {
+      ticketId: created.id,
+      status: created.status,
+      areaDestino: created.area_destino,
+    });
+    realtimeService.publish('ticket_updated', {
+      ticketId: created.id,
+      reason: 'created',
+      status: created.status,
+    });
+    if ((newTicketRecipients || []).length > 0) {
+      realtimeService.publish(
+        'notification_created',
+        { ticketId: created.id },
+        { recipientAuthUserIds: newTicketRecipients }
+      );
+    }
+    dashboardService.clearStatsCache();
 
     return created;
   },
@@ -332,6 +354,17 @@ export const ticketService = {
       detalhes: { status_anterior: statusAnterior, status_novo: status },
     });
 
+    realtimeService.publish('ticket_updated', {
+      ticketId: id,
+      reason: 'status_changed',
+      statusAnterior,
+      statusNovo: status,
+    });
+    if (status === 'Concluído') {
+      realtimeService.publish('ticket_closed', { ticketId: id });
+    }
+    dashboardService.clearStatsCache();
+
     return this.getTicketById(id);
   },
 
@@ -401,12 +434,14 @@ export const ticketService = {
         }
       }
     }
+    const notificationRecipients = new Set();
     if (ticketRow?.solicitante_id) {
       const { data: pdcUser } = await client.from('PDC_users').select('auth_user_id').eq('id', ticketRow.solicitante_id).single();
       const remetenteEhSolicitante =
         ticketRow.solicitante_id === autorId ||
         (authUserId && pdcUser?.auth_user_id && pdcUser.auth_user_id === authUserId);
       if (pdcUser?.auth_user_id && !remetenteEhSolicitante) {
+        notificationRecipients.add(pdcUser.auth_user_id);
         await client.from('PDC_notifications').insert({
           auth_user_id: pdcUser.auth_user_id,
           tipo: 'resposta_chamado',
@@ -417,7 +452,7 @@ export const ticketService = {
       }
     }
 
-    await notifyPdcUsersInDestinationDepartment(client, {
+    const deptRecipients = await notifyPdcUsersInDestinationDepartment(client, {
       areaDestino: ticketRow?.area_destino,
       ticketId,
       numeroProtocolo: ticketRow.numero_protocolo,
@@ -426,6 +461,7 @@ export const ticketService = {
       tipo: 'resposta_chamado',
       titulo: 'Nova resposta no chamado',
     });
+    (deptRecipients || []).forEach((id) => notificationRecipients.add(id));
 
     // Atualizar status se ainda estiver Aberto
     await client
@@ -436,6 +472,19 @@ export const ticketService = {
       })
       .eq('id', ticketId)
       .eq('status', 'Aberto');
+
+    realtimeService.publish('ticket_updated', {
+      ticketId,
+      reason: 'response_added',
+    });
+    if (notificationRecipients.size > 0) {
+      realtimeService.publish(
+        'notification_created',
+        { ticketId },
+        { recipientAuthUserIds: [...notificationRecipients] }
+      );
+    }
+    dashboardService.clearStatsCache();
 
     return this.getTicketById(ticketId);
   },
