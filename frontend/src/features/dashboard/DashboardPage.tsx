@@ -32,6 +32,7 @@ const emptyStats: DashboardStats = {
   total: 0,
   abertos: 0,
   em_andamento: 0,
+  pausados: 0,
   concluidos: 0,
   por_departamento: [],
   por_dia: [],
@@ -238,11 +239,12 @@ export function DashboardPage() {
             gridTemplateColumns: {
               xs: "1fr",
               sm: "1fr 1fr",
-              lg: "repeat(4, 1fr)",
+              md: "repeat(3, 1fr)",
+              lg: "repeat(5, 1fr)",
             },
           }}
         >
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4, 5].map((i) => (
             <Skeleton key={i} variant="rounded" height={108} />
           ))}
         </Box>
@@ -456,6 +458,7 @@ export function DashboardPage() {
         total={stats.total ?? 0}
         abertos={stats.abertos ?? 0}
         emAndamento={stats.em_andamento ?? 0}
+        pausados={stats.pausados ?? 0}
         concluidos={stats.concluidos ?? 0}
       />
 

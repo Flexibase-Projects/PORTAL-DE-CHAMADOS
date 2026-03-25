@@ -10,6 +10,8 @@ export const STATUS_COLOR_ABERTO = "#dc2626";
 export const STATUS_COLOR_EM_ANDAMENTO = "#ca8a04";
 /** Verde para concluído (substitui o cinza anterior). */
 export const STATUS_COLOR_CONCLUIDO = "#16a34a";
+/** Roxo para pausado (dashboard, calendário e gráficos). */
+export const STATUS_COLOR_PAUSADO = "#9333ea";
 
 /**
  * Mesmas cores do gradiente do velocímetro “Resolvidos” (ResolvidosGauge em Charts.tsx).
@@ -28,6 +30,8 @@ export function statusColorForLeadBar(status: string): string {
       return STATUS_COLOR_ABERTO;
     case "Em Andamento":
       return STATUS_COLOR_EM_ANDAMENTO;
+    case "Pausado":
+      return STATUS_COLOR_PAUSADO;
     case "Concluído":
       return STATUS_COLOR_CONCLUIDO;
     default:
@@ -41,6 +45,8 @@ export function statusLabelForLegend(status: TicketStatus): string {
       return "Aberto";
     case "Em Andamento":
       return "Em andamento";
+    case "Pausado":
+      return "Pausado";
     case "Concluído":
       return "Concluído";
     default:

@@ -336,6 +336,8 @@ export const ticketService = {
     };
     if (status === 'Concluído') {
       updates.closed_at = new Date().toISOString();
+    } else {
+      updates.closed_at = null;
     }
     const { data, error } = await client
       .from('PDC_tickets')

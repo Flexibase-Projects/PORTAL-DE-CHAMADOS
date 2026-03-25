@@ -1,6 +1,6 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { HelpCircle, Clock, CheckCircle2 } from "lucide-react";
+import { HelpCircle, Clock, CheckCircle2, Pause } from "lucide-react";
 import { getTicketStatusAccent } from "@/features/tickets/ticketStatusAccent";
 import type { TicketStatus } from "@/types/ticket";
 
@@ -17,6 +17,7 @@ export function TicketStatusPill({ status, variant = "default" }: TicketStatusPi
   const map = {
     Aberto: { Icon: HelpCircle, label: "Aberto" as const },
     "Em Andamento": { Icon: Clock, label: "Em atendimento" as const },
+    Pausado: { Icon: Pause, label: "Pausado" as const },
     Concluído: { Icon: CheckCircle2, label: "Concluído" as const },
   };
 

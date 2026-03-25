@@ -6,7 +6,7 @@ import Box from "@mui/material/Box";
 import Avatar from "@mui/material/Avatar";
 import Divider from "@mui/material/Divider";
 import { alpha, useTheme } from "@mui/material/styles";
-import { Clock, CheckCircle2, HelpCircle } from "lucide-react";
+import { Clock, CheckCircle2, HelpCircle, Pause } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { getTicketStatusAccent } from "@/features/tickets/ticketStatusAccent";
 import type { Ticket, TicketStatus } from "@/types/ticket";
@@ -42,7 +42,14 @@ function protocolCompact(numero: string): string {
 
 function statusFooterIcon(status: TicketStatus): { Icon: typeof HelpCircle; fg: string; bg: string } {
   const { fg, iconBg } = getTicketStatusAccent(status);
-  const Icon = status === "Concluído" ? CheckCircle2 : status === "Em Andamento" ? Clock : HelpCircle;
+  const Icon =
+    status === "Concluído"
+      ? CheckCircle2
+      : status === "Em Andamento"
+        ? Clock
+        : status === "Pausado"
+          ? Pause
+          : HelpCircle;
   return { Icon, fg, bg: iconBg };
 }
 

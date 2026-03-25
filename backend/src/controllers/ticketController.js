@@ -101,7 +101,7 @@ export const ticketController = {
       const { status } = req.body;
       if (!status) return res.status(400).json({ success: false, error: 'Status é obrigatório' });
 
-      const validStatuses = ['Aberto', 'Em Andamento', 'Concluído'];
+      const validStatuses = ['Aberto', 'Em Andamento', 'Pausado', 'Concluído'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ success: false, error: 'Status inválido' });
       }

@@ -34,9 +34,8 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import { Maximize2 } from "lucide-react";
 import { ChartFullscreenDialog } from "./ChartFullscreenDialog";
 import type { PeriodKey } from "../dashboardPeriod";
-
-type PorDiaItem = { date: string; dateKey?: string; abertos?: number; fechados?: number; count?: number };
-type PorMesItem = { mes: string; mesKey?: string; abertos?: number; fechados?: number; count?: number };
+type PorDiaItem = { date: string; dateKey?: string; abertos?: number; fechados?: number; pausados?: number; count?: number };
+type PorMesItem = { mes: string; mesKey?: string; abertos?: number; fechados?: number; pausados?: number; count?: number };
 const DASHBOARD_BAR_GRADIENT_LIGHT = { from: "#111184", to: "#132937" } as const;
 const DASHBOARD_BAR_GRADIENT_DARK = { from: "#4f86ff", to: "#60a5fa" } as const;
 /** Mesmos tons dos números/labels em `StatsCards` (claro / escuro). */
@@ -117,10 +116,12 @@ function ChamadosPorPeriodoPlot({
           <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
           <Tooltip
             labelFormatter={tooltipLabel}
-            formatter={(value: number, name: string) => [
-              value,
-              String(name).toLowerCase() === "abertos" ? "Abertos" : "Fechados",
-            ]}
+            formatter={(value: number, name: string) => {
+              const n = String(name).toLowerCase();
+              if (n === "abertos") return [value, "Abertos"];
+              if (n === "fechados") return [value, "Fechados"];
+              return [value, name];
+            }}
             contentStyle={{
               backgroundColor: theme.palette.background.paper,
               color: theme.palette.text.primary,
@@ -249,7 +250,7 @@ export function ChamadosPorPeriodoChart({
 
   const pointCount = chartData.length;
   const chartMargin = {
-    top: pointCount > 28 ? 58 : pointCount > 18 ? 48 : pointCount > 10 ? 38 : 32,
+    top: pointCount > 28 ? 72 : pointCount > 18 ? 62 : pointCount > 10 ? 52 : 44,
     right: 12,
     left: 6,
     bottom: pointCount > 22 ? 14 : 10,

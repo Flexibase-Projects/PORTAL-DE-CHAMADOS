@@ -45,32 +45,90 @@ function getSetorParaDashboard(area) {
 
 const mesNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-/** Agrupa tickets por mês: { mes, abertos, fechados }. Usa departamento de origem (solicitante). */
+function ticketsForDashboardSetor(ticketList, filterSetor) {
+  if (filterSetor == null) return ticketList;
+  return ticketList.filter(
+    (t) => getSetorParaDashboard(t.solicitante?.departamento ?? t.area_destino) === filterSetor
+  );
+}
+
+function toDateStrDash(x) {
+  return (x || '').toString().slice(0, 10);
+}
+
+/** Saldo ao fim de `dateStr`: criados até a data e ainda não concluídos naquele momento (inclui Pausado, Aberto, Em Andamento). */
+function saldoNaoConcluidosAteData(base, dateStr) {
+  return base.filter((t) => {
+    const created = toDateStrDash(t.created_at);
+    if (created > dateStr) return false;
+    if (t.status !== 'Concluído' || !t.closed_at) return true;
+    const closed = toDateStrDash(t.closed_at);
+    return closed > dateStr;
+  }).length;
+}
+
+function lastDayOfMonthString(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const last = new Date(y, m, 0);
+  return `${y}-${String(m).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
+}
+
+/** Snapshot alinhado ao gráfico por dia: tickets com status Pausado e criação até a data. */
+function pausadosSnapshotAteData(base, dateStr) {
+  return base.filter((t) => t.status === 'Pausado' && toDateStrDash(t.created_at) <= dateStr).length;
+}
+
+function expandMonthRange(sortedYms) {
+  if (sortedYms.length === 0) return [];
+  const toIdx = (ym) => {
+    const [y, m] = ym.split('-').map(Number);
+    return y * 12 + m - 1;
+  };
+  const fromIdx = (idx) => {
+    const m = (idx % 12) + 1;
+    const y = Math.floor(idx / 12);
+    return `${y}-${String(m).padStart(2, '0')}`;
+  };
+  const lo = toIdx(sortedYms[0]);
+  const hi = toIdx(sortedYms[sortedYms.length - 1]);
+  const out = [];
+  for (let i = lo; i <= hi; i++) out.push(fromIdx(i));
+  return out;
+}
+
+/**
+ * Agrupa por mês: fechados = concluídos naquele mês; abertos = saldo não concluídos no último dia do mês (inclui pausados);
+ * pausados = subset em Pausado na mesma data de corte. Usa departamento de origem (solicitante).
+ */
 function aggregateByMonth(ticketList, filterSetor = null) {
-  const byMonthAbertos = {};
   const byMonthFechados = {};
+  const monthSet = new Set();
   ticketList.forEach((t) => {
     const setor = getSetorParaDashboard(t.solicitante?.departamento ?? t.area_destino);
     if (filterSetor !== null && setor !== filterSetor) return;
     const created = t.created_at ? String(t.created_at).slice(0, 7) : null;
-    if (created) {
-      byMonthAbertos[created] = (byMonthAbertos[created] || 0) + 1;
-    }
+    if (created) monthSet.add(created);
     if (t.status === 'Concluído' && t.closed_at) {
       const closed = String(t.closed_at).slice(0, 7);
-      if (closed) byMonthFechados[closed] = (byMonthFechados[closed] || 0) + 1;
+      if (closed) {
+        byMonthFechados[closed] = (byMonthFechados[closed] || 0) + 1;
+        monthSet.add(closed);
+      }
     }
+    if (t.status === 'Pausado' && created) monthSet.add(created);
   });
-  const allMonths = new Set([...Object.keys(byMonthAbertos), ...Object.keys(byMonthFechados)]);
-  const sorted = [...allMonths].sort();
-  return sorted.map((ym) => {
+  const base = ticketsForDashboardSetor(ticketList, filterSetor);
+  const sortedMonths = expandMonthRange([...monthSet].sort());
+  return sortedMonths.map((ym) => {
     const [y, m] = ym.split('-').map(Number);
     const mesLabel = `${String(m).padStart(2, '0')}. ${mesNames[m - 1]}`;
+    const endStr = lastDayOfMonthString(ym);
     return {
       mes: mesLabel,
       ym,
-      abertos: byMonthAbertos[ym] || 0,
+      abertos: saldoNaoConcluidosAteData(base, endStr),
       fechados: byMonthFechados[ym] || 0,
+      pausados: pausadosSnapshotAteData(base, endStr),
     };
   });
 }
@@ -81,11 +139,12 @@ function aggregateByMonthInRange(ticketList, filterSetor, dateFrom, dateTo) {
   const rangeEnd = dateTo.slice(0, 7);
     return aggregateByMonth(ticketList, filterSetor)
     .filter((row) => row.ym >= rangeStart && row.ym <= rangeEnd)
-    .map(({ mes, ym, abertos, fechados }) => ({
+    .map(({ mes, ym, abertos, fechados, pausados }) => ({
       mesKey: ym,
       mes: `${mes} ${ym.slice(0, 4)}`,
       abertos,
       fechados,
+      pausados,
     }));
 }
 
@@ -194,6 +253,7 @@ export const dashboardService = {
     const total = listForStats.length;
     const abertos = listForStats.filter(t => t.status === 'Aberto').length;
     const em_andamento = listForStats.filter(t => t.status === 'Em Andamento').length;
+    const pausados = listForStats.filter(t => t.status === 'Pausado').length;
     const concluidos = listForStats.filter(t => t.status === 'Concluído').length;
 
     const areaOrigem = (t) => (t.solicitante?.departamento ?? t.area_destino ?? '').trim() || '(sem área)';
@@ -206,7 +266,7 @@ export const dashboardService = {
       .map(([area, count]) => ({ area, count }))
       .sort((a, b) => b.count - a.count);
 
-    /** Por dia: "abertos" = saldo de abertos ao fim do dia (criados até o dia - fechados até o dia); "fechados" = quantidade fechada naquele dia. */
+    /** Por dia: "abertos" = saldo não concluídos ao fim do dia (inclui Pausado); "fechados" = fechados naquele dia. Por mês: mesma ideia no último dia do mês. */
     const buildPorDia = (list, filterSetor = null) => {
       const base = filterSetor
         ? list.filter(t => getSetorParaDashboard(t.solicitante?.departamento ?? t.area_destino) === filterSetor)
@@ -223,6 +283,8 @@ export const dashboardService = {
           const closed = toDateStr(t.closed_at);
           return closed > dateStr;
         }).length;
+      const pausadosNoDia = (dateStr) =>
+        base.filter((t) => t.status === 'Pausado' && toDateStr(t.created_at) <= dateStr).length;
 
       if (useCustomRange) {
         const parseYMD = (s) => {
@@ -240,6 +302,7 @@ export const dashboardService = {
             date: loc.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
             abertos: saldoAbertosFimDoDia(dateStr),
             fechados: fechadosNoDia(dateStr),
+            pausados: pausadosNoDia(dateStr),
           });
           if (dateStr === dateTo.slice(0, 10)) break;
           loc.setDate(loc.getDate() + 1);
@@ -257,6 +320,7 @@ export const dashboardService = {
             date: d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
             abertos: saldoAbertosFimDoDia(dateStr),
             fechados: fechadosNoDia(dateStr),
+            pausados: pausadosNoDia(dateStr),
           });
         }
       }
@@ -276,6 +340,7 @@ export const dashboardService = {
       total,
       abertos,
       em_andamento,
+      pausados,
       concluidos,
       por_departamento,
       por_dia,

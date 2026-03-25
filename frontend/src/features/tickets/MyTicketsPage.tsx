@@ -39,17 +39,18 @@ function getPermissionsForTicket(
   return { canEdit, canComment };
 }
 
-/** Ordem das seções: aberto → em atendimento → encerrado. */
-const STATUS_SECTION_ORDER: TicketStatus[] = ["Aberto", "Em Andamento", "Concluído"];
+/** Ordem das seções: aberto → em atendimento → pausado → encerrado. */
+const STATUS_SECTION_ORDER: TicketStatus[] = ["Aberto", "Em Andamento", "Pausado", "Concluído"];
 
 const STATUS_SECTION_ARIA: Record<TicketStatus, string> = {
   Aberto: "Chamados abertos",
   "Em Andamento": "Chamados em atendimento",
+  Pausado: "Chamados pausados",
   Concluído: "Chamados concluídos",
 };
 
 function groupTicketsByStatus(tickets: Ticket[]): Record<TicketStatus, Ticket[]> {
-  const map: Record<TicketStatus, Ticket[]> = { "Em Andamento": [], Aberto: [], Concluído: [] };
+  const map: Record<TicketStatus, Ticket[]> = { "Em Andamento": [], Aberto: [], Pausado: [], Concluído: [] };
   for (const t of tickets) {
     map[t.status].push(t);
   }

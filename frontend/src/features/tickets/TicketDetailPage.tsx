@@ -7,7 +7,7 @@ import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import Paper from "@mui/material/Paper";
 import CircularProgress from "@mui/material/CircularProgress";
-import { ArrowLeft, CheckCircle2, Clock } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, Pause, Play } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
 import { templateService } from "@/services/templateService";
 import { notificationService } from "@/services/notificationService";
@@ -179,6 +179,30 @@ export function TicketDetailPage() {
     }
   };
 
+  const handlePauseTicket = async () => {
+    if (!ticket) return;
+    setStatusActionLoading(true);
+    try {
+      const res = await ticketService.updateStatus(ticket.id, "Pausado");
+      if (res.success && "ticket" in res && res.ticket) setTicket(res.ticket);
+      else await loadTicket(false);
+    } finally {
+      setStatusActionLoading(false);
+    }
+  };
+
+  const handleResumeTicket = async () => {
+    if (!ticket) return;
+    setStatusActionLoading(true);
+    try {
+      const res = await ticketService.updateStatus(ticket.id, "Em Andamento");
+      if (res.success && "ticket" in res && res.ticket) setTicket(res.ticket);
+      else await loadTicket(false);
+    } finally {
+      setStatusActionLoading(false);
+    }
+  };
+
   const handleBack = () => navigate("/meus-chamados");
 
   if (!id) {
@@ -306,6 +330,42 @@ export function TicketDetailPage() {
                   Iniciar atendimento
                 </Button>
               ) : null}
+              {(ticket.status === "Aberto" || ticket.status === "Em Andamento") && (
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  size="small"
+                  startIcon={
+                    statusActionLoading ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <Pause style={{ width: 18, height: 18 }} />
+                    )
+                  }
+                  onClick={handlePauseTicket}
+                  disabled={statusActionLoading}
+                >
+                  Pausar
+                </Button>
+              )}
+              {ticket.status === "Pausado" && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  size="small"
+                  startIcon={
+                    statusActionLoading ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <Play style={{ width: 18, height: 18 }} />
+                    )
+                  }
+                  onClick={handleResumeTicket}
+                  disabled={statusActionLoading}
+                >
+                  Retomar
+                </Button>
+              )}
               <Button
                 variant="contained"
                 color="success"

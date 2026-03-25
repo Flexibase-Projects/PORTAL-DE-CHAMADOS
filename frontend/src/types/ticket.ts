@@ -1,4 +1,4 @@
-export type TicketStatus = "Aberto" | "Em Andamento" | "Concluído";
+export type TicketStatus = "Aberto" | "Em Andamento" | "Pausado" | "Concluído";
 export type TicketPriority = "Baixa" | "Normal" | "Alta" | "Urgente";
 
 export interface TicketResponse {

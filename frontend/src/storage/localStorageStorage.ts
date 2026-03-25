@@ -237,6 +237,7 @@ export const localStorageStorage = {
     const tickets = this.getTickets();
     const abertos = tickets.filter((t) => t.status === "Aberto").length;
     const em_andamento = tickets.filter((t) => t.status === "Em Andamento").length;
+    const pausados = tickets.filter((t) => t.status === "Pausado").length;
     const concluidos = tickets.filter((t) => t.status === "Concluído").length;
     const deptCounts: Record<string, number> = {};
     tickets.forEach((t) => {
@@ -280,8 +281,22 @@ export const localStorageStorage = {
     const buildPorDia = (
       list: Ticket[],
       filterSetor: string | null = null
-    ): { date: string; count: number }[] => {
-      const out: { date: string; count: number }[] = [];
+    ): {
+      date: string;
+      dateKey?: string;
+      count: number;
+      abertos?: number;
+      fechados?: number;
+      pausados?: number;
+    }[] => {
+      const out: {
+        date: string;
+        dateKey?: string;
+        count: number;
+        abertos?: number;
+        fechados?: number;
+        pausados?: number;
+      }[] = [];
       if (useCustomRange && dateFrom && dateTo) {
         const parseYMD = (s: string) => {
           const p = s.slice(0, 10).split("-").map(Number);
@@ -299,10 +314,16 @@ export const localStorageStorage = {
             (t.created_at ?? "").toString().startsWith(dateStr)
           ).length;
           const loc = new Date(y, m - 1, d);
+          const pausadosDia = filtered.filter(
+            (t) => t.status === "Pausado" && (t.created_at ?? "").toString().slice(0, 10) <= dateStr
+          ).length;
           out.push({
             dateKey: dateStr,
             date: loc.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" }),
             count,
+            abertos: count,
+            fechados: 0,
+            pausados: pausadosDia,
           });
           if (dateStr === dateTo.slice(0, 10)) break;
           loc.setDate(loc.getDate() + 1);
@@ -322,9 +343,15 @@ export const localStorageStorage = {
           const count = filtered.filter((t) =>
             (t.created_at ?? "").toString().startsWith(dateStr)
           ).length;
+          const pausadosDia = filtered.filter(
+            (t) => t.status === "Pausado" && (t.created_at ?? "").toString().slice(0, 10) <= dateStr
+          ).length;
           out.push({
             date: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
             count,
+            abertos: count,
+            fechados: 0,
+            pausados: pausadosDia,
           });
         }
       }
@@ -334,56 +361,91 @@ export const localStorageStorage = {
     const por_dia_industria = buildPorDia(tickets, "Industrial");
     const por_dia_administrativo = buildPorDia(tickets, "Administrativo");
     const mesNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const toYMD = (x: string | undefined) => (x ?? "").toString().slice(0, 10);
+    const saldoNaoConcluidosAteData = (base: Ticket[], dateStr: string) =>
+      base.filter((t) => {
+        const created = toYMD(t.created_at);
+        if (created > dateStr) return false;
+        if (t.status !== "Concluído" || !t.closed_at) return true;
+        const closed = toYMD(t.closed_at);
+        return closed > dateStr;
+      }).length;
+    const lastDayOfMonthString = (ym: string) => {
+      const [y, m] = ym.split("-").map(Number);
+      const last = new Date(y, m, 0);
+      return `${y}-${String(m).padStart(2, "0")}-${String(last.getDate()).padStart(2, "0")}`;
+    };
+    const pausadosSnapshotAteData = (base: Ticket[], dateStr: string) =>
+      base.filter((t) => t.status === "Pausado" && toYMD(t.created_at) <= dateStr).length;
+    const expandMonthRange = (sortedYms: string[]) => {
+      if (sortedYms.length === 0) return [];
+      const toIdx = (ym: string) => {
+        const [y, m] = ym.split("-").map(Number);
+        return y * 12 + m - 1;
+      };
+      const fromIdx = (idx: number) => {
+        const m = (idx % 12) + 1;
+        const y = Math.floor(idx / 12);
+        return `${y}-${String(m).padStart(2, "0")}`;
+      };
+      const lo = toIdx(sortedYms[0]);
+      const hi = toIdx(sortedYms[sortedYms.length - 1]);
+      const out: string[] = [];
+      for (let i = lo; i <= hi; i++) out.push(fromIdx(i));
+      return out;
+    };
     const aggregateByMonth = (
       list: Ticket[],
       filterSetor: string | null = null
-    ): { mes: string; count: number }[] => {
-      const byMonth: Record<string, number> = {};
+    ) => {
+      const byMonthFechados: Record<string, number> = {};
+      const monthSet = new Set<string>();
       list.forEach((t) => {
         const setor = getSetorParaDashboard(t.area_destino ?? "");
         if (filterSetor !== null && setor !== filterSetor) return;
         const created = (t.created_at ?? "").toString().slice(0, 7);
-        if (!created) return;
-        byMonth[created] = (byMonth[created] ?? 0) + 1;
+        if (created) monthSet.add(created);
+        if (t.status === "Concluído" && t.closed_at) {
+          const closed = String(t.closed_at).slice(0, 7);
+          if (closed) {
+            byMonthFechados[closed] = (byMonthFechados[closed] ?? 0) + 1;
+            monthSet.add(closed);
+          }
+        }
+        if (t.status === "Pausado" && created) monthSet.add(created);
       });
-      return Object.keys(byMonth)
-        .sort()
-        .map((ym) => {
-          const [y, m] = ym.split("-").map(Number);
-          return { mes: `${mesNames[m - 1]}/${String(y).slice(-2)}`, count: byMonth[ym] };
-        });
+      const base =
+        filterSetor === null
+          ? list
+          : list.filter((t) => getSetorParaDashboard(t.area_destino ?? "") === filterSetor);
+      const sortedMonths = expandMonthRange([...monthSet].sort());
+      return sortedMonths.map((ym) => {
+        const [y, m] = ym.split("-").map(Number);
+        const endStr = lastDayOfMonthString(ym);
+        const abertos = saldoNaoConcluidosAteData(base, endStr);
+        const fechados = byMonthFechados[ym] ?? 0;
+        const pausadosMes = pausadosSnapshotAteData(base, endStr);
+        return {
+          mes: `${mesNames[m - 1]}/${String(y).slice(-2)}`,
+          mesKey: ym,
+          abertos,
+          fechados,
+          pausados: pausadosMes,
+          count: abertos,
+        };
+      });
     };
     const aggregateByMonthInRange = (
       list: Ticket[],
       filterSetor: string | null,
       rangeFrom: string,
       rangeTo: string
-    ): { mes: string; mesKey: string; count: number }[] => {
+    ) => {
       const rangeStart = rangeFrom.slice(0, 7);
       const rangeEnd = rangeTo.slice(0, 7);
-      const filtered = list.filter((t) => {
-        const created = (t.created_at ?? "").toString().slice(0, 10);
-        return created >= rangeFrom && created <= rangeTo;
-      });
-      const byMonth: Record<string, number> = {};
-      filtered.forEach((t) => {
-        const setor = getSetorParaDashboard(t.area_destino ?? "");
-        if (filterSetor !== null && setor !== filterSetor) return;
-        const created = (t.created_at ?? "").toString().slice(0, 7);
-        if (!created) return;
-        byMonth[created] = (byMonth[created] ?? 0) + 1;
-      });
-      return Object.keys(byMonth)
-        .sort()
-        .filter((ym) => ym >= rangeStart && ym <= rangeEnd)
-        .map((ym) => {
-          const [y, m] = ym.split("-").map(Number);
-          return {
-            mesKey: ym,
-            mes: `${mesNames[m - 1]}/${String(y).slice(-2)}`,
-            count: byMonth[ym],
-          };
-        });
+      return aggregateByMonth(list, filterSetor).filter(
+        (row) => row.mesKey >= rangeStart && row.mesKey <= rangeEnd
+      );
     };
     const aggregateBySetor = (): { setor: string; count: number }[] => {
       const counts: Record<string, number> = { Administrativo: 0, Industrial: 0 };
@@ -400,6 +462,7 @@ export const localStorageStorage = {
       total: tickets.length,
       abertos,
       em_andamento,
+      pausados,
       concluidos,
       por_departamento,
       por_dia,

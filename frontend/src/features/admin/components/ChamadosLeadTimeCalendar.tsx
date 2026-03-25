@@ -23,6 +23,7 @@ import {
   STATUS_COLOR_ABERTO,
   STATUS_COLOR_CONCLUIDO,
   STATUS_COLOR_EM_ANDAMENTO,
+  STATUS_COLOR_PAUSADO,
   statusColorForLeadBar,
   statusLabelForLegend,
 } from "@/constants/ticketStatusColors";
@@ -256,6 +257,11 @@ function leadBarBodyBackground(theme: Theme, barColor: string): string {
       ? `linear-gradient(90deg, ${alpha(DASHBOARD_GAUGE_GREEN_START, 0.38)} 0%, ${alpha(DASHBOARD_GAUGE_GREEN_END, 0.28)} 100%)`
       : `linear-gradient(90deg, ${alpha(DASHBOARD_GAUGE_GREEN_START, 0.34)} 0%, ${alpha(DASHBOARD_GAUGE_GREEN_END, 0.2)} 100%)`;
   }
+  if (barColor === STATUS_COLOR_PAUSADO) {
+    return dark
+      ? `linear-gradient(90deg, ${alpha(STATUS_COLOR_PAUSADO, 0.42)} 0%, ${alpha(STATUS_COLOR_PAUSADO, 0.22)} 100%)`
+      : `linear-gradient(90deg, ${alpha(STATUS_COLOR_PAUSADO, 0.28)} 0%, ${alpha(STATUS_COLOR_PAUSADO, 0.12)} 100%)`;
+  }
   return dark
     ? `linear-gradient(90deg, ${alpha(barColor, 0.38)} 0%, ${alpha(barColor, 0.22)} 100%)`
     : `linear-gradient(90deg, ${alpha(barColor, 0.26)} 0%, ${alpha(barColor, 0.12)} 100%)`;
@@ -264,6 +270,9 @@ function leadBarBodyBackground(theme: Theme, barColor: string): string {
 function leadBarOuterBorder(barColor: string, theme: Theme): string {
   if (barColor === STATUS_COLOR_CONCLUIDO) {
     return alpha(DASHBOARD_GAUGE_GREEN_END, theme.palette.mode === "dark" ? 0.45 : 0.28);
+  }
+  if (barColor === STATUS_COLOR_PAUSADO) {
+    return alpha(STATUS_COLOR_PAUSADO, theme.palette.mode === "dark" ? 0.45 : 0.3);
   }
   return alpha(barColor, theme.palette.mode === "dark" ? 0.35 : 0.22);
 }
@@ -461,6 +470,7 @@ export function ChamadosLeadTimeCalendar() {
   const legendItems: { color: string; label: string }[] = [
     { color: STATUS_COLOR_ABERTO, label: statusLabelForLegend("Aberto") },
     { color: STATUS_COLOR_EM_ANDAMENTO, label: statusLabelForLegend("Em Andamento") },
+    { color: STATUS_COLOR_PAUSADO, label: statusLabelForLegend("Pausado") },
     { color: STATUS_COLOR_CONCLUIDO, label: statusLabelForLegend("Concluído") },
   ];
 
@@ -876,16 +886,23 @@ export function ChamadosLeadTimeCalendar() {
                           backgroundImage: `linear-gradient(90deg, ${alpha(DASHBOARD_GAUGE_GREEN_START, 0.22)} 0%, ${alpha(DASHBOARD_GAUGE_GREEN_END, 0.12)} 68%, transparent 100%)`,
                           bgcolor: alpha(DASHBOARD_GAUGE_GREEN_END, theme.palette.mode === "dark" ? 0.1 : 0.06),
                         }
-                      : {
-                          backgroundImage: `linear-gradient(90deg, ${alpha(b.color, 0.12)} 0%, ${alpha(b.color, 0.04)} 65%, transparent 100%)`,
-                          bgcolor: alpha(b.color, theme.palette.mode === "dark" ? 0.06 : 0.03),
-                        }),
+                      : b.color === STATUS_COLOR_PAUSADO
+                        ? {
+                            backgroundImage: `linear-gradient(90deg, ${alpha(STATUS_COLOR_PAUSADO, 0.18)} 0%, ${alpha(STATUS_COLOR_PAUSADO, 0.06)} 65%, transparent 100%)`,
+                            bgcolor: alpha(STATUS_COLOR_PAUSADO, theme.palette.mode === "dark" ? 0.08 : 0.04),
+                          }
+                        : {
+                            backgroundImage: `linear-gradient(90deg, ${alpha(b.color, 0.12)} 0%, ${alpha(b.color, 0.04)} 65%, transparent 100%)`,
+                            bgcolor: alpha(b.color, theme.palette.mode === "dark" ? 0.06 : 0.03),
+                          }),
                     transition: "background-color 0.12s ease",
                     "&:hover": {
                       bgcolor:
                         b.color === STATUS_COLOR_CONCLUIDO
                           ? alpha(DASHBOARD_GAUGE_GREEN_END, theme.palette.mode === "dark" ? 0.16 : 0.1)
-                          : alpha(b.color, theme.palette.mode === "dark" ? 0.11 : 0.07),
+                          : b.color === STATUS_COLOR_PAUSADO
+                            ? alpha(STATUS_COLOR_PAUSADO, theme.palette.mode === "dark" ? 0.14 : 0.09)
+                            : alpha(b.color, theme.palette.mode === "dark" ? 0.11 : 0.07),
                     },
                   }}
                 >

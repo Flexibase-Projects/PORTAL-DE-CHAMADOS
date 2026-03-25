@@ -9,15 +9,17 @@ interface StatsCardsProps {
   total: number;
   abertos: number;
   emAndamento: number;
+  pausados: number;
   concluidos: number;
 }
 
-type StatKey = "total" | "abertos" | "emAndamento" | "concluidos";
+type StatKey = "total" | "abertos" | "emAndamento" | "pausados" | "concluidos";
 
 const CARD_ACCENT: Record<StatKey, string> = {
   total: "#00072d",
   abertos: "#051650",
   emAndamento: "#0A2472",
+  pausados: "#6b21a8",
   concluidos: "#123499",
 };
 const CARD_TEXT_COLOR_LIGHT = "#111184";
@@ -27,6 +29,7 @@ const stats: readonly { key: StatKey; label: string }[] = [
   { key: "total", label: "Total" },
   { key: "abertos", label: "Abertos" },
   { key: "emAndamento", label: "Em Andamento" },
+  { key: "pausados", label: "Pausados" },
   { key: "concluidos", label: "Concluidos" },
 ];
 
@@ -36,10 +39,10 @@ function percentForCard(key: StatKey, count: number, totalAll: number): number {
   return Math.round((count / totalAll) * 100);
 }
 
-export function StatsCards({ total, abertos, emAndamento, concluidos }: StatsCardsProps) {
+export function StatsCards({ total, abertos, emAndamento, pausados, concluidos }: StatsCardsProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
-  const values: Record<StatKey, number> = { total, abertos, emAndamento, concluidos };
+  const values: Record<StatKey, number> = { total, abertos, emAndamento, pausados, concluidos };
 
   return (
     <Box
@@ -49,7 +52,8 @@ export function StatsCards({ total, abertos, emAndamento, concluidos }: StatsCar
         gridTemplateColumns: {
           xs: "1fr",
           sm: "1fr 1fr",
-          lg: "repeat(4, 1fr)",
+          md: "repeat(3, 1fr)",
+          lg: "repeat(5, 1fr)",
         },
       }}
     >

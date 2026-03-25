@@ -11,7 +11,7 @@ import Collapse from "@mui/material/Collapse";
 import Fade from "@mui/material/Fade";
 import Typography from "@mui/material/Typography";
 import { useTheme } from "@mui/material/styles";
-import { CheckCircle2, ArrowLeft, Archive } from "lucide-react";
+import { CheckCircle2, ArrowLeft, Archive, Pause, Play } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
 import { notificationService } from "@/services/notificationService";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,12 +26,14 @@ interface Props {
   initialTicketId?: string;
 }
 
-function statusColor(status: string): "default" | "primary" | "warning" | "success" {
+function statusColor(status: string): "default" | "primary" | "warning" | "success" | "secondary" {
   switch (status) {
     case "Concluído":
       return "success";
     case "Em Andamento":
       return "warning";
+    case "Pausado":
+      return "secondary";
     default:
       return "default";
   }
@@ -225,6 +227,44 @@ export function TicketManagement({ initialTicketId }: Props) {
       }
     } catch {
       setError("Erro ao concluir chamado.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handlePauseTicket = async () => {
+    if (!selected) return;
+    setActionLoading(true);
+    try {
+      const res = await ticketService.updateStatus(selected.id, "Pausado");
+      if (res.success && "ticket" in res && res.ticket) {
+        const t = res.ticket;
+        setSelected(t);
+        setTickets((prev) => prev.map((x) => (x.id === t.id ? t : x)));
+        setConcludedTickets((prev) => prev.map((x) => (x.id === t.id ? t : x)));
+        setSuccess("Chamado pausado.");
+      }
+    } catch {
+      setError("Erro ao pausar chamado.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleResumeTicket = async () => {
+    if (!selected) return;
+    setActionLoading(true);
+    try {
+      const res = await ticketService.updateStatus(selected.id, "Em Andamento");
+      if (res.success && "ticket" in res && res.ticket) {
+        const t = res.ticket;
+        setSelected(t);
+        setTickets((prev) => prev.map((x) => (x.id === t.id ? t : x)));
+        setConcludedTickets((prev) => prev.map((x) => (x.id === t.id ? t : x)));
+        setSuccess("Chamado retomado.");
+      }
+    } catch {
+      setError("Erro ao retomar chamado.");
     } finally {
       setActionLoading(false);
     }
@@ -504,6 +544,28 @@ export function TicketManagement({ initialTicketId }: Props) {
               <Divider sx={{ my: 2 }} />
 
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                {(selected.status === "Aberto" || selected.status === "Em Andamento") && (
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    startIcon={<Pause style={{ width: 18, height: 18 }} />}
+                    onClick={handlePauseTicket}
+                    disabled={actionLoading}
+                  >
+                    Pausar
+                  </Button>
+                )}
+                {selected.status === "Pausado" && (
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    startIcon={<Play style={{ width: 18, height: 18 }} />}
+                    onClick={handleResumeTicket}
+                    disabled={actionLoading}
+                  >
+                    Retomar
+                  </Button>
+                )}
                 <Button
                   variant="contained"
                   color="success"

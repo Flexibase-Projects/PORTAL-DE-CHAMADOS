@@ -15,6 +15,7 @@ export const dashboardController = {
         total: 0,
         abertos: 0,
         em_andamento: 0,
+        pausados: 0,
         concluidos: 0,
         por_departamento: [],
         por_dia: [],
