@@ -54,3 +54,26 @@ export const validateResponse = (req, res, next) => {
 
   next();
 };
+
+const VALID_TICKET_STATUSES = ['Aberto', 'Em Andamento', 'Pausado', 'Concluído'];
+
+export const validateStatusChange = (req, res, next) => {
+  const { status, mensagem } = req.body;
+
+  if (!status || String(status).trim().length === 0) {
+    return res.status(400).json({ success: false, error: 'Status é obrigatório' });
+  }
+
+  if (!VALID_TICKET_STATUSES.includes(status)) {
+    return res.status(400).json({ success: false, error: 'Status inválido' });
+  }
+
+  if (!mensagem || String(mensagem).trim().length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: 'É obrigatório informar uma mensagem no chat ao alterar o status',
+    });
+  }
+
+  next();
+};

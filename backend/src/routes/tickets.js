@@ -1,6 +1,6 @@
 import express from 'express';
 import { ticketController } from '../controllers/ticketController.js';
-import { validateTicket, validateResponse } from '../middleware/validation.js';
+import { validateTicket, validateResponse, validateStatusChange } from '../middleware/validation.js';
 
 const router = express.Router();
 
@@ -26,7 +26,7 @@ router.get('/area', ticketController.getTicketsByArea);
 router.get('/:id', ticketController.getTicketById);
 
 // Atualizar status do chamado
-router.patch('/:id/status', ticketController.updateTicketStatus);
+router.patch('/:id/status', validateStatusChange, ticketController.updateTicketStatus);
 
 // Adicionar resposta ao chamado
 router.post('/:id/resposta', validateResponse, ticketController.addResponse);

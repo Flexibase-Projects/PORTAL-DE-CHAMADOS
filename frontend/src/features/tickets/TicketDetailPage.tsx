@@ -12,6 +12,7 @@ import { ticketService } from "@/services/ticketService";
 import { templateService } from "@/services/templateService";
 import { notificationService } from "@/services/notificationService";
 import { TicketDetailContent } from "./components/TicketDetailContent";
+import { StatusChangeReasonDialog } from "./components/StatusChangeReasonDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Ticket } from "@/types/ticket";
 import type { TemplateField } from "@/types/template";
@@ -55,6 +56,11 @@ export function TicketDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [replyLoading, setReplyLoading] = useState(false);
   const [statusActionLoading, setStatusActionLoading] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    nextStatus: Ticket["status"];
+    title: string;
+    confirmLabel: string;
+  } | null>(null);
   const [canEdit, setCanEdit] = useState(state?.canEdit ?? false);
   const [canComment, setCanComment] = useState(state?.canComment ?? true);
 
@@ -154,50 +160,52 @@ export function TicketDetailPage() {
     }
   };
 
-  const handleStartAttendance = async () => {
-    if (!ticket) return;
-    setStatusActionLoading(true);
-    try {
-      const res = await ticketService.updateStatus(ticket.id, "Em Andamento");
-      if (res.success && "ticket" in res && res.ticket) setTicket(res.ticket);
-      else await loadTicket(false);
-    } finally {
-      setStatusActionLoading(false);
-    }
+  const openStatusReasonDialog = (
+    nextStatus: Ticket["status"],
+    title: string,
+    confirmLabel: string
+  ) => {
+    setPendingStatusChange({ nextStatus, title, confirmLabel });
   };
 
-  const handleConclude = async () => {
-    if (!ticket || !confirm("Encerrar este chamado?")) return;
+  const handleStartAttendance = () => {
+    if (!ticket) return;
+    openStatusReasonDialog("Em Andamento", "Iniciar atendimento", "Iniciar");
+  };
+
+  const handleConclude = () => {
+    if (!ticket) return;
+    openStatusReasonDialog("Concluído", "Encerrar chamado", "Encerrar");
+  };
+
+  const handlePauseTicket = () => {
+    if (!ticket) return;
+    openStatusReasonDialog("Pausado", "Pausar chamado", "Pausar");
+  };
+
+  const handleResumeTicket = () => {
+    if (!ticket) return;
+    openStatusReasonDialog("Em Andamento", "Retomar chamado", "Retomar");
+  };
+
+  const handleStatusReasonConfirm = async (mensagem: string) => {
+    if (!ticket || !pendingStatusChange) return;
+    const target = pendingStatusChange;
     setStatusActionLoading(true);
     try {
-      const res = await ticketService.updateStatus(ticket.id, "Concluído");
-      if (res.success) {
+      const res = await ticketService.updateStatus(ticket.id, target.nextStatus, {
+        mensagem,
+        auth_user_id: user?.id ?? undefined,
+        auth_user_email: user?.email ?? undefined,
+      });
+      setPendingStatusChange(null);
+      if (res.success && target.nextStatus === "Concluído") {
         navigate("/meus-chamados");
+      } else if (res.success && "ticket" in res && res.ticket) {
+        setTicket(res.ticket);
+      } else {
+        await loadTicket(false);
       }
-    } finally {
-      setStatusActionLoading(false);
-    }
-  };
-
-  const handlePauseTicket = async () => {
-    if (!ticket) return;
-    setStatusActionLoading(true);
-    try {
-      const res = await ticketService.updateStatus(ticket.id, "Pausado");
-      if (res.success && "ticket" in res && res.ticket) setTicket(res.ticket);
-      else await loadTicket(false);
-    } finally {
-      setStatusActionLoading(false);
-    }
-  };
-
-  const handleResumeTicket = async () => {
-    if (!ticket) return;
-    setStatusActionLoading(true);
-    try {
-      const res = await ticketService.updateStatus(ticket.id, "Em Andamento");
-      if (res.success && "ticket" in res && res.ticket) setTicket(res.ticket);
-      else await loadTicket(false);
     } finally {
       setStatusActionLoading(false);
     }
@@ -396,6 +404,16 @@ export function TicketDetailPage() {
           currentUserEmail={user?.email}
         />
       </Box>
+      <StatusChangeReasonDialog
+        open={Boolean(pendingStatusChange)}
+        title={pendingStatusChange?.title ?? ""}
+        confirmLabel={pendingStatusChange?.confirmLabel}
+        loading={statusActionLoading}
+        onClose={() => {
+          if (!statusActionLoading) setPendingStatusChange(null);
+        }}
+        onConfirm={handleStatusReasonConfirm}
+      />
     </Box>
   );
 }

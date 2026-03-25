@@ -98,17 +98,13 @@ export const ticketController = {
 
   async updateTicketStatus(req, res) {
     try {
-      const { status } = req.body;
-      if (!status) return res.status(400).json({ success: false, error: 'Status é obrigatório' });
-
-      const validStatuses = ['Aberto', 'Em Andamento', 'Pausado', 'Concluído'];
-      if (!validStatuses.includes(status)) {
-        return res.status(400).json({ success: false, error: 'Status inválido' });
-      }
+      const { status, mensagem } = req.body;
 
       const authUserId = req.headers['x-auth-user-id'] || req.query.auth_user_id || req.body.auth_user_id || null;
       const authUserEmail = (req.body.auth_user_email || req.query.auth_user_email || '').trim() || null;
-      const ticket = await ticketService.updateTicketStatus(req.params.id, status, authUserId, authUserEmail);
+      const ticket = await ticketService.updateTicketStatus(req.params.id, status, authUserId, authUserEmail, {
+        mensagem,
+      });
       if (!ticket) return res.status(404).json({ success: false, error: 'Chamado não encontrado' });
 
       res.json({ success: true, message: 'Status atualizado', ticket });

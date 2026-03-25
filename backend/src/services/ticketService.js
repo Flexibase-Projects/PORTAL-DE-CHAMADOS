@@ -325,53 +325,19 @@ export const ticketService = {
     return autorId;
   },
 
-  async updateTicketStatus(id, status, authUserId = null, authUserEmail = null) {
-    const client = supabaseAdmin || supabase;
-    const { data: current } = await client.from('PDC_tickets').select('status').eq('id', id).single();
-    const statusAnterior = current?.status || null;
-
-    const updates = {
-      status,
-      updated_at: new Date().toISOString(),
-    };
-    if (status === 'Concluído') {
-      updates.closed_at = new Date().toISOString();
-    } else {
-      updates.closed_at = null;
-    }
-    const { data, error } = await client
-      .from('PDC_tickets')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) return null;
-
-    const autorId = await this._resolveAutorId(client, authUserId, authUserEmail);
-    await client.from('PDC_ticket_activities').insert({
-      ticket_id: id,
-      tipo: 'status_alterado',
-      autor_id: autorId,
-      detalhes: { status_anterior: statusAnterior, status_novo: status },
-    });
-
-    realtimeService.publish('ticket_updated', {
-      ticketId: id,
-      reason: 'status_changed',
-      statusAnterior,
-      statusNovo: status,
-    });
-    if (status === 'Concluído') {
-      realtimeService.publish('ticket_closed', { ticketId: id });
-    }
-    dashboardService.clearStatsCache();
-
-    return this.getTicketById(id);
-  },
-
-  async addResponse(ticketId, responseData, authUserId = null, authUserEmail = null) {
-    const client = supabaseAdmin || supabase;
+  /**
+   * Grava mensagem em PDC_ticket_responses, atividade comentário, notificações e efeitos colaterais.
+   * @param {{ promoteAbertoToEmAndamento: boolean, publishResponseAdded?: boolean }} sideEffectOpts — se promoteAbertoToEmAndamento, só altera Aberto→Em Andamento quando o autor é do dept. receptor e não é o solicitante.
+   */
+  async _persistResponseSideEffects(
+    client,
+    ticketId,
+    responseData,
+    authUserId,
+    authUserEmail,
+    sideEffectOpts
+  ) {
+    const { promoteAbertoToEmAndamento, publishResponseAdded = true } = sideEffectOpts;
 
     let autorId = responseData.autor_id;
     if (!autorId || autorId === 'current') {
@@ -399,7 +365,6 @@ export const ticketService = {
       detalhes: { response_id: insertedResponse?.id, mensagem: msgPreview },
     });
 
-    // Notificar o solicitante sobre nova resposta (se tiver auth_user_id)
     let { data: ticketRow, error: ticketRowErr } = await client
       .from('PDC_tickets')
       .select('solicitante_id, area_destino, numero_protocolo, assunto, responsavel_id')
@@ -416,24 +381,28 @@ export const ticketService = {
     }
     if (ticketRowErr) throw new Error(ticketRowErr.message);
 
-    // Autoatribuição na primeira resposta: somente se autor for do departamento receptor.
-    if (!ticketRow?.responsavel_id && ticketRow?.area_destino && autorId) {
-      const areaNorm = (ticketRow.area_destino || '').trim().toUpperCase();
-      const { data: autorRow } = await client
-        .from('PDC_users')
-        .select('id, departamento')
-        .eq('id', autorId)
-        .maybeSingle();
-      const autorDeptNorm = (autorRow?.departamento || '').trim().toUpperCase();
-      if (autorRow?.id && autorDeptNorm === areaNorm) {
-        const updateResult = await client
-          .from('PDC_tickets')
-          .update({ responsavel_id: autorRow.id, updated_at: new Date().toISOString() })
-          .eq('id', ticketId)
-          .is('responsavel_id', null);
-        if (updateResult.error && !isMissingResponsavelColumnError(updateResult.error)) {
-          throw new Error(updateResult.error.message);
-        }
+    const { data: autorRow } = await client
+      .from('PDC_users')
+      .select('id, departamento')
+      .eq('id', autorId)
+      .maybeSingle();
+    const areaNorm = (ticketRow.area_destino || '').trim().toUpperCase();
+    const autorDeptNorm = (autorRow?.departamento || '').trim().toUpperCase();
+    const autorEhDoDepartamentoReceptor = Boolean(autorRow?.id) && autorDeptNorm === areaNorm;
+    /** Aberto → Em Andamento só quando quem escreve é da equipe receptora, não o solicitante. */
+    const devePromoverAbertoPorMensagem =
+      promoteAbertoToEmAndamento &&
+      ticketRow.solicitante_id !== autorId &&
+      autorEhDoDepartamentoReceptor;
+
+    if (!ticketRow?.responsavel_id && ticketRow?.area_destino && autorId && autorEhDoDepartamentoReceptor) {
+      const updateResult = await client
+        .from('PDC_tickets')
+        .update({ responsavel_id: autorRow.id, updated_at: new Date().toISOString() })
+        .eq('id', ticketId)
+        .is('responsavel_id', null);
+      if (updateResult.error && !isMissingResponsavelColumnError(updateResult.error)) {
+        throw new Error(updateResult.error.message);
       }
     }
     const notificationRecipients = new Set();
@@ -465,20 +434,23 @@ export const ticketService = {
     });
     (deptRecipients || []).forEach((id) => notificationRecipients.add(id));
 
-    // Atualizar status se ainda estiver Aberto
-    await client
-      .from('PDC_tickets')
-      .update({
-        status: 'Em Andamento',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', ticketId)
-      .eq('status', 'Aberto');
+    if (devePromoverAbertoPorMensagem) {
+      await client
+        .from('PDC_tickets')
+        .update({
+          status: 'Em Andamento',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', ticketId)
+        .eq('status', 'Aberto');
+    }
 
-    realtimeService.publish('ticket_updated', {
-      ticketId,
-      reason: 'response_added',
-    });
+    if (publishResponseAdded) {
+      realtimeService.publish('ticket_updated', {
+        ticketId,
+        reason: 'response_added',
+      });
+    }
     if (notificationRecipients.size > 0) {
       realtimeService.publish(
         'notification_created',
@@ -487,7 +459,84 @@ export const ticketService = {
       );
     }
     dashboardService.clearStatsCache();
+  },
 
+  async updateTicketStatus(id, status, authUserId = null, authUserEmail = null, opts = {}) {
+    const client = supabaseAdmin || supabase;
+    const { data: current, error: curErr } = await client
+      .from('PDC_tickets')
+      .select('status, closed_at')
+      .eq('id', id)
+      .single();
+
+    if (curErr || !current) return null;
+
+    const statusAnterior = current.status || null;
+    const closedAtAnterior = current.closed_at ?? null;
+    const mensagem = opts?.mensagem != null ? String(opts.mensagem).trim() : '';
+    if (!mensagem) {
+      throw new Error('Mensagem é obrigatória ao alterar o status');
+    }
+
+    const updates = {
+      status,
+      updated_at: new Date().toISOString(),
+    };
+    if (status === 'Concluído') {
+      updates.closed_at = new Date().toISOString();
+    } else {
+      updates.closed_at = null;
+    }
+    const { error: updErr } = await client.from('PDC_tickets').update(updates).eq('id', id).select().single();
+    if (updErr) return null;
+
+    const responsePayload = { mensagem, autor_id: 'current' };
+
+    try {
+      await this._persistResponseSideEffects(client, id, responsePayload, authUserId, authUserEmail, {
+        promoteAbertoToEmAndamento: false,
+        publishResponseAdded: false,
+      });
+    } catch (e) {
+      await client
+        .from('PDC_tickets')
+        .update({
+          status: statusAnterior,
+          closed_at: closedAtAnterior,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+      throw e;
+    }
+
+    const autorId = await this._resolveAutorId(client, authUserId, authUserEmail);
+    await client.from('PDC_ticket_activities').insert({
+      ticket_id: id,
+      tipo: 'status_alterado',
+      autor_id: autorId,
+      detalhes: { status_anterior: statusAnterior, status_novo: status },
+    });
+
+    realtimeService.publish('ticket_updated', {
+      ticketId: id,
+      reason: 'status_changed',
+      statusAnterior,
+      statusNovo: status,
+    });
+    if (status === 'Concluído') {
+      realtimeService.publish('ticket_closed', { ticketId: id });
+    }
+    dashboardService.clearStatsCache();
+
+    return this.getTicketById(id);
+  },
+
+  async addResponse(ticketId, responseData, authUserId = null, authUserEmail = null) {
+    const client = supabaseAdmin || supabase;
+    await this._persistResponseSideEffects(client, ticketId, responseData, authUserId, authUserEmail, {
+      promoteAbertoToEmAndamento: true,
+      publishResponseAdded: true,
+    });
     return this.getTicketById(ticketId);
   },
 

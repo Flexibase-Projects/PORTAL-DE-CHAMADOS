@@ -175,16 +175,38 @@ export const ticketService = {
     }
   },
 
-  async updateStatus(id: string, status: string) {
+  async updateStatus(
+    id: string,
+    status: string,
+    options: {
+      mensagem: string;
+      auth_user_id?: string | null;
+      auth_user_email?: string | null;
+    }
+  ) {
+    const { mensagem, auth_user_id, auth_user_email } = options;
+    const body: Record<string, unknown> = {
+      status,
+      mensagem,
+    };
+    if (auth_user_id) body.auth_user_id = auth_user_id;
+    if (auth_user_email) body.auth_user_email = auth_user_email;
+
     if (USE_LOCAL_STORAGE) {
-      const ticket = localStorageStorage.updateTicketStatus(id, status as Ticket["status"]);
+      const ticket = localStorageStorage.updateTicketStatus(id, status as Ticket["status"], {
+        mensagem,
+        autor_id: "current",
+      });
       return ticket ? { success: true, message: "Status atualizado", ticket } : { success: false };
     }
     try {
-      const res = await api.patch(`/tickets/${id}/status`, { status });
+      const res = await api.patch(`/tickets/${id}/status`, body);
       return res.data;
     } catch {
-      const ticket = localStorageStorage.updateTicketStatus(id, status as Ticket["status"]);
+      const ticket = localStorageStorage.updateTicketStatus(id, status as Ticket["status"], {
+        mensagem,
+        autor_id: "current",
+      });
       return ticket ? { success: true, message: "Status atualizado", ticket } : { success: false };
     }
   },
@@ -193,15 +215,24 @@ export const ticketService = {
     id: string,
     data: { mensagem: string; autor_id: string; auth_user_id?: string | null; auth_user_email?: string | null }
   ) {
+    const resolveLocalAutorId = () => {
+      if (data.autor_id !== "current") return data.autor_id;
+      const email = data.auth_user_email?.trim();
+      if (!email) return data.autor_id;
+      const pdc = localStorageStorage.getUserByEmail(email);
+      return pdc?.id ?? data.autor_id;
+    };
+    const payload = { ...data, autor_id: resolveLocalAutorId() };
+
     if (USE_LOCAL_STORAGE) {
-      const ticket = localStorageStorage.addTicketResponse(id, data);
+      const ticket = localStorageStorage.addTicketResponse(id, payload);
       return ticket ? { success: true, message: "Resposta adicionada", ticket } : { success: false };
     }
     try {
       const res = await api.post(`/tickets/${id}/resposta`, data);
       return res.data;
     } catch {
-      const ticket = localStorageStorage.addTicketResponse(id, data);
+      const ticket = localStorageStorage.addTicketResponse(id, payload);
       return ticket ? { success: true, message: "Resposta adicionada", ticket } : { success: false };
     }
   },

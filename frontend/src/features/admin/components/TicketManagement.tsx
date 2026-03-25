@@ -21,6 +21,7 @@ import { formatDate } from "@/lib/utils";
 import type { Ticket } from "@/types/ticket";
 import type { TemplateField } from "@/types/template";
 import { TicketChatThread, TicketChatComposer } from "@/features/tickets/components/TicketChatPanel";
+import { StatusChangeReasonDialog } from "@/features/tickets/components/StatusChangeReasonDialog";
 
 interface Props {
   initialTicketId?: string;
@@ -53,6 +54,11 @@ export function TicketManagement({ initialTicketId }: Props) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [templateFields, setTemplateFields] = useState<TemplateField[]>([]);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    nextStatus: Ticket["status"];
+    title: string;
+    confirmLabel: string;
+  } | null>(null);
   const threadScrollRef = useRef<HTMLDivElement>(null);
   const listColumnRef = useRef<HTMLDivElement>(null);
 
@@ -214,57 +220,38 @@ export function TicketManagement({ initialTicketId }: Props) {
     }
   };
 
-  const handleConclude = async () => {
-    if (!selected || !confirm("Tem certeza que deseja concluir este chamado?")) return;
+  const handleStatusReasonConfirm = async (mensagem: string) => {
+    if (!selected || !pendingStatusChange || !user?.id) return;
+    const target = pendingStatusChange.nextStatus;
     setActionLoading(true);
     try {
-      const res = await ticketService.updateStatus(selected.id, "Concluído");
-      if (res.success) {
+      const res = await ticketService.updateStatus(selected.id, target, {
+        mensagem,
+        auth_user_id: user.id,
+        auth_user_email: user.email ?? undefined,
+      });
+      setPendingStatusChange(null);
+      if (res.success && target === "Concluído") {
         setSuccess("Chamado concluído!");
         setSelected(null);
         await loadTickets();
         if (concludedSectionOpen) await loadConcludedTickets();
-      }
-    } catch {
-      setError("Erro ao concluir chamado.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handlePauseTicket = async () => {
-    if (!selected) return;
-    setActionLoading(true);
-    try {
-      const res = await ticketService.updateStatus(selected.id, "Pausado");
-      if (res.success && "ticket" in res && res.ticket) {
+      } else if (res.success && "ticket" in res && res.ticket) {
         const t = res.ticket;
         setSelected(t);
         setTickets((prev) => prev.map((x) => (x.id === t.id ? t : x)));
         setConcludedTickets((prev) => prev.map((x) => (x.id === t.id ? t : x)));
-        setSuccess("Chamado pausado.");
+        if (target === "Pausado") setSuccess("Chamado pausado.");
+        else if (target === "Em Andamento") setSuccess("Chamado retomado.");
       }
     } catch {
-      setError("Erro ao pausar chamado.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleResumeTicket = async () => {
-    if (!selected) return;
-    setActionLoading(true);
-    try {
-      const res = await ticketService.updateStatus(selected.id, "Em Andamento");
-      if (res.success && "ticket" in res && res.ticket) {
-        const t = res.ticket;
-        setSelected(t);
-        setTickets((prev) => prev.map((x) => (x.id === t.id ? t : x)));
-        setConcludedTickets((prev) => prev.map((x) => (x.id === t.id ? t : x)));
-        setSuccess("Chamado retomado.");
-      }
-    } catch {
-      setError("Erro ao retomar chamado.");
+      setError(
+        target === "Concluído"
+          ? "Erro ao concluir chamado."
+          : target === "Pausado"
+            ? "Erro ao pausar chamado."
+            : "Erro ao retomar chamado."
+      );
     } finally {
       setActionLoading(false);
     }
@@ -549,7 +536,13 @@ export function TicketManagement({ initialTicketId }: Props) {
                     variant="outlined"
                     color="secondary"
                     startIcon={<Pause style={{ width: 18, height: 18 }} />}
-                    onClick={handlePauseTicket}
+                    onClick={() =>
+                      setPendingStatusChange({
+                        nextStatus: "Pausado",
+                        title: "Pausar chamado",
+                        confirmLabel: "Pausar",
+                      })
+                    }
                     disabled={actionLoading}
                   >
                     Pausar
@@ -560,7 +553,13 @@ export function TicketManagement({ initialTicketId }: Props) {
                     variant="outlined"
                     color="primary"
                     startIcon={<Play style={{ width: 18, height: 18 }} />}
-                    onClick={handleResumeTicket}
+                    onClick={() =>
+                      setPendingStatusChange({
+                        nextStatus: "Em Andamento",
+                        title: "Retomar chamado",
+                        confirmLabel: "Retomar",
+                      })
+                    }
                     disabled={actionLoading}
                   >
                     Retomar
@@ -570,7 +569,13 @@ export function TicketManagement({ initialTicketId }: Props) {
                   variant="contained"
                   color="success"
                   startIcon={<CheckCircle2 style={{ width: 18, height: 18 }} />}
-                  onClick={handleConclude}
+                  onClick={() =>
+                    setPendingStatusChange({
+                      nextStatus: "Concluído",
+                      title: "Concluir chamado",
+                      confirmLabel: "Concluir",
+                    })
+                  }
                   disabled={actionLoading || selected.status === "Concluído"}
                 >
                   Concluir
@@ -583,6 +588,16 @@ export function TicketManagement({ initialTicketId }: Props) {
           </Card>
         )}
       </Box>
+      <StatusChangeReasonDialog
+        open={Boolean(pendingStatusChange)}
+        title={pendingStatusChange?.title ?? ""}
+        confirmLabel={pendingStatusChange?.confirmLabel}
+        loading={actionLoading}
+        onClose={() => {
+          if (!actionLoading) setPendingStatusChange(null);
+        }}
+        onConfirm={handleStatusReasonConfirm}
+      />
     </Box>
   );
 }

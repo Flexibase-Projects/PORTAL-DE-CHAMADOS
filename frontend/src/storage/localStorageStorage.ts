@@ -63,7 +63,8 @@ export const localStorageStorage = {
     return this.getUsers().find((u) => u.id === id) ?? null;
   },
   getUserByEmail(email: string): User | null {
-    return this.getUsers().find((u) => u.email === email) ?? null;
+    const norm = email.trim().toLowerCase();
+    return this.getUsers().find((u) => (u.email || "").trim().toLowerCase() === norm) ?? null;
   },
   createUser(data: Partial<User>): User {
     const users = this.getUsers();
@@ -158,13 +159,31 @@ export const localStorageStorage = {
     set(KEYS.TICKETS, tickets);
     return ticket;
   },
-  updateTicketStatus(id: string, status: Ticket["status"]): Ticket | null {
+  updateTicketStatus(
+    id: string,
+    status: Ticket["status"],
+    opts?: { mensagem: string; autor_id: string }
+  ): Ticket | null {
     const tickets = this.getTickets();
     const idx = tickets.findIndex((t) => t.id === id);
     if (idx === -1) return null;
+    const msg = opts?.mensagem != null ? String(opts.mensagem).trim() : "";
+    if (!msg) return null;
+    const autorId = opts?.autor_id ?? "current";
+    const autor = this.getUserById(autorId);
+    const respostas = [...(tickets[idx].respostas ?? [])];
+    respostas.push({
+      id: genId(),
+      ticket_id: id,
+      autor_id: autorId,
+      autor_nome: autor?.nome ?? "Administrador",
+      mensagem: msg,
+      created_at: now(),
+    });
     tickets[idx] = {
       ...tickets[idx],
       status,
+      respostas,
       updated_at: now(),
       closed_at: status === "Concluído" ? now() : undefined,
     };
@@ -178,7 +197,7 @@ export const localStorageStorage = {
     const ticket = this.getTicketById(ticketId);
     if (!ticket) return null;
     const respostas = ticket.respostas ?? [];
-    const autor = this.getUserById(data.autor_id);
+    const autor = data.autor_id !== "current" ? this.getUserById(data.autor_id) : null;
     respostas.push({
       id: genId(),
       ticket_id: ticketId,
@@ -190,10 +209,18 @@ export const localStorageStorage = {
     const tickets = this.getTickets();
     const idx = tickets.findIndex((t) => t.id === ticketId);
     if (idx === -1) return null;
+    const destNorm = (ticket.area_destino ?? "").trim().toUpperCase();
+    const autorDeptNorm = (autor?.departamento ?? "").trim().toUpperCase();
+    const autorEhReceptor =
+      Boolean(autor) &&
+      autorDeptNorm === destNorm &&
+      ticket.solicitante_id !== autor.id;
+    const podePromoverAberto =
+      ticket.status === "Aberto" && autorEhReceptor;
     tickets[idx] = {
       ...tickets[idx],
       respostas,
-      status: ticket.status === "Aberto" ? "Em Andamento" : ticket.status,
+      status: podePromoverAberto ? "Em Andamento" : ticket.status,
       updated_at: now(),
     };
     set(KEYS.TICKETS, tickets);
