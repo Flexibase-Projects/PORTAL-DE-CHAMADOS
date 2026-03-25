@@ -581,7 +581,9 @@ function TicketsBySetorDonutPlot({
               const item = payload[0];
               const setor = item.payload?.setor ?? item.name ?? "";
               const count = item.payload?.count ?? item.value ?? 0;
-              const fillColor = SETOR_COLOR_MAP[setor] ?? "#888";
+              const baseColor = SETOR_COLOR_MAP[setor] ?? "#888";
+              const fillColor =
+                isDark && setor === "Administrativo" ? "#60a5fa" : baseColor;
               return (
                 <Box
                   sx={{

@@ -10,7 +10,7 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Popover from "@mui/material/Popover";
 import { useTheme, alpha } from "@mui/material/styles";
-import { Calendar, Layers } from "lucide-react";
+import { Building2, Calendar, CalendarDays, CalendarRange, Clock3, Factory, LayoutGrid } from "lucide-react";
 import { StatsCards } from "./components/StatsCards";
 import {
   ChamadosPorPeriodoChart,
@@ -322,12 +322,23 @@ export function DashboardPage() {
             label="Período"
             onChange={(e) => handlePeriodChange(e.target.value as PeriodKey)}
             MenuProps={filterMenuProps}
-            renderValue={(value) => (
-              <Box component="span" sx={{ display: "flex", alignItems: "center", gap: 1, fontWeight: 600 }}>
-                <Calendar size={17} strokeWidth={2} style={{ opacity: 0.9, flexShrink: 0 }} />
-                {PERIOD_LABELS[value as PeriodKey]}
-              </Box>
-            )}
+            renderValue={(value) => {
+              const key = value as PeriodKey;
+              const PeriodIcon =
+                key === "7d"
+                  ? Clock3
+                  : key === "mes_atual"
+                    ? CalendarDays
+                    : key === "ano_atual"
+                      ? CalendarRange
+                      : Calendar;
+              return (
+                <Box component="span" sx={{ display: "flex", alignItems: "center", gap: 1, fontWeight: 600 }}>
+                  <PeriodIcon size={17} strokeWidth={2} style={{ opacity: 0.9, flexShrink: 0 }} aria-hidden />
+                  {PERIOD_LABELS[key]}
+                </Box>
+              );
+            }}
             sx={{ "& .MuiSelect-select": { py: 1, display: "flex", alignItems: "center" } }}
           >
             <MenuItem value="7d" sx={menuItemSelectedSx}>
@@ -400,10 +411,13 @@ export function DashboardPage() {
           </>
         )}
         <FormControl size="small" sx={filterFormControlSx}>
-          <InputLabel id="dashboard-setor-label">Filtrar por setor</InputLabel>
+          <InputLabel id="dashboard-setor-label" shrink>
+            Filtrar por setor
+          </InputLabel>
           <Select
             labelId="dashboard-setor-label"
             value={filterSetorGlobal ?? ""}
+            displayEmpty
             label="Filtrar por setor"
             onChange={(e) => setFilterSetorGlobal(e.target.value || null)}
             MenuProps={filterMenuProps}
@@ -414,9 +428,11 @@ export function DashboardPage() {
                   : value === "Industrial"
                     ? "Industrial"
                     : "Todos";
+              const SetorIcon =
+                value === "Administrativo" ? Building2 : value === "Industrial" ? Factory : LayoutGrid;
               return (
                 <Box component="span" sx={{ display: "flex", alignItems: "center", gap: 1, fontWeight: 600 }}>
-                  <Layers size={17} strokeWidth={2} style={{ opacity: 0.9, flexShrink: 0 }} />
+                  <SetorIcon size={17} strokeWidth={2} style={{ opacity: 0.9, flexShrink: 0 }} aria-hidden />
                   {label}
                 </Box>
               );
