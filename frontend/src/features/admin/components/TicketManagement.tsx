@@ -221,23 +221,44 @@ export function TicketManagement({ initialTicketId }: Props) {
   };
 
   const handleStatusReasonConfirm = async (mensagem: string) => {
-    if (!selected || !pendingStatusChange || !user?.id) return;
+    if (!selected || !pendingStatusChange || !user?.id) {
+      setError("Sessão inválida. Faça login novamente para alterar o status.");
+      return;
+    }
     const target = pendingStatusChange.nextStatus;
     setActionLoading(true);
+    setError("");
     try {
       const res = await ticketService.updateStatus(selected.id, target, {
         mensagem,
         auth_user_id: user.id,
         auth_user_email: user.email ?? undefined,
       });
+      if (!res.success) {
+        const apiMsg =
+          "error" in res && typeof res.error === "string" && res.error.trim() ? res.error.trim() : null;
+        setError(
+          apiMsg ||
+            (target === "Concluído"
+              ? "Não foi possível concluir o chamado."
+              : target === "Pausado"
+                ? "Não foi possível pausar o chamado."
+                : "Não foi possível retomar o chamado.")
+        );
+        return;
+      }
+      if (!("ticket" in res) || !res.ticket) {
+        setError("O servidor não devolveu o chamado atualizado. Atualize a lista e tente de novo.");
+        return;
+      }
       setPendingStatusChange(null);
-      if (res.success && target === "Concluído") {
+      const t = res.ticket;
+      if (target === "Concluído") {
         setSuccess("Chamado concluído!");
         setSelected(null);
         await loadTickets();
         if (concludedSectionOpen) await loadConcludedTickets();
-      } else if (res.success && "ticket" in res && res.ticket) {
-        const t = res.ticket;
+      } else {
         setSelected(t);
         setTickets((prev) => prev.map((x) => (x.id === t.id ? t : x)));
         setConcludedTickets((prev) => prev.map((x) => (x.id === t.id ? t : x)));

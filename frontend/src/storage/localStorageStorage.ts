@@ -106,23 +106,34 @@ export const localStorageStorage = {
   getTicketById(id: string): Ticket | null {
     const t = this.getTickets().find((t) => t.id === id) ?? null;
     if (!t) return null;
-    const atividades = [...(t.respostas || [])]
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .map((r) => ({
+    const persisted = [...(t.atividades ?? [])];
+    const criadoIdx = persisted.findIndex((a) => a.tipo === "criado");
+    if (criadoIdx === -1) {
+      persisted.unshift({
+        id: `${t.id}-criado`,
+        tipo: "criado",
+        autor_nome: t.solicitante_nome,
+        created_at: t.created_at,
+        detalhes: {},
+      });
+    }
+    const comentIds = new Set(
+      persisted.filter((a) => a.tipo === "comentario").map((a) => a.id)
+    );
+    for (const r of [...(t.respostas || [])].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )) {
+      if (comentIds.has(r.id)) continue;
+      persisted.push({
         id: r.id,
-        tipo: "comentario" as const,
+        tipo: "comentario",
         autor_nome: r.autor_nome,
         created_at: r.created_at,
         detalhes: { mensagem: (r.mensagem || "").slice(0, 300) },
-      }));
-    atividades.unshift({
-      id: `${t.id}-criado`,
-      tipo: "criado",
-      autor_nome: t.solicitante_nome,
-      created_at: t.created_at,
-      detalhes: {},
-    });
-    return { ...t, atividades };
+      });
+    }
+    persisted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return { ...t, atividades: persisted };
   },
   createTicket(data: Record<string, unknown>): Ticket {
     const tickets = this.getTickets();
@@ -137,8 +148,10 @@ export const localStorageStorage = {
         ramal: data.ramal as string,
       });
     }
+    const tid = genId();
+    const ts = now();
     const ticket: Ticket = {
-      id: genId(),
+      id: tid,
       numero_protocolo: generateProtocol(),
       solicitante_id: user.id,
       solicitante_nome: user.nome,
@@ -151,9 +164,18 @@ export const localStorageStorage = {
       dados_extras: (data.dadosExtras ?? data.dados_extras ?? {}) as Record<string, unknown>,
       status: "Aberto",
       prioridade: (data.prioridade as Ticket["prioridade"]) ?? "Normal",
-      created_at: now(),
-      updated_at: now(),
+      created_at: ts,
+      updated_at: ts,
       respostas: [],
+      atividades: [
+        {
+          id: `${tid}-criado`,
+          tipo: "criado",
+          autor_nome: user.nome,
+          created_at: ts,
+          detalhes: {},
+        },
+      ],
     };
     tickets.unshift(ticket);
     set(KEYS.TICKETS, tickets);
@@ -171,6 +193,8 @@ export const localStorageStorage = {
     if (!msg) return null;
     const autorId = opts?.autor_id ?? "current";
     const autor = this.getUserById(autorId);
+    const statusAnterior = tickets[idx].status;
+    const ts = now();
     const respostas = [...(tickets[idx].respostas ?? [])];
     respostas.push({
       id: genId(),
@@ -178,14 +202,33 @@ export const localStorageStorage = {
       autor_id: autorId,
       autor_nome: autor?.nome ?? "Administrador",
       mensagem: msg,
-      created_at: now(),
+      created_at: ts,
+    });
+    let atividades = [...(tickets[idx].atividades ?? [])];
+    if (!atividades.some((a) => a.tipo === "criado")) {
+      atividades.unshift({
+        id: `${id}-criado`,
+        tipo: "criado",
+        autor_nome: tickets[idx].solicitante_nome,
+        created_at: tickets[idx].created_at,
+        detalhes: {},
+      });
+    }
+    atividades.push({
+      id: genId(),
+      tipo: "status_alterado",
+      autor_id: autorId,
+      autor_nome: autor?.nome ?? "Administrador",
+      created_at: ts,
+      detalhes: { status_anterior: statusAnterior, status_novo: status },
     });
     tickets[idx] = {
       ...tickets[idx],
       status,
       respostas,
-      updated_at: now(),
-      closed_at: status === "Concluído" ? now() : undefined,
+      atividades,
+      updated_at: ts,
+      closed_at: status === "Concluído" ? ts : undefined,
     };
     set(KEYS.TICKETS, tickets);
     return tickets[idx];
@@ -217,10 +260,32 @@ export const localStorageStorage = {
       ticket.solicitante_id !== autor.id;
     const podePromoverAberto =
       ticket.status === "Aberto" && autorEhReceptor;
+    const tsResponse = respostas[respostas.length - 1]!.created_at;
+    let atividadesResp = [...(tickets[idx].atividades ?? [])];
+    if (!atividadesResp.some((a) => a.tipo === "criado")) {
+      atividadesResp.unshift({
+        id: `${ticketId}-criado`,
+        tipo: "criado",
+        autor_nome: tickets[idx].solicitante_nome,
+        created_at: tickets[idx].created_at,
+        detalhes: {},
+      });
+    }
+    if (podePromoverAberto) {
+      atividadesResp.push({
+        id: genId(),
+        tipo: "status_alterado",
+        autor_id: data.autor_id,
+        autor_nome: autor?.nome ?? "Administrador",
+        created_at: tsResponse,
+        detalhes: { status_anterior: "Aberto", status_novo: "Em Andamento" },
+      });
+    }
     tickets[idx] = {
       ...tickets[idx],
       respostas,
       status: podePromoverAberto ? "Em Andamento" : ticket.status,
+      atividades: atividadesResp,
       updated_at: now(),
     };
     set(KEYS.TICKETS, tickets);

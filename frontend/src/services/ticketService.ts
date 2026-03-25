@@ -5,6 +5,17 @@ import type { Ticket } from "@/types/ticket";
 const USE_LOCAL_STORAGE =
   import.meta.env.VITE_USE_LOCAL_STORAGE === "true";
 
+function messageFromPatchStatusError(err: unknown): string {
+  const data = (err as { response?: { data?: unknown } })?.response?.data;
+  if (data && typeof data === "object") {
+    const o = data as { message?: string; error?: string };
+    if (typeof o.message === "string" && o.message.trim()) return o.message.trim();
+    if (typeof o.error === "string" && o.error.trim()) return o.error.trim();
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return "Falha ao atualizar o status. Verifique a conexão ou tente novamente.";
+}
+
 export interface DashboardStats {
   total: number;
   abertos: number;
@@ -202,12 +213,24 @@ export const ticketService = {
     try {
       const res = await api.patch(`/tickets/${id}/status`, body);
       return res.data;
-    } catch {
-      const ticket = localStorageStorage.updateTicketStatus(id, status as Ticket["status"], {
-        mensagem,
-        autor_id: "current",
-      });
-      return ticket ? { success: true, message: "Status atualizado", ticket } : { success: false };
+    } catch (err: unknown) {
+      const msg = messageFromPatchStatusError(err);
+      if (USE_LOCAL_STORAGE) {
+        const ticket = localStorageStorage.updateTicketStatus(id, status as Ticket["status"], {
+          mensagem,
+          autor_id: "current",
+        });
+        return ticket ? { success: true, message: "Status atualizado", ticket } : { success: false, error: msg };
+      }
+      const hasLocal = Boolean(localStorageStorage.getTicketById(id));
+      if (hasLocal) {
+        const ticket = localStorageStorage.updateTicketStatus(id, status as Ticket["status"], {
+          mensagem,
+          autor_id: "current",
+        });
+        if (ticket) return { success: true, message: "Status atualizado (local)", ticket };
+      }
+      return { success: false, error: msg };
     }
   },
 

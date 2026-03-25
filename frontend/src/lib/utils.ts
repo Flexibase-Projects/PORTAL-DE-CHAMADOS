@@ -16,6 +16,29 @@ export function formatDate(dateString: string) {
   });
 }
 
+/** Data, hora e rótulo completo (pt-BR) para timeline e marcos de status. */
+export function formatDateTimePartsPtBr(dateString: string) {
+  const date = new Date(dateString);
+  return {
+    date: date.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }),
+    time: date.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    full: date.toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  };
+}
+
 export function generateProtocol() {
   const now = new Date();
   const y = now.getFullYear().toString().slice(-2);

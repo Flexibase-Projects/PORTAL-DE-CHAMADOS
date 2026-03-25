@@ -6,12 +6,14 @@ import Typography from "@mui/material/Typography";
 import Skeleton from "@mui/material/Skeleton";
 import Alert from "@mui/material/Alert";
 import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
 import { alpha, useTheme } from "@mui/material/styles";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { ChartFullscreenDialog } from "@/features/dashboard/components/ChartFullscreenDialog";
+import { TicketStatusTimelineDialog } from "@/features/tickets/components/TicketStatusTimelineDialog";
 import { formatDate } from "@/lib/utils";
 import { ticketService } from "@/services/ticketService";
 import { localStorageStorage } from "@/storage/localStorageStorage";
@@ -365,6 +367,7 @@ export function ChamadosLeadTimeCalendar() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [detailDayKey, setDetailDayKey] = useState<string | null>(null);
+  const [timelineTicketId, setTimelineTicketId] = useState<string | null>(null);
   const [cellsCollapsed, setCellsCollapsed] = useState(false);
 
   const load = useCallback(async () => {
@@ -873,14 +876,27 @@ export function ChamadosLeadTimeCalendar() {
           <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", pr: 0.5 }}>
             <List dense disablePadding>
               {detailDayItems.map((b) => (
-                <ListItemButton
+                <ListItem
                   key={b.ticket.id}
-                  onClick={() => openTicketFromDialog(b.ticket.id)}
-                  alignItems="flex-start"
+                  disablePadding
+                  secondaryAction={
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      sx={{ mt: 0.75, mr: 0.5, flexShrink: 0, whiteSpace: "nowrap" }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTimelineTicketId(b.ticket.id);
+                      }}
+                    >
+                      Conferir timeline
+                    </Button>
+                  }
                   sx={{
                     borderRadius: 1,
                     mb: 0.5,
                     border: `1px solid ${theme.palette.divider}`,
+                    alignItems: "flex-start",
                     ...(b.color === STATUS_COLOR_CONCLUIDO
                       ? {
                           backgroundImage: `linear-gradient(90deg, ${alpha(DASHBOARD_GAUGE_GREEN_START, 0.22)} 0%, ${alpha(DASHBOARD_GAUGE_GREEN_END, 0.12)} 68%, transparent 100%)`,
@@ -895,52 +911,68 @@ export function ChamadosLeadTimeCalendar() {
                             backgroundImage: `linear-gradient(90deg, ${alpha(b.color, 0.12)} 0%, ${alpha(b.color, 0.04)} 65%, transparent 100%)`,
                             bgcolor: alpha(b.color, theme.palette.mode === "dark" ? 0.06 : 0.03),
                           }),
-                    transition: "background-color 0.12s ease",
-                    "&:hover": {
-                      bgcolor:
-                        b.color === STATUS_COLOR_CONCLUIDO
-                          ? alpha(DASHBOARD_GAUGE_GREEN_END, theme.palette.mode === "dark" ? 0.16 : 0.1)
-                          : b.color === STATUS_COLOR_PAUSADO
-                            ? alpha(STATUS_COLOR_PAUSADO, theme.palette.mode === "dark" ? 0.14 : 0.09)
-                            : alpha(b.color, theme.palette.mode === "dark" ? 0.11 : 0.07),
-                    },
                   }}
                 >
-                  <Box
+                  <ListItemButton
+                    onClick={() => openTicketFromDialog(b.ticket.id)}
+                    alignItems="flex-start"
                     sx={{
-                      width: 22,
-                      height: 12,
-                      borderRadius: "6px",
-                      flexShrink: 0,
-                      mt: 0.85,
-                      mr: 1.25,
-                      overflow: "hidden",
-                      border: `1px solid ${leadBarOuterBorder(b.color, theme)}`,
-                      backgroundImage: leadBarBodyBackground(theme, b.color),
-                      bgcolor: "transparent",
+                      pr: { xs: 2, sm: 20 },
+                      py: 1,
+                      borderRadius: 1,
+                      transition: "background-color 0.12s ease",
+                      "&:hover": {
+                        bgcolor:
+                          b.color === STATUS_COLOR_CONCLUIDO
+                            ? alpha(DASHBOARD_GAUGE_GREEN_END, theme.palette.mode === "dark" ? 0.16 : 0.1)
+                            : b.color === STATUS_COLOR_PAUSADO
+                              ? alpha(STATUS_COLOR_PAUSADO, theme.palette.mode === "dark" ? 0.14 : 0.09)
+                              : alpha(b.color, theme.palette.mode === "dark" ? 0.11 : 0.07),
+                      },
                     }}
-                  />
-                  <ListItemText
-                    primary={b.label}
-                    primaryTypographyProps={{ fontWeight: 600, variant: "body2" }}
-                    secondary={
-                      <>
-                        <Typography component="span" variant="caption" color="text.secondary" display="block">
-                          {b.ticket.numero_protocolo} · {b.ticket.status}
-                        </Typography>
-                        <Typography component="span" variant="caption" color="text.secondary" display="block">
-                          Abertura {formatDate(b.ticket.created_at)}
-                          {b.ticket.closed_at ? ` · Encerramento ${formatDate(b.ticket.closed_at)}` : ""}
-                        </Typography>
-                      </>
-                    }
-                  />
-                </ListItemButton>
+                  >
+                    <Box
+                      sx={{
+                        width: 22,
+                        height: 12,
+                        borderRadius: "6px",
+                        flexShrink: 0,
+                        mt: 0.85,
+                        mr: 1.25,
+                        overflow: "hidden",
+                        border: `1px solid ${leadBarOuterBorder(b.color, theme)}`,
+                        backgroundImage: leadBarBodyBackground(theme, b.color),
+                        bgcolor: "transparent",
+                      }}
+                    />
+                    <ListItemText
+                      primary={b.label}
+                      primaryTypographyProps={{ fontWeight: 600, variant: "body2" }}
+                      secondary={
+                        <>
+                          <Typography component="span" variant="caption" color="text.secondary" display="block">
+                            {b.ticket.numero_protocolo} · {b.ticket.status}
+                          </Typography>
+                          <Typography component="span" variant="caption" color="text.secondary" display="block">
+                            Abertura {formatDate(b.ticket.created_at)}
+                            {b.ticket.closed_at ? ` · Encerramento ${formatDate(b.ticket.closed_at)}` : ""}
+                          </Typography>
+                        </>
+                      }
+                    />
+                  </ListItemButton>
+                </ListItem>
               ))}
             </List>
           </Box>
         )}
       </ChartFullscreenDialog>
+
+      <TicketStatusTimelineDialog
+        open={Boolean(timelineTicketId)}
+        onClose={() => setTimelineTicketId(null)}
+        ticketId={timelineTicketId}
+      />
     </Box>
   );
 }

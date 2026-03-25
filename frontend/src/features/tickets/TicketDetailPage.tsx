@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
@@ -61,6 +62,7 @@ export function TicketDetailPage() {
     title: string;
     confirmLabel: string;
   } | null>(null);
+  const [statusActionError, setStatusActionError] = useState("");
   const [canEdit, setCanEdit] = useState(state?.canEdit ?? false);
   const [canComment, setCanComment] = useState(state?.canComment ?? true);
 
@@ -192,19 +194,35 @@ export function TicketDetailPage() {
     if (!ticket || !pendingStatusChange) return;
     const target = pendingStatusChange;
     setStatusActionLoading(true);
+    setStatusActionError("");
     try {
       const res = await ticketService.updateStatus(ticket.id, target.nextStatus, {
         mensagem,
         auth_user_id: user?.id ?? undefined,
         auth_user_email: user?.email ?? undefined,
       });
-      setPendingStatusChange(null);
-      if (res.success && target.nextStatus === "Concluído") {
-        navigate("/meus-chamados");
-      } else if (res.success && "ticket" in res && res.ticket) {
-        setTicket(res.ticket);
-      } else {
+      if (!res.success) {
+        const apiMsg =
+          "error" in res && typeof res.error === "string" && res.error.trim() ? res.error.trim() : null;
+        setStatusActionError(
+          apiMsg ||
+            (target.nextStatus === "Concluído"
+              ? "Não foi possível encerrar o chamado."
+              : target.nextStatus === "Pausado"
+                ? "Não foi possível pausar o chamado."
+                : "Não foi possível retomar o chamado.")
+        );
+        return;
+      }
+      if (!("ticket" in res) || !res.ticket) {
+        setStatusActionError("Resposta sem dados do chamado. Atualize a página.");
         await loadTicket(false);
+        return;
+      }
+      setPendingStatusChange(null);
+      setTicket(res.ticket);
+      if (target.nextStatus === "Concluído") {
+        navigate("/meus-chamados");
       }
     } finally {
       setStatusActionLoading(false);
@@ -394,6 +412,11 @@ export function TicketDetailPage() {
           ) : null}
         </Box>
       </Paper>
+      {statusActionError ? (
+        <Alert severity="error" onClose={() => setStatusActionError("")} sx={{ mx: { xs: 1, sm: 2 }, mt: 1 }}>
+          {statusActionError}
+        </Alert>
+      ) : null}
       <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         <TicketDetailContent
           ticket={ticket}

@@ -20,6 +20,94 @@ function isMissingResponsavelColumnError(error) {
   return msg.includes('responsavel_id') || msg.includes('pdc_tickets.responsavel_id');
 }
 
+/** Postgres/Supabase pode devolver `dados_extras` como objeto ou string JSON. */
+function parseDadosExtrasField(value) {
+  if (value == null) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return { ...value };
+  if (typeof value === 'string') {
+    try {
+      const o = JSON.parse(value);
+      return o && typeof o === 'object' && !Array.isArray(o) ? { ...o } : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+/** Tabela ainda não criada no Postgres ou PostgREST sem ela no schema cache. */
+function isPdcActivitiesTableMissingError(error) {
+  if (!error) return false;
+  const msg = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`.toLowerCase();
+  if (!msg.includes('pdc_ticket_activities')) return false;
+  return (
+    msg.includes('schema cache') ||
+    msg.includes('could not find') ||
+    msg.includes('does not exist') ||
+    (msg.includes('relation') && msg.includes('does not exist')) ||
+    msg.includes('undefined_table')
+  );
+}
+
+/** Quando `PDC_ticket_activities` não existe, persiste mudanças de status em `dados_extras._pdc_status_events` para a timeline. */
+async function appendStatusEventToDadosExtras(client, ticketId, row) {
+  if (!ticketId || row.tipo !== 'status_alterado') return;
+  const { data: t, error: selErr } = await client.from('PDC_tickets').select('dados_extras').eq('id', ticketId).single();
+  if (selErr || !t) {
+    console.error('[ticketService] appendStatusEventToDadosExtras select:', selErr?.message || 'sem linha');
+    return;
+  }
+  const base = parseDadosExtrasField(t.dados_extras);
+  const events = Array.isArray(base._pdc_status_events) ? [...base._pdc_status_events] : [];
+  events.push({
+    created_at: new Date().toISOString(),
+    autor_id: row.autor_id || null,
+    tipo: 'status_alterado',
+    detalhes: row.detalhes && typeof row.detalhes === 'object' ? row.detalhes : {},
+  });
+  base._pdc_status_events = events.slice(-150);
+  const { error: updErr } = await client.from('PDC_tickets').update({ dados_extras: base }).eq('id', ticketId);
+  if (updErr) console.error('[ticketService] appendStatusEventToDadosExtras update:', updErr.message);
+}
+
+function statusActivityDedupeKeyFromMapped(a) {
+  const d = a.detalhes || {};
+  return `${a.created_at || ''}|${d.status_anterior ?? ''}|${d.status_novo ?? ''}`;
+}
+
+function mapActivityRowFromDb(a) {
+  let detalhes = a.detalhes || {};
+  if (typeof detalhes === 'string') {
+    try {
+      detalhes = JSON.parse(detalhes);
+    } catch {
+      detalhes = {};
+    }
+  }
+  return {
+    id: a.id,
+    tipo: a.tipo,
+    autor_id: a.autor_id,
+    autor_nome: a.autor?.nome || 'Sistema',
+    created_at: a.created_at,
+    detalhes,
+  };
+}
+
+/** Grava atividade em PDC_ticket_activities. Se a tabela não existir, grava fallback em dados_extras (timeline). */
+async function insertTicketActivityOrSkip(client, row, ticketIdForFallback = null) {
+  const { error } = await client.from('PDC_ticket_activities').insert(row);
+  if (!error) return {};
+  if (isPdcActivitiesTableMissingError(error)) {
+    console.warn('[ticketService] PDC_ticket_activities indisponível; usando fallback em dados_extras:', error.message);
+    if (ticketIdForFallback) {
+      await appendStatusEventToDadosExtras(client, ticketIdForFallback, row);
+    }
+    return {};
+  }
+  return { error };
+}
+
 function mapTicketWithJoins(t) {
   return {
     ...t,
@@ -133,12 +221,13 @@ export const ticketService = {
 
     if (error) throw new Error(`Erro ao criar ticket: ${error.message}`);
 
-    await client.from('PDC_ticket_activities').insert({
+    const { error: criadoActErr } = await insertTicketActivityOrSkip(client, {
       ticket_id: created.id,
       tipo: 'criado',
       autor_id: solicitanteId,
       detalhes: {},
     });
+    if (criadoActErr) throw new Error(`Erro ao registrar atividade: ${criadoActErr.message}`);
 
     const newTicketRecipients = await notifyPdcUsersInDestinationDepartment(client, {
       areaDestino: created.area_destino,
@@ -213,27 +302,68 @@ export const ticketService = {
       .order('created_at', { ascending: true });
 
     // Buscar atividades (histórico)
-    const { data: atividades } = await client
+    const { data: atividades, error: actFetchErr } = await client
       .from('PDC_ticket_activities')
       .select(`*, autor:PDC_users!autor_id(nome)`)
       .eq('ticket_id', id)
       .order('created_at', { ascending: false });
 
+    const atividadesRows =
+      actFetchErr && isPdcActivitiesTableMissingError(actFetchErr)
+        ? []
+        : actFetchErr
+          ? (console.error('[ticketService] getTicketById atividades:', actFetchErr.message), [])
+          : atividades || [];
+
+    const fullExtrasParsed = parseDadosExtrasField(ticket.dados_extras);
+    const fallbackStatusEvents = Array.isArray(fullExtrasParsed._pdc_status_events)
+      ? [...fullExtrasParsed._pdc_status_events]
+      : [];
+
+    const dbMapped = atividadesRows.map(mapActivityRowFromDb);
+    const dbStatusKeys = new Set(
+      dbMapped.filter((a) => a.tipo === 'status_alterado').map(statusActivityDedupeKeyFromMapped)
+    );
+    const fallbackAutorIds = [...new Set(fallbackStatusEvents.map((e) => e.autor_id).filter(Boolean))];
+    let autorNomeById = {};
+    if (fallbackAutorIds.length > 0) {
+      const { data: nomeRows } = await client.from('PDC_users').select('id, nome').in('id', fallbackAutorIds);
+      (nomeRows || []).forEach((u) => {
+        autorNomeById[u.id] = u.nome;
+      });
+    }
+    const fromFallback = fallbackStatusEvents.map((ev, i) => {
+      let detalhes = ev.detalhes || {};
+      if (typeof detalhes === 'string') {
+        try {
+          detalhes = JSON.parse(detalhes);
+        } catch {
+          detalhes = {};
+        }
+      }
+      const mapped = {
+        id: ev.id || `pdc-fallback-status-${i}-${ev.created_at || ''}`,
+        tipo: 'status_alterado',
+        autor_id: ev.autor_id || null,
+        autor_nome: (ev.autor_id && autorNomeById[ev.autor_id]) || 'Sistema',
+        created_at: ev.created_at,
+        detalhes,
+      };
+      return mapped;
+    });
+    const extraStatus = fromFallback.filter((a) => !dbStatusKeys.has(statusActivityDedupeKeyFromMapped(a)));
+    const mergedAtividades = [...dbMapped, ...extraStatus].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+
     return {
-      ...mapTicketWithJoins(ticket),
+      ...mapTicketWithJoins({ ...ticket, dados_extras: fullExtrasParsed }),
       respostas: (respostas || []).map(r => ({
         ...r,
         autor_nome: r.autor?.nome || 'Administrador',
         autor_email: r.autor?.email || null,
       })),
-      atividades: (atividades || []).map(a => ({
-        id: a.id,
-        tipo: a.tipo,
-        autor_id: a.autor_id,
-        autor_nome: a.autor?.nome || 'Sistema',
-        created_at: a.created_at,
-        detalhes: a.detalhes || {},
-      })),
+      atividades: mergedAtividades,
     };
   },
 
@@ -358,12 +488,13 @@ export const ticketService = {
     if (respErr) throw new Error(respErr.message);
 
     const msgPreview = (responseData.mensagem || '').slice(0, 300);
-    await client.from('PDC_ticket_activities').insert({
+    const { error: comActErr } = await insertTicketActivityOrSkip(client, {
       ticket_id: ticketId,
       tipo: 'comentario',
       autor_id: autorId,
       detalhes: { response_id: insertedResponse?.id, mensagem: msgPreview },
     });
+    if (comActErr) throw new Error(comActErr.message);
 
     let { data: ticketRow, error: ticketRowErr } = await client
       .from('PDC_tickets')
@@ -435,14 +566,34 @@ export const ticketService = {
     (deptRecipients || []).forEach((id) => notificationRecipients.add(id));
 
     if (devePromoverAbertoPorMensagem) {
-      await client
+      const { data: promotedRows, error: promoteErr } = await client
         .from('PDC_tickets')
         .update({
           status: 'Em Andamento',
           updated_at: new Date().toISOString(),
         })
         .eq('id', ticketId)
-        .eq('status', 'Aberto');
+        .eq('status', 'Aberto')
+        .select('id');
+      if (!promoteErr && promotedRows?.length) {
+        const { error: promoteActErr } = await insertTicketActivityOrSkip(
+          client,
+          {
+            ticket_id: ticketId,
+            tipo: 'status_alterado',
+            autor_id: autorId,
+            detalhes: { status_anterior: 'Aberto', status_novo: 'Em Andamento' },
+          },
+          ticketId
+        );
+        if (promoteActErr) {
+          await client
+            .from('PDC_tickets')
+            .update({ status: 'Aberto', updated_at: new Date().toISOString() })
+            .eq('id', ticketId);
+          throw new Error(promoteActErr.message || 'Falha ao registrar promoção no histórico do chamado');
+        }
+      }
     }
 
     if (publishResponseAdded) {
@@ -510,12 +661,27 @@ export const ticketService = {
     }
 
     const autorId = await this._resolveAutorId(client, authUserId, authUserEmail);
-    await client.from('PDC_ticket_activities').insert({
-      ticket_id: id,
-      tipo: 'status_alterado',
-      autor_id: autorId,
-      detalhes: { status_anterior: statusAnterior, status_novo: status },
-    });
+    const { error: actInsErr } = await insertTicketActivityOrSkip(
+      client,
+      {
+        ticket_id: id,
+        tipo: 'status_alterado',
+        autor_id: autorId,
+        detalhes: { status_anterior: statusAnterior, status_novo: status },
+      },
+      id
+    );
+    if (actInsErr) {
+      await client
+        .from('PDC_tickets')
+        .update({
+          status: statusAnterior,
+          closed_at: closedAtAnterior,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+      throw new Error(actInsErr.message || 'Falha ao registrar mudança de status no histórico');
+    }
 
     realtimeService.publish('ticket_updated', {
       ticketId: id,

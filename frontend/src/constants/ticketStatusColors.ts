@@ -1,4 +1,5 @@
 import type { TicketStatus } from "@/types/ticket";
+import type { TimelineMarker } from "@/utils/ticketStatusTimeline";
 
 /** Card "Total" do dashboard. */
 export const DASHBOARD_TOTAL_BLUE = "#0ea5e9";
@@ -33,6 +34,22 @@ export function statusColorForLeadBar(status: string): string {
     case "Pausado":
       return STATUS_COLOR_PAUSADO;
     case "Concluído":
+      return STATUS_COLOR_CONCLUIDO;
+    default:
+      return "#64748b";
+  }
+}
+
+/** Cor do marco na timeline (bolinha + ícone), alinhada ao dashboard/calendário. */
+export function statusHexForTimelineMarker(marker: TimelineMarker): string {
+  switch (marker) {
+    case "aberto":
+      return STATUS_COLOR_ABERTO;
+    case "em_andamento":
+      return STATUS_COLOR_EM_ANDAMENTO;
+    case "pausado":
+      return STATUS_COLOR_PAUSADO;
+    case "concluido":
       return STATUS_COLOR_CONCLUIDO;
     default:
       return "#64748b";
