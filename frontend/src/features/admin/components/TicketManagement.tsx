@@ -300,7 +300,7 @@ export function TicketManagement({ initialTicketId }: Props) {
             tickets={tickets}
             selectedTicketId={selected?.id ?? null}
             onRowActivate={(t) => {
-              setSelected(t);
+              setSelected((prev) => (prev?.id === t.id ? null : t));
               setError("");
               setSuccess("");
             }}
@@ -340,7 +340,7 @@ export function TicketManagement({ initialTicketId }: Props) {
                     tickets={concludedTickets}
                     selectedTicketId={selected?.id ?? null}
                     onRowActivate={(t) => {
-                      setSelected(t);
+                      setSelected((prev) => (prev?.id === t.id ? null : t));
                       setError("");
                       setSuccess("");
                     }}
