@@ -52,6 +52,7 @@ export function TicketManagement({ initialTicketId }: Props) {
   const [success, setSuccess] = useState("");
   const [templateFields, setTemplateFields] = useState<TemplateField[]>([]);
   const threadScrollRef = useRef<HTMLDivElement>(null);
+  const listColumnRef = useRef<HTMLDivElement>(null);
 
   const lastRespostaKey =
     selected?.respostas?.length && selected.respostas.length > 0
@@ -124,6 +125,22 @@ export function TicketManagement({ initialTicketId }: Props) {
       concludedTickets.find((t) => t.id === initialTicketId);
     if (found) setSelected(found);
   }, [initialTicketId, tickets, concludedTickets]);
+
+  useLayoutEffect(() => {
+    if (!selected?.id) return;
+    const root = listColumnRef.current;
+    if (!root) return;
+    const safeId =
+      typeof CSS !== "undefined" && typeof CSS.escape === "function"
+        ? CSS.escape(selected.id)
+        : selected.id.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    const row = root.querySelector<HTMLElement>(`[data-ticket-id="${safeId}"]`);
+    if (!row) return;
+    const r = row.getBoundingClientRect();
+    const c = root.getBoundingClientRect();
+    const nextTop = root.scrollTop + (r.top - c.top) - (c.height / 2 - r.height / 2);
+    root.scrollTo({ top: Math.max(0, nextTop), behavior: "smooth" });
+  }, [selected?.id, tickets, concludedTickets, concludedSectionOpen]);
 
   /** Lista / meus-chamados não trazem `respostas`; só o GET por id monta o chat. */
   useEffect(() => {
@@ -223,7 +240,16 @@ export function TicketManagement({ initialTicketId }: Props) {
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
+        minHeight: 0,
+        height: { xs: "auto", lg: selected ? "calc(100dvh - 150px)" : "auto" },
+        overflow: { xs: "visible", lg: selected ? "hidden" : "visible" },
+      }}
+    >
       {error && (
         <Alert severity="error" onClose={() => setError("")}>
           {error}
@@ -237,16 +263,36 @@ export function TicketManagement({ initialTicketId }: Props) {
 
       <Box
         sx={{
+          flex: { xs: 0, lg: selected ? 1 : 0 },
           display: "grid",
           gridTemplateColumns: {
             xs: "1fr",
             lg: selected ? "minmax(0, 1fr) minmax(340px, 440px)" : "1fr",
           },
+          gridTemplateRows: {
+            xs: "auto",
+            lg: selected ? "minmax(0, 1fr)" : "auto",
+          },
           gap: 2,
-          alignItems: "start",
+          alignItems: { xs: "start", lg: selected ? "stretch" : "start" },
+          minHeight: 0,
+          height: {
+            xs: "auto",
+            lg: selected ? "100%" : "auto",
+          },
+          overflow: { xs: "visible", lg: selected ? "hidden" : "visible" },
         }}
       >
-        <Box sx={{ minWidth: 0, pr: { lg: 0.5 } }}>
+        <Box
+          ref={listColumnRef}
+          sx={{
+            minWidth: 0,
+            minHeight: 0,
+            pr: { lg: 0.5 },
+            overflowY: { xs: "visible", lg: selected ? "auto" : "visible" },
+            alignSelf: { lg: selected ? "stretch" : undefined },
+          }}
+        >
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             Chamados Recebidos ({tickets.length})
           </Typography>
@@ -307,8 +353,22 @@ export function TicketManagement({ initialTicketId }: Props) {
         </Box>
 
         {selected && (
-          <Card>
-            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+          <Card
+            sx={{
+              minHeight: 0,
+              height: { xs: "auto", lg: "100%" },
+              maxHeight: { xs: "none", lg: "100%" },
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <CardContent
+              sx={{
+                p: { xs: 2, sm: 3 },
+                minHeight: 0,
+                overflowY: { xs: "visible", lg: "auto" },
+              }}
+            >
               <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, mb: 2 }}>
                 <Box>
                   <Typography variant="h6" fontWeight={600}>
@@ -410,6 +470,13 @@ export function TicketManagement({ initialTicketId }: Props) {
                     minHeight: 120,
                     overflow: "auto",
                     pr: 0.5,
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                    "&::-webkit-scrollbar": {
+                      width: 0,
+                      height: 0,
+                      display: "none",
+                    },
                   }}
                 >
                   <TicketChatThread ticket={selected} currentUserEmail={user?.email} plain />

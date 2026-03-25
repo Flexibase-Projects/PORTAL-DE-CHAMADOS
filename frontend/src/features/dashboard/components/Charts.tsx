@@ -39,6 +39,9 @@ type PorDiaItem = { date: string; dateKey?: string; abertos?: number; fechados?:
 type PorMesItem = { mes: string; mesKey?: string; abertos?: number; fechados?: number; count?: number };
 const DASHBOARD_BAR_GRADIENT_LIGHT = { from: "#111184", to: "#132937" } as const;
 const DASHBOARD_BAR_GRADIENT_DARK = { from: "#4f86ff", to: "#60a5fa" } as const;
+/** Mesmos tons dos números/labels em `StatsCards` (claro / escuro). */
+const STAT_CARD_VALUE_COLOR_LIGHT = "#111184";
+const STAT_CARD_VALUE_COLOR_DARK = "#60a5fa";
 
 function ChartExpandButton({ onClick, ariaLabel }: { onClick: () => void; ariaLabel: string }) {
   return (
@@ -88,7 +91,7 @@ function ChamadosPorPeriodoPlot({
   const isDark = theme.palette.mode === "dark";
   const barGradient = isDark ? DASHBOARD_BAR_GRADIENT_DARK : DASHBOARD_BAR_GRADIENT_LIGHT;
   const fillFechados = `url(#${fechadosGradientId})`;
-  const colorFechadosLabel = "#498DF2";
+  const colorFechadosLabel = isDark ? STAT_CARD_VALUE_COLOR_DARK : STAT_CARD_VALUE_COLOR_LIGHT;
   const colorAbertos = "#FA9E00";
   const legendWrapperStyle = { paddingTop: 4, lineHeight: 1.2 } as const;
 

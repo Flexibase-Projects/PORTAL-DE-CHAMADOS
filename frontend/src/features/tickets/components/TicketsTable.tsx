@@ -208,6 +208,7 @@ export function TicketsTable({
               key={ticket.id}
               variant="outlined"
               onClick={() => onRowActivate(ticket)}
+              data-ticket-id={ticket.id}
               sx={{
                 ...tableContainerSx,
                 p: 2,
@@ -372,6 +373,7 @@ export function TicketsTable({
                 key={ticket.id}
                 hover
                 selected={selected}
+                data-ticket-id={ticket.id}
                 onClick={() => onRowActivate(ticket)}
                 sx={{
                   cursor: "pointer",
