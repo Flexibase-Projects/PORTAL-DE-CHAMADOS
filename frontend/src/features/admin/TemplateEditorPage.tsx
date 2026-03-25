@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import { TemplateEditor } from "./components/TemplateEditor";
-import { TemplateDepartmentCarousel } from "./components/TemplateDepartmentCarousel";
+import { DepartmentPickerCards } from "@/features/tickets/components/DepartmentPickerCards";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   canEditTemplateForDepartment,
@@ -57,16 +59,17 @@ export function TemplateEditorPage() {
       </Box>
 
       {departamentosComEdicao.length > 0 && (
-        <TemplateDepartmentCarousel
-          departamentos={departamentosComEdicao}
-          value={departamento}
-          onChange={setDepartamento}
-          hint={
-            departamentosComEdicao.length > 1
-              ? "Deslize horizontalmente (ou use a barra de rolagem) para ver todos os departamentos."
-              : undefined
-          }
-        />
+        <Card sx={{ borderRadius: 1 }}>
+          <CardContent>
+            <DepartmentPickerCards
+              idPrefix="template-editor"
+              ariaGroupLabel="Departamentos com permissão de template"
+              selectedArea={departamento}
+              allowedDepartamentos={departamentosComEdicao}
+              onSelect={(area) => setDepartamento(area)}
+            />
+          </CardContent>
+        </Card>
       )}
 
       {departamentosComEdicao.length === 0 && (

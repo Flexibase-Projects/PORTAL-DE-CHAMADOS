@@ -1,4 +1,5 @@
 /** Picker de departamentos por macro-setor na criação de chamado. */
+import { useMemo } from "react";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -39,28 +40,49 @@ export interface DepartmentPickerCardsProps {
   idPrefix: string;
   /** Rótulo do grupo para leitores de tela. */
   ariaGroupLabel: string;
+  /** Se definido, exibe só estes departamentos (ex.: permissão de template). `undefined` = todos. */
+  allowedDepartamentos?: string[];
 }
 
-export function DepartmentPickerCards({ selectedArea, onSelect, idPrefix, ariaGroupLabel }: DepartmentPickerCardsProps) {
+export function DepartmentPickerCards({
+  selectedArea,
+  onSelect,
+  idPrefix,
+  ariaGroupLabel,
+  allowedDepartamentos,
+}: DepartmentPickerCardsProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
+
+  const allowedSet = useMemo(() => {
+    if (allowedDepartamentos === undefined) return null;
+    return new Set(
+      allowedDepartamentos.map((d) => (d || "").trim().toUpperCase()).filter(Boolean)
+    );
+  }, [allowedDepartamentos]);
 
   return (
     <Box
       role="group"
       aria-label={ariaGroupLabel}
       sx={{
-        display: "grid",
-        gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" },
+        display: "flex",
+        flexDirection: { xs: "column", md: "row" },
         gap: 2,
         alignItems: "stretch",
+        width: "100%",
+        minWidth: 0,
       }}
     >
       {SETORES.map((setorKey) => {
         const accent = SETOR_ACCENT_PICKER[setorKey];
         const title = SETOR_LABEL_PICKER[setorKey];
         const Icon = ICONS[setorKey];
-        const depts = DEPARTAMENTOS_POR_SETOR[setorKey] ?? [];
+        const rawDepts = DEPARTAMENTOS_POR_SETOR[setorKey] ?? [];
+        const depts = allowedSet
+          ? rawDepts.filter((d) => allowedSet.has(d.trim().toUpperCase()))
+          : rawDepts;
+        if (depts.length === 0) return null;
         const count = depts.length;
         const accentSoft = isDark ? alpha(accent, 0.22) : alpha(accent, 0.1);
         const borderSoft = isDark ? alpha(accent, 0.45) : alpha(accent, 0.35);
@@ -80,6 +102,9 @@ export function DepartmentPickerCards({ selectedArea, onSelect, idPrefix, ariaGr
               flexDirection: "column",
               borderRadius: 1,
               overflow: "hidden",
+              width: { xs: "100%", md: "0" },
+              flex: { xs: "none", md: "1 1 0%" },
+              minWidth: 0,
               borderColor: "divider",
               boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.35)" : "0 1px 4px rgba(15, 23, 42, 0.06)",
               // Só translateY (sem scale): scale + will-change em card com texto borra em subpixel no Chrome.
@@ -121,6 +146,7 @@ export function DepartmentPickerCards({ selectedArea, onSelect, idPrefix, ariaGr
                 pt: 1.75,
                 pb: 1.5,
                 px: 1.75,
+                minWidth: 0,
                 WebkitFontSmoothing: "subpixel-antialiased",
               }}
             >
@@ -155,7 +181,18 @@ export function DepartmentPickerCards({ selectedArea, onSelect, idPrefix, ariaGr
                   Nenhum departamento cadastrado neste setor.
                 </Typography>
               ) : (
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75, mt: 0.5 }}>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" },
+                    columnGap: 0.75,
+                    rowGap: 0.75,
+                    mt: 0.5,
+                    width: "100%",
+                    minWidth: 0,
+                    alignItems: "stretch",
+                  }}
+                >
                   {depts.map((dept) => {
                     const active = areaMatchesSelected(dept, selectedArea);
                     const rowId = deptDomId(idPrefix, setorKey, dept);
@@ -165,13 +202,17 @@ export function DepartmentPickerCards({ selectedArea, onSelect, idPrefix, ariaGr
                         component="label"
                         htmlFor={rowId}
                         sx={{
-                          width: "100%",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "flex-start",
-                          gap: 1,
-                          py: 0.75,
-                          px: 1,
+                          gap: 0.5,
+                          width: "100%",
+                          minWidth: 0,
+                          minHeight: { xs: 44, sm: 52 },
+                          alignSelf: "stretch",
+                          boxSizing: "border-box",
+                          py: 0.65,
+                          px: 0.75,
                           borderRadius: 1,
                           textAlign: "left",
                           border: "1px solid",
@@ -209,6 +250,7 @@ export function DepartmentPickerCards({ selectedArea, onSelect, idPrefix, ariaGr
                           }}
                           sx={{
                             p: 0.5,
+                            flexShrink: 0,
                             color: alpha(accent, 0.55),
                             "&.Mui-checked": { color: accent },
                           }}
@@ -223,6 +265,9 @@ export function DepartmentPickerCards({ selectedArea, onSelect, idPrefix, ariaGr
                             color: active ? accent : "text.primary",
                             fontSize: "0.8125rem",
                             lineHeight: 1.35,
+                            whiteSpace: "normal",
+                            overflowWrap: "anywhere",
+                            wordBreak: "break-word",
                           }}
                         >
                           {dept}
