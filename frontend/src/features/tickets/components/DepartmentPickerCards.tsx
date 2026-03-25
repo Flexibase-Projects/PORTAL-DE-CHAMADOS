@@ -184,7 +184,7 @@ export function DepartmentPickerCards({
                 <Box
                   sx={{
                     display: "grid",
-                    gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" },
+                    gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" },
                     columnGap: 0.75,
                     rowGap: 0.75,
                     mt: 0.5,
@@ -196,6 +196,7 @@ export function DepartmentPickerCards({
                   {depts.map((dept) => {
                     const active = areaMatchesSelected(dept, selectedArea);
                     const rowId = deptDomId(idPrefix, setorKey, dept);
+                    const deptHasSpaces = /\s/.test(dept);
                     return (
                       <Box
                         key={dept}
@@ -210,6 +211,7 @@ export function DepartmentPickerCards({
                           minWidth: 0,
                           minHeight: { xs: 44, sm: 52 },
                           alignSelf: "stretch",
+                          overflow: "hidden",
                           boxSizing: "border-box",
                           py: 0.65,
                           px: 0.75,
@@ -258,6 +260,7 @@ export function DepartmentPickerCards({
                         <Typography
                           variant="body2"
                           component="span"
+                          title={dept}
                           fontWeight={active ? 600 : 500}
                           sx={{
                             flex: 1,
@@ -265,9 +268,10 @@ export function DepartmentPickerCards({
                             color: active ? accent : "text.primary",
                             fontSize: "0.8125rem",
                             lineHeight: 1.35,
-                            whiteSpace: "normal",
-                            overflowWrap: "anywhere",
-                            wordBreak: "break-word",
+                            overflow: "hidden",
+                            whiteSpace: deptHasSpaces ? "normal" : "nowrap",
+                            overflowWrap: "normal",
+                            wordBreak: "normal",
                           }}
                         >
                           {dept}

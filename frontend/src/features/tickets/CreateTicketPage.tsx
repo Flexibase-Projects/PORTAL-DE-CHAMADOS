@@ -1,14 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import IconButton from "@mui/material/IconButton";
+import InputAdornment from "@mui/material/InputAdornment";
+import List from "@mui/material/List";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemText from "@mui/material/ListItemText";
 import Alert from "@mui/material/Alert";
 import Typography from "@mui/material/Typography";
 import Chip from "@mui/material/Chip";
@@ -16,7 +20,7 @@ import Stack from "@mui/material/Stack";
 import CircularProgress from "@mui/material/CircularProgress";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { alpha, useTheme } from "@mui/material/styles";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ChevronDown, X } from "lucide-react";
 import { ticketService } from "@/services/ticketService";
 import { templateService } from "@/services/templateService";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,6 +38,58 @@ export function CreateTicketPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { user } = useAuth();
+
+  const [tipoSuporteDialogOpen, setTipoSuporteDialogOpen] = useState(false);
+
+  const tipoSuporteDialogSlotProps = useMemo(
+    () => ({
+      backdrop: {
+        sx: {
+          backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.14 : 0.08),
+          backdropFilter: "blur(8px)",
+        },
+      },
+      paper: {
+        id: "tipo-suporte-dialog-paper",
+        sx: {
+          borderRadius: "16px",
+          border: `1px solid ${theme.palette.divider}`,
+          bgcolor:
+            theme.palette.mode === "dark"
+              ? alpha(theme.palette.background.paper, 0.98)
+              : alpha("#ffffff", 0.98),
+          backdropFilter: "blur(16px)",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 24px 56px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06)"
+              : `0 16px 48px ${alpha(theme.palette.primary.main, 0.12)}, 0 4px 16px rgba(0,0,0,0.06)`,
+          overflow: "hidden",
+        },
+      },
+    }),
+    [theme]
+  );
+
+  const tipoSuporteListRowSx = useMemo(
+    () => ({
+      borderRadius: "12px",
+      mx: 0.5,
+      py: 1.1,
+      px: 1.25,
+      minHeight: 44,
+      transition: "background-color 0.18s ease, color 0.18s ease, transform 0.12s ease",
+      "&:active": { transform: "scale(0.99)" },
+      "&.Mui-selected": {
+        bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.28 : 0.12),
+        color: theme.palette.primary.main,
+        "&:hover": {
+          bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.34 : 0.16),
+        },
+      },
+    }),
+    [theme]
+  );
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [ticketId, setTicketId] = useState<string | null>(null);
@@ -231,6 +287,7 @@ export function CreateTicketPage() {
   }
 
   return (
+    <>
     <Box
       sx={{
         display: "flex",
@@ -340,20 +397,40 @@ export function CreateTicketPage() {
                   sx={{ gridColumn: { xs: "1", sm: "1 / -1" } }}
                 />
                 {formData.area_destino === "TI" && (
-                  <FormControl fullWidth sx={{ gridColumn: { xs: "1", sm: "1 / -1" } }}>
-                    <InputLabel>Tipo de Suporte</InputLabel>
-                    <Select
-                      value={formData.tipoSuporte}
-                      label="Tipo de Suporte"
-                      onChange={(e) => handleChange("tipoSuporte", e.target.value)}
-                    >
-                      {TIPOS_SUPORTE_TI.map((opt) => (
-                        <MenuItem key={opt} value={opt}>
-                          {opt}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <TextField
+                    id="create-ticket-tipo-suporte-trigger"
+                    label="Tipo de Suporte"
+                    fullWidth
+                    value={formData.tipoSuporte}
+                    placeholder="Toque para selecionar"
+                    onClick={() => setTipoSuporteDialogOpen(true)}
+                    InputProps={{
+                      readOnly: true,
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <ChevronDown size={18} strokeWidth={2} style={{ opacity: 0.65 }} aria-hidden />
+                        </InputAdornment>
+                      ),
+                    }}
+                    inputProps={{
+                      "aria-expanded": tipoSuporteDialogOpen,
+                      "aria-haspopup": "dialog",
+                      "aria-controls": "tipo-suporte-dialog-paper",
+                      role: "button",
+                      tabIndex: 0,
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setTipoSuporteDialogOpen(true);
+                      }
+                    }}
+                    sx={{
+                      gridColumn: { xs: "1", sm: "1 / -1" },
+                      "& .MuiInputBase-root": { cursor: "pointer" },
+                      "& .MuiInputBase-input": { cursor: "pointer" },
+                    }}
+                  />
                 )}
               </Box>
             </Box>
@@ -433,5 +510,65 @@ export function CreateTicketPage() {
         </CardContent>
       </Card>
     </Box>
+
+    <Dialog
+      open={tipoSuporteDialogOpen}
+      onClose={() => setTipoSuporteDialogOpen(false)}
+      maxWidth="sm"
+      fullWidth
+      aria-labelledby="tipo-suporte-dialog-title"
+      slotProps={tipoSuporteDialogSlotProps}
+    >
+      <DialogTitle
+        id="tipo-suporte-dialog-title"
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 1,
+          pr: 1,
+          pb: 1,
+          fontWeight: 700,
+          letterSpacing: "-0.01em",
+        }}
+      >
+        Tipo de Suporte
+        <IconButton
+          aria-label="Fechar"
+          size="small"
+          onClick={() => setTipoSuporteDialogOpen(false)}
+          sx={{ color: "text.secondary" }}
+        >
+          <X size={20} strokeWidth={2} />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent sx={{ pt: 0, px: 1.5, pb: 2.5 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ px: 0.5, pb: 1.75, lineHeight: 1.5 }}>
+          Escolha a categoria que melhor descreve seu pedido para a equipe de TI.
+        </Typography>
+        <List disablePadding sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+          {TIPOS_SUPORTE_TI.map((opt) => (
+            <ListItemButton
+              key={opt}
+              selected={formData.tipoSuporte === opt}
+              onClick={() => {
+                handleChange("tipoSuporte", opt);
+                setTipoSuporteDialogOpen(false);
+              }}
+              sx={tipoSuporteListRowSx}
+            >
+              <ListItemText
+                primary={opt}
+                primaryTypographyProps={{
+                  fontSize: "0.9375rem",
+                  fontWeight: formData.tipoSuporte === opt ? 700 : 500,
+                }}
+              />
+            </ListItemButton>
+          ))}
+        </List>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

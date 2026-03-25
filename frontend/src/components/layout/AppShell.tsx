@@ -134,6 +134,7 @@ export function AppShell({ children }: AppShellProps) {
       >
         <AppHeader onMobileToggle={handleDrawerToggle} />
         <Box
+          data-app-main-content
           sx={{
             flex: 1,
             overflow: "auto",
