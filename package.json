@@ -2,6 +2,7 @@
   "name": "portal-chamados",
   "version": "1.0.0",
   "description": "Portal de Chamados - Sistema de gerenciamento de tickets",
+  "type": "module",
   "private": true,
   "workspaces": [
     "frontend",
@@ -15,10 +16,19 @@
     "build:frontend": "npm run build -w frontend",
     "start": "npm run build:frontend && npm start -w backend",
     "kill-port": "npm run kill-port -w backend",
-    "install:all": "npm install && npm install -w frontend && npm install -w backend"
+    "install:all": "npm install && npm install -w frontend && npm install -w backend",
+    "lint": "npx eslint \"frontend/src/**/*.{ts,tsx}\"",
+    "typecheck": "npx tsc --noEmit -p frontend/tsconfig.json",
+    "build": "npm run build:frontend",
+    "test:backend": "npm run test -w backend",
+    "test:permissions": "node --test backend/tests/permissions/**/*.test.js",
+    "ci": "npm run lint && npm run typecheck && npm run build && npm run test:backend"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "eslint": "^9.38.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.1"
   }
 }

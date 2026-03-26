@@ -149,7 +149,7 @@ export function MyTicketsPage() {
     try {
       const [ticketsRes, notifRes] = await Promise.all([
         ticketService.getMeusChamadosByAuth(user.id, user.email),
-        notificationService.list(true, user.id).catch(() => ({ success: false, notifications: [] as { ticket_id?: string }[] })),
+        notificationService.list(true).catch(() => ({ success: false, notifications: [] as { ticket_id?: string }[] })),
       ]);
       if (ticketsRes.success) {
         setChamadosMeuDepartamento(ticketsRes.chamadosMeuDepartamento || []);

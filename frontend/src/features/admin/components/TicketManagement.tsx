@@ -212,7 +212,7 @@ export function TicketManagement({ initialTicketId }: Props) {
         setSelected(res.ticket);
         setTickets((prev) => prev.map((t) => (t.id === res.ticket!.id ? res.ticket! : t)));
         setConcludedTickets((prev) => prev.map((t) => (t.id === res.ticket!.id ? res.ticket! : t)));
-        notificationService.markReadByTicket(selected.id, user.id).catch(() => {});
+        notificationService.markReadByTicket(selected.id).catch(() => {});
         window.dispatchEvent(new CustomEvent("notifications-refresh"));
       }
     } finally {

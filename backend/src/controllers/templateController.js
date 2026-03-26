@@ -26,7 +26,7 @@ export const templateController = {
 
   async saveTemplate(req, res) {
     try {
-      const authUserId = req.headers['x-auth-user-id'];
+      const authUserId = req.auth?.user?.id;
       if (!authUserId) return res.status(401).json({ success: false, error: 'Não autenticado' });
       const { departamento, fields } = req.body || {};
       if (!departamento || typeof departamento !== 'string') {

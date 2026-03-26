@@ -29,7 +29,7 @@ import { APP_HEADER_HEIGHT } from "./AppHeader";
 
 interface NavItem {
   title: string;
-  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties; strokeWidth?: number }>;
   path: string;
 }
 

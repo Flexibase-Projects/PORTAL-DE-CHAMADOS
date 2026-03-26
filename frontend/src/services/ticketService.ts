@@ -66,13 +66,8 @@ export const ticketService = {
       const ticket = localStorageStorage.createTicket(data);
       return { success: true, message: "Chamado criado com sucesso", ticket };
     }
-    try {
-      const res = await api.post("/tickets", data);
-      return res.data;
-    } catch {
-      const ticket = localStorageStorage.createTicket(data);
-      return { success: true, message: "Chamado criado com sucesso", ticket };
-    }
+    const res = await api.post("/tickets", data);
+    return res.data;
   },
 
   async getAll() {
@@ -80,13 +75,8 @@ export const ticketService = {
       const tickets = localStorageStorage.getTickets();
       return { success: true, tickets };
     }
-    try {
-      const res = await api.get("/tickets");
-      return res.data;
-    } catch {
-      const tickets = localStorageStorage.getTickets();
-      return { success: true, tickets };
-    }
+    const res = await api.get("/tickets");
+    return res.data;
   },
 
   async getById(id: string) {
@@ -94,13 +84,8 @@ export const ticketService = {
       const ticket = localStorageStorage.getTicketById(id);
       return ticket ? { success: true, ticket } : { success: false, error: "Chamado não encontrado" };
     }
-    try {
-      const res = await api.get(`/tickets/${id}`);
-      return res.data;
-    } catch {
-      const ticket = localStorageStorage.getTicketById(id);
-      return ticket ? { success: true, ticket } : { success: false, error: "Chamado não encontrado" };
-    }
+    const res = await api.get(`/tickets/${id}`);
+    return res.data;
   },
 
   /** Meus chamados por usuário autenticado. Envia auth_user_id e email na query para garantir que o backend receba mesmo se o header for perdido. */
@@ -114,34 +99,14 @@ export const ticketService = {
       return { success: true, chamadosMeuDepartamento: [], chamadosQueAbriOutros: [] };
     }
     try {
-      const params: Record<string, string> = {};
-      if (authUserId) params.auth_user_id = authUserId;
-      if (email) params.auth_user_email = email;
-      const res = await api.get("/tickets/meus-chamados-by-auth", { params });
+      void authUserId;
+      void email;
+      const res = await api.get("/tickets/meus-chamados-by-auth");
       return res.data;
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 400) throw new Error("Não foi possível identificar seu usuário. Faça login novamente.");
       throw err;
-    }
-  },
-
-  async getByName(nome: string) {
-    const nomeTrim = nome.trim();
-    if (USE_LOCAL_STORAGE) {
-      const tickets = localStorageStorage.getTickets().filter(
-        (t) => t.solicitante_nome?.toLowerCase() === nomeTrim.toLowerCase()
-      );
-      return { success: true, enviados: tickets, recebidos: [] };
-    }
-    try {
-      const res = await api.get("/tickets/meus-chamados", { params: { nome: nomeTrim } });
-      return res.data;
-    } catch {
-      const tickets = localStorageStorage.getTickets().filter(
-        (t) => t.solicitante_nome?.toLowerCase() === nomeTrim.toLowerCase()
-      );
-      return { success: true, enviados: tickets, recebidos: [] };
     }
   },
 
@@ -151,12 +116,9 @@ export const ticketService = {
       return { success: true, tickets };
     }
     try {
-      const res = await api.get("/tickets/recebidos", {
-        params: {
-          ...(authUserId ? { auth_user_id: authUserId } : {}),
-          ...(email ? { auth_user_email: email } : {}),
-        },
-      });
+      void authUserId;
+      void email;
+      const res = await api.get("/tickets/recebidos");
       return res.data;
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
@@ -172,18 +134,19 @@ export const ticketService = {
       return { success: true, tickets };
     }
     try {
-      const res = await api.get("/tickets/recebidos/concluidos", {
-        params: {
-          ...(authUserId ? { auth_user_id: authUserId } : {}),
-          ...(email ? { auth_user_email: email } : {}),
-        },
-      });
+      void authUserId;
+      void email;
+      const res = await api.get("/tickets/recebidos/concluidos");
       return res.data;
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 400) throw new Error("Não foi possível identificar seu usuário. Faça login novamente.");
       throw err;
     }
+  },
+
+  async getByName(_nome: string): Promise<{ success: boolean; enviados: Ticket[]; recebidos: Ticket[] }> {
+    throw new Error("Busca sem autenticação foi desativada por segurança.");
   },
 
   async updateStatus(
@@ -200,8 +163,8 @@ export const ticketService = {
       status,
       mensagem,
     };
-    if (auth_user_id) body.auth_user_id = auth_user_id;
-    if (auth_user_email) body.auth_user_email = auth_user_email;
+    void auth_user_id;
+    void auth_user_email;
 
     if (USE_LOCAL_STORAGE) {
       const ticket = localStorageStorage.updateTicketStatus(id, status as Ticket["status"], {
@@ -221,14 +184,6 @@ export const ticketService = {
           autor_id: "current",
         });
         return ticket ? { success: true, message: "Status atualizado", ticket } : { success: false, error: msg };
-      }
-      const hasLocal = Boolean(localStorageStorage.getTicketById(id));
-      if (hasLocal) {
-        const ticket = localStorageStorage.updateTicketStatus(id, status as Ticket["status"], {
-          mensagem,
-          autor_id: "current",
-        });
-        if (ticket) return { success: true, message: "Status atualizado (local)", ticket };
       }
       return { success: false, error: msg };
     }
@@ -251,13 +206,8 @@ export const ticketService = {
       const ticket = localStorageStorage.addTicketResponse(id, payload);
       return ticket ? { success: true, message: "Resposta adicionada", ticket } : { success: false };
     }
-    try {
-      const res = await api.post(`/tickets/${id}/resposta`, data);
-      return res.data;
-    } catch {
-      const ticket = localStorageStorage.addTicketResponse(id, payload);
-      return ticket ? { success: true, message: "Resposta adicionada", ticket } : { success: false };
-    }
+    const res = await api.post(`/tickets/${id}/resposta`, data);
+    return res.data;
   },
 
   async getDashboardStats(options?: {
@@ -274,18 +224,12 @@ export const ticketService = {
     if (dashboardCache?.key === cacheKey && dashboardCache.expiresAt > now) {
       return dashboardCache.result;
     }
-    try {
-      const params: Record<string, string> = {};
-      if (options?.dateFrom) params.dateFrom = options.dateFrom;
-      if (options?.dateTo) params.dateTo = options.dateTo;
-      if (options?.auth_user_id) params.auth_user_id = options.auth_user_id;
-      const res = await api.get("/dashboard/stats", { params });
-      const result = res.data as { success: boolean; stats: DashboardStats };
-      dashboardCache = { key: cacheKey, result, expiresAt: now + DASHBOARD_CACHE_TTL_MS };
-      return result;
-    } catch {
-      const stats = localStorageStorage.getDashboardStats(options);
-      return { success: true, stats };
-    }
+    const params: Record<string, string> = {};
+    if (options?.dateFrom) params.dateFrom = options.dateFrom;
+    if (options?.dateTo) params.dateTo = options.dateTo;
+    const res = await api.get("/dashboard/stats", { params });
+    const result = res.data as { success: boolean; stats: DashboardStats };
+    dashboardCache = { key: cacheKey, result, expiresAt: now + DASHBOARD_CACHE_TTL_MS };
+    return result;
   },
 };

@@ -222,21 +222,20 @@ export const dashboardService = {
     const useCustomRange = dateFrom && dateTo && dateFrom <= dateTo;
 
     const client = supabaseAdmin || supabase;
-    const { data: tickets, error } = await client
-      .from('PDC_tickets')
-      .select('id, status, area_destino, created_at, closed_at, solicitante_id, solicitante:PDC_users!solicitante_id(nome, departamento)');
-
-    DBG('queries done', { error: error?.message, ticketsLen: (tickets || []).length });
-
-    if (error) throw new Error(error.message);
-
-    let all = tickets || [];
+    let all = [];
     /** Dashboard mostra chamados cujo area_destino é o departamento do usuário (PDC_users.departamento), sem exigir permissões. */
     const authUserId = options.authUserId;
     if (authUserId) {
       const permittedSet = await getPermittedDepartmentsForDashboard(authUserId);
-      const areaMatch = (area) => permittedSet.has((area || '').trim().toUpperCase());
-      all = all.filter((t) => areaMatch(t.area_destino));
+      if (permittedSet.size > 0) {
+        const { data: tickets, error } = await client
+          .from('PDC_tickets')
+          .select('id, status, area_destino, created_at, closed_at, solicitante_id, solicitante:PDC_users!solicitante_id(nome, departamento)')
+          .in('area_destino', [...permittedSet]);
+        DBG('queries done', { error: error?.message, ticketsLen: (tickets || []).length });
+        if (error) throw new Error(error.message);
+        all = tickets || [];
+      }
     } else {
       /** Sem usuário autenticado: não exibir dados de outros departamentos. */
       all = [];

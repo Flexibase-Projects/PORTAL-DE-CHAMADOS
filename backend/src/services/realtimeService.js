@@ -34,7 +34,7 @@ function cleanup(id) {
 
 export const realtimeService = {
   connect(req, res) {
-    const authUserId = typeof req.query.auth_user_id === "string" ? req.query.auth_user_id : null;
+    const authUserId = req.auth?.user?.id || null;
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
     res.setHeader("Content-Type", "text/event-stream");

@@ -9,12 +9,7 @@ const api = axios.create({
   timeout: 10000,
 });
 
-const AUTH_REQUIRED_PATTERNS = [
-  "/tickets/meus-chamados-by-auth",
-  "/tickets/recebidos",
-  "/dashboard/stats",
-  "/notifications",
-];
+const AUTH_REQUIRED_PATTERNS = ["/tickets", "/dashboard", "/notifications", "/users", "/me", "/realtime"];
 
 function urlRequiresAuth(url: string): boolean {
   const path = typeof url === "string" ? url.replace(/^.*\/api/, "") : "";
@@ -28,8 +23,8 @@ api.interceptors.request.use(async (config) => {
       await new Promise((r) => setTimeout(r, 300));
       session = (await supabase.auth.getSession()).data.session;
     }
-    if (session?.user?.id) {
-      config.headers["x-auth-user-id"] = session.user.id;
+    if (session?.access_token) {
+      config.headers.Authorization = `Bearer ${session.access_token}`;
     }
   }
   return config;

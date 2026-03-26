@@ -1,6 +1,6 @@
 # Portal de Chamados
 
-Sistema de gerenciamento de chamados (tickets) com dashboard, gestão de usuários, base de conhecimento e templates dinâmicos por departamento.
+Sistema de gerenciamento de chamados (tickets) com dashboard, gestão de usuários e templates dinâmicos por departamento.
 
 ## Stack Tecnológica
 
@@ -28,16 +28,13 @@ Sistema de gerenciamento de chamados (tickets) com dashboard, gestão de usuári
   - `PDC_tickets` - Chamados
   - `PDC_ticket_responses` - Respostas dos chamados
   - `PDC_templates` - Templates dinâmicos por departamento
-  - `PDC_kb_categories` - Categorias da base de conhecimento
-  - `PDC_kb_articles` - Artigos da base de conhecimento
 
 ## Funcionalidades
 
 - **Dashboard** com estatísticas, gráficos (por dia/mês, setor, departamento), intervalo de datas customizado e chamados recentes
 - **Criação de chamados** com formulários dinâmicos por departamento
-- **Meus Chamados** - consulta por e-mail
+- **Meus Chamados** - consulta autenticada por usuário logado
 - **Painel Administrativo** (abas: Chamados, Templates, Usuários) com gestão de chamados, templates por departamento, usuários e **permissões por departamento** (listagem de usuários do Auth e atribuição de permissão Ver / Ver e editar por área, ex.: SGI, TI)
-- **Base de Conhecimento** com CRUD de categorias e artigos
 - **Sidebar retrátil** (colapsa para ícones), fundo branco com destaque em #7289da (hover e item ativo)
 - **Tema claro/escuro** com toggle na sidebar
 - **Layout responsivo** (drawer temporário no mobile, sidebar fixa no desktop)
@@ -57,13 +54,12 @@ PORTAL-DE-CHAMADOS/
 │   │   │   ├── tickets/            # CreateTicketPage, MyTicketsPage, TicketCard, TemplateFieldRenderer
 │   │   │   ├── admin/              # AdminPage, TicketManagement, TemplateEditor
 │   │   │   ├── users/              # UsersPage (gestão de usuários e permissões por departamento)
-│   │   │   └── knowledge-base/     # KnowledgeBasePage
 │   │   ├── hooks/                  # useTheme, use-mobile
 │   │   ├── lib/                    # utils (cn, formatDate)
-│   │   ├── services/               # api (axios), ticketService, templateService, userService, permissionService, kbService
-│   │   ├── storage/                # localStorageStorage (fallback quando VITE_USE_LOCAL_STORAGE)
+│   │   ├── services/               # api (axios), ticketService, templateService, userService, permissionService
+│   │   ├── storage/                # localStorageStorage (somente fallback explícito de desenvolvimento)
 │   │   ├── theme/                  # AppTheme (MUI ThemeProvider + CssBaseline)
-│   │   ├── types/                  # TypeScript (ticket, user, template, knowledge-base)
+│   │   ├── types/                  # TypeScript (ticket, user, template)
 │   │   ├── constants/              # departamentos, roles
 │   │   └── utils/                  # validation (validateTicketForm, etc.)
 │   └── vite.config.ts              # proxy /api -> backend
@@ -71,7 +67,7 @@ PORTAL-DE-CHAMADOS/
 │   ├── scripts/                    # Scripts utilitários (create-sgi-user.js, kill-port.js)
 │   └── src/
 │       ├── config/                 # supabase.js, supabaseAdmin.js (Auth admin)
-│       ├── controllers/            # dashboard, tickets, users, templates, kb, permissions
+│       ├── controllers/            # dashboard, tickets, users, templates, permissions
 │       ├── middleware/             # validation
 │       ├── routes/                 # Express routes (incl. /api/admin/permissions)
 │       ├── services/               # Lógica de negócio (Supabase + permissionService)
@@ -84,13 +80,13 @@ PORTAL-DE-CHAMADOS/
 
 ## Design e Arquitetura
 
-- **Feature-based**: cada funcionalidade em seu diretório (dashboard, tickets, admin, users, knowledge-base), com páginas e componentes específicos.
+- **Feature-based**: cada funcionalidade em seu diretório (dashboard, tickets, admin, users), com páginas e componentes específicos.
 - **Tema MUI**: paleta primária/secundária e modo claro/escuro; sidebar com cor de destaque #7289da (hover e item ativo).
 
 ## Pré-requisitos
 
 - Node.js 18+
-- Conta no Supabase com as tabelas PDC_ criadas (ver `supabase/schema.sql`) e tabela `PDC_user_permissions` para permissões por departamento
+- Conta no Supabase com migrations aplicadas em `supabase/migrations` (fonte oficial de schema)
 - Arquivo `.env` ou `.env.local` na **raiz do projeto** com:
 
 ```env
@@ -104,7 +100,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua-service-role-key
 # SUPABASE_JWT_SECRET=seu-jwt-secret
 # SUPABASE_PROJECT_REF=ref-do-projeto
 
-# Opcional: frontend usa localStorage em vez da API (para desenvolvimento sem backend)
+# Opcional: frontend usa localStorage somente em desenvolvimento controlado
 VITE_USE_LOCAL_STORAGE=true
 ```
 
@@ -184,8 +180,9 @@ O projeto está preparado para deploy via **Docker** (Coolify ou qualquer orques
 | POST | `/api/tickets` | Criar chamado |
 | GET | `/api/tickets` | Listar chamados |
 | GET | `/api/tickets/:id` | Detalhes do chamado |
-| GET | `/api/tickets/meus-chamados` | Chamados por e-mail (query: email) |
+| GET | `/api/tickets/meus-chamados-by-auth` | Chamados do usuário autenticado |
 | GET | `/api/tickets/recebidos` | Chamados não concluídos |
+| GET | `/api/tickets/recebidos/concluidos` | Chamados concluídos |
 | PATCH | `/api/tickets/:id/status` | Atualizar status |
 | POST | `/api/tickets/:id/resposta` | Responder chamado |
 | GET | `/api/users` | Listar usuários |
@@ -195,14 +192,11 @@ O projeto está preparado para deploy via **Docker** (Coolify ou qualquer orques
 | GET | `/api/admin/permissions/auth-users` | Listar usuários do Auth (admin) |
 | GET | `/api/admin/permissions/:authUserId` | Obter permissões por departamento |
 | PUT | `/api/admin/permissions/:authUserId` | Definir permissões (body: `{ departamentos: { [dept]: "view" \| "view_edit" } }`) |
+| PATCH | `/api/admin/permissions/:authUserId/departamento` | Definir departamento base do usuário |
 | GET | `/api/roles` | Listar perfis |
+| GET | `/api/notifications` | Listar notificações do usuário autenticado |
+| PATCH | `/api/notifications/:id/read` | Marcar notificação como lida |
+| POST | `/api/notifications/mark-all-read` | Marcar todas como lidas |
+| GET | `/api/realtime/events` | SSE com autenticação Bearer no header |
 | GET | `/api/templates/:dept` | Template do departamento |
 | PUT | `/api/templates` | Salvar template |
-| GET | `/api/kb/categories` | Categorias da KB |
-| POST | `/api/kb/categories` | Criar categoria |
-| PUT | `/api/kb/categories/:id` | Atualizar categoria |
-| DELETE | `/api/kb/categories/:id` | Excluir categoria |
-| GET | `/api/kb/articles` | Listar artigos |
-| POST | `/api/kb/articles` | Criar artigo |
-| PUT | `/api/kb/articles/:id` | Atualizar artigo |
-| DELETE | `/api/kb/articles/:id` | Excluir artigo |

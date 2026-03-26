@@ -10,8 +10,17 @@ export const permissionService = {
    */
   async listAuthUsers() {
     if (supabaseAdmin) {
-      const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-      if (error) throw new Error(`Auth: ${error.message}`);
+      const users = [];
+      let page = 1;
+      const perPage = 100;
+      for (;;) {
+        const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+        if (error) throw new Error(`Auth: ${error.message}`);
+        const chunk = data?.users || [];
+        users.push(...chunk);
+        if (chunk.length < perPage) break;
+        page += 1;
+      }
       const ids = (users || []).map((u) => u.id);
       const emails = (users || []).map((u) => u.email).filter(Boolean);
       const emailToAuthId = (users || []).reduce((acc, u) => {

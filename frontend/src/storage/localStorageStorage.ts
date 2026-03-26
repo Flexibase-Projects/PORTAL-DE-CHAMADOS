@@ -156,7 +156,7 @@ export const localStorageStorage = {
       solicitante_id: user.id,
       solicitante_nome: user.nome,
       solicitante_email: user.email,
-      area_destino: (data.area as string) ?? "",
+      area_destino: ((data.area_destino as string) ?? (data.area as string)) ?? "",
       setor: (data.setor as string) ?? "",
       assunto: (data.assunto as string) ?? "",
       mensagem: (data.mensagem as string) ?? "",
@@ -204,7 +204,7 @@ export const localStorageStorage = {
       mensagem: msg,
       created_at: ts,
     });
-    let atividades = [...(tickets[idx].atividades ?? [])];
+    const atividades = [...(tickets[idx].atividades ?? [])];
     if (!atividades.some((a) => a.tipo === "criado")) {
       atividades.unshift({
         id: `${id}-criado`,
@@ -257,11 +257,11 @@ export const localStorageStorage = {
     const autorEhReceptor =
       Boolean(autor) &&
       autorDeptNorm === destNorm &&
-      ticket.solicitante_id !== autor.id;
+      ticket.solicitante_id !== (autor?.id ?? "");
     const podePromoverAberto =
       ticket.status === "Aberto" && autorEhReceptor;
     const tsResponse = respostas[respostas.length - 1]!.created_at;
-    let atividadesResp = [...(tickets[idx].atividades ?? [])];
+    const atividadesResp = [...(tickets[idx].atividades ?? [])];
     if (!atividadesResp.some((a) => a.tipo === "criado")) {
       atividadesResp.unshift({
         id: `${ticketId}-criado`,
@@ -305,7 +305,7 @@ export const localStorageStorage = {
     departamento: string,
     fields: TemplateField[]
   ): { departamento: string; fields: TemplateField[] } {
-    const templates = get<Array<{ id?: string; departamento: string; fields: TemplateField[] }>>(
+    const templates = get<Array<{ id?: string; departamento: string; fields: TemplateField[]; created_at?: string }>>(
       KEYS.TEMPLATES,
       []
     );

@@ -15,13 +15,6 @@ interface StatsCardsProps {
 
 type StatKey = "total" | "abertos" | "emAndamento" | "pausados" | "concluidos";
 
-const CARD_ACCENT: Record<StatKey, string> = {
-  total: "#00072d",
-  abertos: "#051650",
-  emAndamento: "#0A2472",
-  pausados: "#6b21a8",
-  concluidos: "#123499",
-};
 const CARD_TEXT_COLOR_LIGHT = "#111184";
 const CARD_TEXT_COLOR_DARK = "#60a5fa";
 

@@ -2,6 +2,7 @@ import supabase from '../config/supabase.js';
 import { supabaseAdmin } from '../config/supabaseAdmin.js';
 import { realtimeService } from './realtimeService.js';
 import { dashboardService } from './dashboardService.js';
+import { permissionService } from './permissionService.js';
 
 function generateProtocol() {
   const now = new Date();
@@ -118,6 +119,62 @@ function mapTicketWithJoins(t) {
   };
 }
 
+function normalizeDept(value) {
+  return (value || '').trim().toUpperCase();
+}
+
+async function resolveActorContext(client, authUserId) {
+  if (!authUserId) return null;
+  const [{ userDepartamento, permissions }, { data: pdcUser }] = await Promise.all([
+    permissionService.getByAuthUserId(authUserId),
+    client.from('PDC_users').select('id').eq('auth_user_id', authUserId).maybeSingle(),
+  ]);
+  const permittedDepartments = new Set(
+    Object.entries(permissions || {})
+      .filter(([, value]) => value === 'view' || value === 'view_edit' || value === 'manage_templates')
+      .map(([key]) => normalizeDept(key))
+  );
+  const editableDepartments = new Set(
+    Object.entries(permissions || {})
+      .filter(([, value]) => value === 'view_edit' || value === 'manage_templates')
+      .map(([key]) => normalizeDept(key))
+  );
+  if (userDepartamento?.trim()) permittedDepartments.add(normalizeDept(userDepartamento));
+  return {
+    authUserId,
+    pdcUserId: pdcUser?.id || null,
+    userDepartamento: userDepartamento || null,
+    permittedDepartments,
+    editableDepartments,
+  };
+}
+
+function canViewTicket(actor, ticket) {
+  if (!actor || !ticket) return false;
+  if (actor.pdcUserId && ticket.solicitante_id === actor.pdcUserId) return true;
+  return actor.permittedDepartments.has(normalizeDept(ticket.area_destino));
+}
+
+function canCommentTicket(actor, ticket) {
+  if (!canViewTicket(actor, ticket)) return false;
+  if (actor.pdcUserId && ticket.solicitante_id === actor.pdcUserId) return true;
+  return actor.permittedDepartments.has(normalizeDept(ticket.area_destino));
+}
+
+function canEditTicket(actor, ticket) {
+  if (!canViewTicket(actor, ticket)) return false;
+  return actor.editableDepartments.has(normalizeDept(ticket.area_destino));
+}
+
+function applyTicketScope(query, pdcUserId, departmentSet) {
+  if (pdcUserId && departmentSet.size > 0) {
+    return query.or(`solicitante_id.eq.${pdcUserId},area_destino.in.(${[...departmentSet].join(',')})`);
+  }
+  if (pdcUserId) return query.eq('solicitante_id', pdcUserId);
+  if (departmentSet.size > 0) return query.in('area_destino', [...departmentSet]);
+  return null;
+}
+
 /** Notifica todos os PDC_users com auth vinculado ao departamento receptor (area_destino), exceto excludePdcUserId. */
 async function notifyPdcUsersInDestinationDepartment(client, {
   areaDestino,
@@ -133,10 +190,10 @@ async function notifyPdcUsersInDestinationDepartment(client, {
   const { data: receptores } = await client
     .from('PDC_users')
     .select('id, auth_user_id, departamento')
-    .not('auth_user_id', 'is', null);
-  const receptoresDoSetor = (receptores || []).filter(
-    (u) => (u.departamento || '').trim().toUpperCase() === areaNorm && u.id !== excludePdcUserId
-  );
+    .eq('departamento', areaNorm)
+    .not('auth_user_id', 'is', null)
+    .neq('id', excludePdcUserId || '');
+  const receptoresDoSetor = receptores || [];
   if (receptoresDoSetor.length === 0) return;
   const authIds = [...new Set(receptoresDoSetor.map((u) => u.auth_user_id).filter(Boolean))];
   const rows = authIds.map((auth_user_id) => ({
@@ -261,24 +318,39 @@ export const ticketService = {
     return created;
   },
 
-  async getAllTickets() {
-    let { data, error } = await supabase
-      .from('PDC_tickets')
-      .select(TICKET_SELECT_WITH_RESP)
-      .order('created_at', { ascending: false });
+  async getAllTickets(authUserId, options = {}) {
+    const client = supabaseAdmin || supabase;
+    const actor = await resolveActorContext(client, authUserId);
+    if (!actor) return [];
+    const page = Math.max(1, Number(options.page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(options.pageSize) || 50));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    let q = applyTicketScope(
+      client.from('PDC_tickets').select(TICKET_SELECT_WITH_RESP).order('created_at', { ascending: false }),
+      actor.pdcUserId,
+      actor.permittedDepartments
+    );
+    if (!q) return [];
+    let { data, error } = await q.range(from, to);
     if (error && isMissingResponsavelColumnError(error)) {
-      ({ data, error } = await supabase
-        .from('PDC_tickets')
-        .select(TICKET_SELECT_BASE)
-        .order('created_at', { ascending: false }));
+      let fallbackQ = applyTicketScope(
+        client.from('PDC_tickets').select(TICKET_SELECT_BASE).order('created_at', { ascending: false }),
+        actor.pdcUserId,
+        actor.permittedDepartments
+      );
+      if (!fallbackQ) return [];
+      ({ data, error } = await fallbackQ.range(from, to));
     }
 
     if (error) throw new Error(error.message);
     return (data || []).map(mapTicketWithJoins);
   },
 
-  async getTicketById(id) {
+  async getTicketById(id, authUserId = null) {
     const client = supabaseAdmin || supabase;
+    const actor = await resolveActorContext(client, authUserId);
+    if (!actor) return null;
     let { data: ticket, error } = await client
       .from('PDC_tickets')
       .select(TICKET_SELECT_WITH_RESP)
@@ -293,6 +365,7 @@ export const ticketService = {
     }
 
     if (error || !ticket) return null;
+    if (!canViewTicket(actor, ticket)) return null;
 
     // Buscar respostas
     const { data: respostas } = await client
@@ -614,13 +687,16 @@ export const ticketService = {
 
   async updateTicketStatus(id, status, authUserId = null, authUserEmail = null, opts = {}) {
     const client = supabaseAdmin || supabase;
+    const actor = await resolveActorContext(client, authUserId);
+    if (!actor) throw new Error('Não autenticado');
     const { data: current, error: curErr } = await client
       .from('PDC_tickets')
-      .select('status, closed_at')
+      .select('status, closed_at, solicitante_id, area_destino')
       .eq('id', id)
       .single();
 
     if (curErr || !current) return null;
+    if (!canEditTicket(actor, current)) throw new Error('Sem permissão para editar este chamado');
 
     const statusAnterior = current.status || null;
     const closedAtAnterior = current.closed_at ?? null;
@@ -699,11 +775,20 @@ export const ticketService = {
 
   async addResponse(ticketId, responseData, authUserId = null, authUserEmail = null) {
     const client = supabaseAdmin || supabase;
+    const actor = await resolveActorContext(client, authUserId);
+    if (!actor) throw new Error('Não autenticado');
+    const { data: ticket, error } = await client
+      .from('PDC_tickets')
+      .select('id, solicitante_id, area_destino')
+      .eq('id', ticketId)
+      .single();
+    if (error || !ticket) return null;
+    if (!canCommentTicket(actor, ticket)) throw new Error('Sem permissão para responder este chamado');
     await this._persistResponseSideEffects(client, ticketId, responseData, authUserId, authUserEmail, {
       promoteAbertoToEmAndamento: true,
       publishResponseAdded: true,
     });
-    return this.getTicketById(ticketId);
+    return this.getTicketById(ticketId, authUserId);
   },
 
   async getTicketsByArea(area) {
@@ -730,7 +815,7 @@ export const ticketService = {
    * - chamadosMeuDepartamento: chamados cujo area_destino é o departamento do usuário (PDC_users.departamento).
    * - chamadosQueAbriOutros: chamados que o usuário abriu (solicitante_id) para outros departamentos.
    */
-  async getMeusChamadosByAuthUser(authUserId, authUserEmail = null) {
+  async getMeusChamadosByAuthUser(authUserId, authUserEmail = null, options = {}) {
     const isDev = process.env.NODE_ENV !== 'production';
     if (!authUserId) {
       if (isDev) console.debug('[ticketService] getMeusChamadosByAuthUser: authUserId ausente');
@@ -783,15 +868,25 @@ export const ticketService = {
     const formatTicket = (t) => mapTicketWithJoins(t);
 
     const ticketClient = supabaseAdmin || client;
-    let { data: allTickets, error } = await ticketClient
+    const page = Math.max(1, Number(options.page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(options.pageSize) || 50));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    let q = ticketClient
       .from('PDC_tickets')
       .select(TICKET_SELECT_WITH_RESP)
       .order('created_at', { ascending: false });
+    q = applyTicketScope(q, solicitanteId, permittedSet);
+    if (!q) return { chamadosMeuDepartamento: [], chamadosQueAbriOutros: [] };
+    let { data: allTickets, error } = await q.range(from, to);
     if (error && isMissingResponsavelColumnError(error)) {
-      ({ data: allTickets, error } = await ticketClient
-        .from('PDC_tickets')
-        .select(TICKET_SELECT_BASE)
-        .order('created_at', { ascending: false }));
+      let fallbackQ = applyTicketScope(
+        ticketClient.from('PDC_tickets').select(TICKET_SELECT_BASE).order('created_at', { ascending: false }),
+        solicitanteId,
+        permittedSet
+      );
+      if (!fallbackQ) return { chamadosMeuDepartamento: [], chamadosQueAbriOutros: [] };
+      ({ data: allTickets, error } = await fallbackQ.range(from, to));
     }
 
     if (error) throw new Error(error.message);

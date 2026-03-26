@@ -108,7 +108,7 @@ export function TicketDetailPage() {
   useEffect(() => {
     if (!id || !user?.id) return;
     notificationService
-      .markReadByTicket(id, user.id)
+      .markReadByTicket(id)
       .then(() => {
         window.dispatchEvent(new CustomEvent("notifications-refresh"));
       })

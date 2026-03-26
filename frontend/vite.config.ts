@@ -47,8 +47,14 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes("node_modules")) {
-              if (id.includes("react") || id.includes("react-dom") || id.includes("scheduler")) return "vendor-react";
               if (id.includes("react-router")) return "vendor-router";
+              if (
+                /[\\/]node_modules[\\/]react[\\/]/.test(id) ||
+                /[\\/]node_modules[\\/]react-dom[\\/]/.test(id) ||
+                /[\\/]node_modules[\\/]scheduler[\\/]/.test(id)
+              ) {
+                return "vendor-react";
+              }
               if (id.includes("@mui")) return "vendor-mui";
               if (id.includes("recharts")) return "vendor-recharts";
               if (id.includes("lucide-react")) return "vendor-lucide";

@@ -58,16 +58,17 @@ export const userController = {
 
   async syncAuth(req, res) {
     try {
-      const { auth_user_id, email, nome } = req.body || {};
-      if (!auth_user_id || !email) return res.status(400).json({ success: false, error: 'auth_user_id e email são obrigatórios' });
-      const user = await userService.syncAuthUser(auth_user_id, email, nome);
+      const authUserId = req.auth?.user?.id;
+      const email = req.auth?.user?.email;
+      const nome = req.auth?.user?.user_metadata?.nome || req.auth?.user?.user_metadata?.full_name || null;
+      if (!authUserId || !email) return res.status(400).json({ success: false, error: 'Usuário autenticado inválido' });
+      const user = await userService.syncAuthUser(authUserId, email, nome);
       res.json({ success: true, user });
     } catch (error) {
-      console.error('[userController] syncAuth fallback:', error?.message || error);
-      res.status(200).json({
-        success: true,
-        user: null,
-        degraded: true,
+      console.error('[userController] syncAuth:', error?.message || error);
+      res.status(500).json({
+        success: false,
+        error: 'Erro ao sincronizar usuário',
         message: error?.message || 'Sincronização temporariamente indisponível',
       });
     }

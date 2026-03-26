@@ -1,4 +1,5 @@
 // Middleware de validação
+import { TICKET_STATUS } from '../../../shared/contracts.js';
 
 export const validateEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -55,8 +56,6 @@ export const validateResponse = (req, res, next) => {
   next();
 };
 
-const VALID_TICKET_STATUSES = ['Aberto', 'Em Andamento', 'Pausado', 'Concluído'];
-
 export const validateStatusChange = (req, res, next) => {
   const { status, mensagem } = req.body;
 
@@ -64,7 +63,7 @@ export const validateStatusChange = (req, res, next) => {
     return res.status(400).json({ success: false, error: 'Status é obrigatório' });
   }
 
-  if (!VALID_TICKET_STATUSES.includes(status)) {
+  if (!TICKET_STATUS.includes(status)) {
     return res.status(400).json({ success: false, error: 'Status inválido' });
   }
 

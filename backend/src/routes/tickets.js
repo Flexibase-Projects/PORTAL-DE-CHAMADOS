@@ -1,8 +1,11 @@
 import express from 'express';
 import { ticketController } from '../controllers/ticketController.js';
 import { validateTicket, validateResponse, validateStatusChange } from '../middleware/validation.js';
+import { requireAuth } from '../middleware/auth.js';
+import { attachActor } from '../middleware/authorization.js';
 
 const router = express.Router();
+router.use(requireAuth, attachActor);
 
 // Criar novo chamado
 router.post('/', validateTicket, ticketController.createTicket);
@@ -12,15 +15,9 @@ router.get('/', ticketController.getAllTickets);
 
 // Meus chamados por usuário autenticado (prioridade quando logado)
 router.get('/meus-chamados-by-auth', ticketController.getMeusChamadosByAuthUser);
-// Buscar chamados por nome do usuário (para "Meus Chamados" sem login)
-router.get('/meus-chamados', ticketController.getTicketsByNome);
-
 // Buscar chamados recebidos (Painel Administrativo)
 router.get('/recebidos/concluidos', ticketController.getReceivedConcludedTickets);
 router.get('/recebidos', ticketController.getReceivedTickets);
-
-// Buscar chamados por área
-router.get('/area', ticketController.getTicketsByArea);
 
 // Buscar chamado por ID
 router.get('/:id', ticketController.getTicketById);

@@ -3,7 +3,7 @@ import { permissionService } from '../services/permissionService.js';
 export const meController = {
   async getMe(req, res) {
     try {
-      const authUserId = req.headers['x-auth-user-id'];
+      const authUserId = req.auth?.user?.id;
       if (!authUserId) {
         return res.status(401).json({ success: false, error: 'Não autenticado' });
       }
@@ -16,15 +16,7 @@ export const meController = {
       });
     } catch (error) {
       console.error('[me] getMe:', error.message);
-      // 200 degradado: front continua utilizável (RLS/Supabase indisponível na demo).
-      res.status(200).json({
-        success: true,
-        departamento: null,
-        permissions: {},
-        templateDepartamentos: [],
-        degraded: true,
-        message: error.message,
-      });
+      res.status(500).json({ success: false, error: 'Erro ao carregar perfil', message: error.message });
     }
   },
 };

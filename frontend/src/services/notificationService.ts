@@ -13,37 +13,29 @@ export interface NotificationItem {
 
 export const notificationService = {
   async list(
-    unreadOnly = false,
-    authUserId?: string
+    unreadOnly = false
   ): Promise<{
     success: boolean;
     notifications: NotificationItem[];
     unreadCount: number;
   }> {
     const params: Record<string, string | boolean> = { unread_only: unreadOnly };
-    if (authUserId) params.auth_user_id = authUserId;
     const res = await api.get("/notifications", { params });
     return res.data;
   },
 
-  async markRead(id: string, authUserId?: string): Promise<{ success: boolean }> {
-    const res = await api.patch(`/notifications/${id}/read`, undefined, {
-      params: authUserId ? { auth_user_id: authUserId } : undefined,
-    });
+  async markRead(id: string): Promise<{ success: boolean }> {
+    const res = await api.patch(`/notifications/${id}/read`);
     return res.data;
   },
 
-  async markAllRead(authUserId?: string): Promise<{ success: boolean }> {
-    const res = await api.post("/notifications/mark-all-read", {}, {
-      params: authUserId ? { auth_user_id: authUserId } : undefined,
-    });
+  async markAllRead(): Promise<{ success: boolean }> {
+    const res = await api.post("/notifications/mark-all-read", {});
     return res.data;
   },
 
-  async markReadByTicket(ticketId: string, authUserId?: string): Promise<{ success: boolean }> {
-    const res = await api.post(`/notifications/mark-read-by-ticket/${ticketId}`, {}, {
-      params: authUserId ? { auth_user_id: authUserId } : undefined,
-    });
+  async markReadByTicket(ticketId: string): Promise<{ success: boolean }> {
+    const res = await api.post(`/notifications/mark-read-by-ticket/${ticketId}`, {});
     return res.data;
   },
 };

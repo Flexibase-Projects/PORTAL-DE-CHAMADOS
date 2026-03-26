@@ -1,6 +1,6 @@
--- Portal de Chamados - Schema Supabase
--- Todas as tabelas no schema public com prefixo PDC_
--- Execute no Supabase Dashboard > SQL Editor
+-- Portal de Chamados - Schema Supabase (LEGADO)
+-- Fonte oficial de verdade do banco: supabase/migrations
+-- Este arquivo é apenas referência histórica e pode ficar defasado.
 
 -- =============================================
 -- 1. DROP (ordem inversa respeitando FKs)

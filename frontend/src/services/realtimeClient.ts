@@ -1,3 +1,5 @@
+import { EventSourcePolyfill } from "event-source-polyfill";
+
 export type RealtimeEventName =
   | "connected"
   | "ticket_created"
@@ -14,14 +16,14 @@ export interface RealtimeEventPayload {
 
 type RealtimeCallback = (eventName: RealtimeEventName, payload: RealtimeEventPayload) => void;
 
-let source: EventSource | null = null;
+let source: EventSourcePolyfill | null = null;
 const listeners = new Set<RealtimeCallback>();
 
 function emit(eventName: RealtimeEventName, payload: RealtimeEventPayload) {
   listeners.forEach((cb) => cb(eventName, payload));
 }
 
-function attachListeners(es: EventSource) {
+function attachListeners(es: EventSourcePolyfill) {
   const allEvents: RealtimeEventName[] = [
     "connected",
     "ticket_created",
@@ -31,9 +33,9 @@ function attachListeners(es: EventSource) {
   ];
 
   allEvents.forEach((eventName) => {
-    es.addEventListener(eventName, (evt) => {
+    es.addEventListener(eventName, (evt: MessageEvent) => {
       try {
-        const payload = JSON.parse((evt as MessageEvent).data) as RealtimeEventPayload;
+        const payload = JSON.parse(evt.data) as RealtimeEventPayload;
         emit(eventName, payload);
       } catch {
         emit(eventName, {});
@@ -42,12 +44,15 @@ function attachListeners(es: EventSource) {
   });
 }
 
-export function startRealtimeStream(authUserId: string) {
-  if (!authUserId) return;
-  const url = `/api/realtime/events?auth_user_id=${encodeURIComponent(authUserId)}`;
+export function startRealtimeStream(accessToken: string) {
+  if (!accessToken) return;
+  const url = `/api/realtime/events`;
   if (source && source.url === url && source.readyState !== EventSource.CLOSED) return;
   if (source) source.close();
-  source = new EventSource(url, { withCredentials: false });
+  source = new EventSourcePolyfill(url, {
+    withCredentials: false,
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
   attachListeners(source);
 }
 

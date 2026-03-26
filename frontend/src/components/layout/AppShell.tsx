@@ -22,7 +22,7 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const width = collapsed ? DRAWER_WIDTH_COLLAPSED : DRAWER_WIDTH;
   const debounceRef = useRef<number | null>(null);
   const pendingTicketIdsRef = useRef<Set<string>>(new Set());
@@ -35,7 +35,7 @@ export function AppShell({ children }: AppShellProps) {
       return;
     }
 
-    startRealtimeStream(user.id);
+    startRealtimeStream(session?.access_token || "");
     const unsubscribe = subscribeRealtime((eventName, payload: RealtimeEventPayload) => {
       if (eventName === "connected") return;
       if (payload.ticketId) pendingTicketIdsRef.current.add(payload.ticketId);
@@ -58,7 +58,7 @@ export function AppShell({ children }: AppShellProps) {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
       stopRealtimeStream();
     };
-  }, [user?.id]);
+  }, [user?.id, session?.access_token]);
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>

@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "vite",
     "build": "npx vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "npx tsc --noEmit",
+    "lint": "npx eslint \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
@@ -23,6 +25,7 @@
     "axios": "^1.6.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "event-source-polyfill": "^1.0.31",
     "lucide-react": "^0.563.0",
     "postcss": "^8.5.6",
     "radix-ui": "^1.4.3",

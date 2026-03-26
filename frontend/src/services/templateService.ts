@@ -11,13 +11,8 @@ export const templateService = {
       const template = localStorageStorage.getTemplate(departamento);
       return { success: true, template };
     }
-    try {
-      const res = await api.get(`/templates/${encodeURIComponent(departamento)}`);
-      return res.data;
-    } catch {
-      const template = localStorageStorage.getTemplate(departamento);
-      return { success: true, template };
-    }
+    const res = await api.get(`/templates/${encodeURIComponent(departamento)}`);
+    return res.data;
   },
 
   async saveTemplate(departamento: string, fields: unknown[]) {

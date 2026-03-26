@@ -35,10 +35,9 @@ export function AppHeader({ onMobileToggle }: AppHeaderProps) {
 
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return;
-    const uid = user.id;
     const load = () => {
       notificationService
-        .list(false, uid)
+        .list(false)
         .then((r) => {
           if (r.success) {
             setUnreadCount(r.unreadCount ?? 0);
@@ -92,7 +91,7 @@ export function AppHeader({ onMobileToggle }: AppHeaderProps) {
       setAnchorEl(null);
       navigate(`/meus-chamados/${n.ticket_id}`);
       if (!n.lida && user?.id) {
-        notificationService.markRead(n.id, user.id).then(() => {
+        notificationService.markRead(n.id).then(() => {
           setUnreadCount((c) => Math.max(0, c - 1));
           setNotifications((prev) => prev.map((item) => (item.id === n.id ? { ...item, lida: true } : item)));
         });
