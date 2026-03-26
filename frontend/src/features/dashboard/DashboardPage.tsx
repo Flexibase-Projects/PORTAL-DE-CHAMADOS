@@ -16,7 +16,6 @@ import {
   ChamadosPorPeriodoChart,
   DepartmentBarChart,
   TicketsBySetorDonut,
-  ResolvidosGauge,
 } from "./components/Charts";
 import { TopTicketCreatorsCard } from "./components/TopTicketCreatorsCard";
 import {
@@ -466,44 +465,54 @@ export function DashboardPage() {
         sx={{
           display: "grid",
           gap: 1.5,
-          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "1fr 1fr",
+            md: "repeat(3, minmax(0, 1fr))",
+            lg: "repeat(5, minmax(0, 1fr))",
+          },
         }}
       >
-        <ChamadosPorPeriodoChart
-          dataDia={
-            (filterSetorGlobal === "Industrial"
-              ? stats.por_dia_industria
-              : filterSetorGlobal === "Administrativo"
-                ? stats.por_dia_administrativo
-                : stats.por_dia) ?? []
-          }
-          dataMes={
-            periodKey === "custom"
-              ? (filterSetorGlobal === "Industrial"
-                  ? stats.por_mes_industria_range
-                  : filterSetorGlobal === "Administrativo"
-                    ? stats.por_mes_administrativo_range
-                    : stats.por_mes_geral_range) ?? []
-              : (filterSetorGlobal === "Industrial"
-                  ? stats.por_mes_industria
-                  : filterSetorGlobal === "Administrativo"
-                    ? stats.por_mes_administrativo
-                    : stats.por_mes_geral) ?? []
-          }
-          periodKey={periodKey}
-          customViewMode={customViewMode}
-          onCustomViewModeChange={setCustomViewMode}
-        />
+        <Box sx={{ minWidth: 0, gridColumn: { xs: "1", sm: "span 1", md: "span 2", lg: "span 4" } }}>
+          <ChamadosPorPeriodoChart
+            dataDia={
+              (filterSetorGlobal === "Industrial"
+                ? stats.por_dia_industria
+                : filterSetorGlobal === "Administrativo"
+                  ? stats.por_dia_administrativo
+                  : stats.por_dia) ?? []
+            }
+            dataMes={
+              periodKey === "custom"
+                ? (filterSetorGlobal === "Industrial"
+                    ? stats.por_mes_industria_range
+                    : filterSetorGlobal === "Administrativo"
+                      ? stats.por_mes_administrativo_range
+                      : stats.por_mes_geral_range) ?? []
+                : (filterSetorGlobal === "Industrial"
+                    ? stats.por_mes_industria
+                    : filterSetorGlobal === "Administrativo"
+                      ? stats.por_mes_administrativo
+                      : stats.por_mes_geral) ?? []
+            }
+            periodKey={periodKey}
+            customViewMode={customViewMode}
+            onCustomViewModeChange={setCustomViewMode}
+          />
+        </Box>
         <Box
           sx={{
             display: "grid",
             gap: 1.5,
-            gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+            gridTemplateColumns: "1fr",
             minWidth: 0,
+            gridColumn: { xs: "1", sm: "span 1", md: "span 1", lg: "span 1" },
+            "& .MuiCard-root": {
+              width: "100%",
+            },
           }}
         >
           <TicketsBySetorDonut data={stats.por_setor ?? []} />
-          <ResolvidosGauge total={stats.total ?? 0} concluidos={stats.concluidos ?? 0} />
         </Box>
       </Box>
 

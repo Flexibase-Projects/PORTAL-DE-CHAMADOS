@@ -88,14 +88,21 @@ export function TicketCard({
         width: "100%",
         maxWidth: 300,
         mx: "auto",
-        transition: "box-shadow 0.2s, border-color 0.2s",
+        transform: "translateY(0)",
+        willChange: "transform, box-shadow, border-color, background-color",
+        transition:
+          "transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 260ms ease, border-color 220ms ease, background-color 220ms ease",
         cursor: onView ? "pointer" : "default",
         borderColor: "divider",
         borderRadius: 2,
         "&:hover": onView
           ? {
-              boxShadow: dark ? `0 4px 14px ${alpha("#000", 0.35)}` : `0 4px 14px ${alpha(theme.palette.primary.main, 0.12)}`,
-              borderColor: alpha(theme.palette.primary.main, dark ? 0.35 : 0.22),
+              transform: "translateY(-2px)",
+              boxShadow: dark
+                ? `0 10px 24px ${alpha("#000", 0.44)}, 0 0 0 1px ${alpha(footerFg, 0.4)}, 0 0 24px ${alpha(footerFg, 0.26)}`
+                : `0 10px 22px ${alpha("#0f172a", 0.16)}, 0 0 0 1px ${alpha(footerFg, 0.26)}, 0 0 22px ${alpha(footerFg, 0.16)}`,
+              borderColor: alpha(footerFg, dark ? 0.5 : 0.28),
+              backgroundColor: dark ? alpha(footerFg, 0.04) : alpha(footerFg, 0.02),
             }
           : {},
       }}

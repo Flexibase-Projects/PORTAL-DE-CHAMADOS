@@ -460,6 +460,18 @@ export function ChamadosLeadTimeCalendar() {
     setDetailDayKey(null);
   }, []);
 
+  const openTimelineFromDayDialog = useCallback((ticketId: string) => {
+    const activeEl = document.activeElement;
+    if (activeEl instanceof HTMLElement) {
+      activeEl.blur();
+    }
+    // Fecha o dialog atual antes de abrir o da timeline, evitando foco preso em ancestral aria-hidden.
+    setDetailDayKey(null);
+    requestAnimationFrame(() => {
+      setTimelineTicketId(ticketId);
+    });
+  }, []);
+
   const detailDayItems = useMemo(() => {
     if (!detailDayKey) return [];
     return dayTicketsMap.get(detailDayKey) ?? [];
@@ -886,7 +898,7 @@ export function ChamadosLeadTimeCalendar() {
                       sx={{ mt: 0.75, mr: 0.5, flexShrink: 0, whiteSpace: "nowrap" }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setTimelineTicketId(b.ticket.id);
+                        openTimelineFromDayDialog(b.ticket.id);
                       }}
                     >
                       Conferir timeline

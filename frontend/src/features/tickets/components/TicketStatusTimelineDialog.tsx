@@ -1,5 +1,4 @@
 import { useEffect, useId, useMemo, useState } from "react";
-import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -25,7 +24,6 @@ import { ticketService } from "@/services/ticketService";
 import type { Ticket } from "@/types/ticket";
 import {
   buildTicketStatusTimelineSteps,
-  ticketStatusHistoryMissingActivities,
   type TimelineMarker,
 } from "@/utils/ticketStatusTimeline";
 
@@ -94,7 +92,6 @@ export function TicketStatusTimelineDialog({ open, onClose, ticketId }: TicketSt
   }, [open, ticketId]);
 
   const steps = useMemo(() => (ticket ? buildTicketStatusTimelineSteps(ticket) : []), [ticket]);
-  const historyMissing = Boolean(ticket && ticketStatusHistoryMissingActivities(ticket));
 
   return (
     <Dialog
@@ -167,21 +164,6 @@ export function TicketStatusTimelineDialog({ open, onClose, ticketId }: TicketSt
         )}
         {!loading && !error && ticket && steps.length > 0 && (
           <>
-          {historyMissing && (
-            <Alert severity="info" variant="outlined" icon={false} sx={{ mb: 1.5 }} role="status">
-              <Typography variant="subtitle2" component="p" fontWeight={700} sx={{ mb: 0.75 }}>
-                Mesmo painel — Linha do tempo
-              </Typography>
-              <Typography variant="body2" color="text.secondary" component="div" sx={{ lineHeight: 1.5 }}>
-                Não é outra janela: esta faixa faz parte deste diálogo. O cadastro indica{" "}
-                <strong>Estado atual: {ticket.status}</strong>, mas ainda não existem linhas de histórico de mudança de
-                status (dados antigos ou alteração fora do portal) — por isso abaixo só aparece o marco{" "}
-                <strong>Chamado aberto</strong>. Da próxima vez que alguém usar <strong>Pausar</strong> ou{" "}
-                <strong>Retomar</strong> aqui, com a mensagem obrigatória, cada alteração ganha um marco à direita, na
-                ordem em que ocorrer.
-              </Typography>
-            </Alert>
-          )}
           <Box
             sx={{
               pt: 1,
@@ -214,12 +196,14 @@ export function TicketStatusTimelineDialog({ open, onClose, ticketId }: TicketSt
               const labelOnTop = isNarrow ? true : i % 2 === 0;
               const accent = statusHexForTimelineMarker(step.marker);
               const when = formatDateTimePartsPtBr(step.at);
+              const isLastConcluido = !isNarrow && i === steps.length - 1 && step.marker === "concluido";
 
               return (
                 <Box
                   key={step.sourceActivityId ?? `${step.kind}-${step.at}-${i}-${step.label}`}
                   sx={{
                     flex: isNarrow ? "none" : "0 0 auto",
+                    ml: isLastConcluido ? "auto" : 0,
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
@@ -228,6 +212,14 @@ export function TicketStatusTimelineDialog({ open, onClose, ticketId }: TicketSt
                     zIndex: 1,
                     minWidth: { xs: 0, sm: 108 },
                     maxWidth: { xs: "100%", sm: 168 },
+                    "&:hover .timeline-marker": {
+                      transform: "scale(1.06)",
+                      boxShadow:
+                        theme.palette.mode === "dark"
+                          ? `0 8px 20px rgba(0,0,0,0.46)`
+                          : `0 8px 18px ${alpha(accent, 0.34)}`,
+                      backgroundColor: alpha(accent, theme.palette.mode === "dark" ? 0.42 : 0.24),
+                    },
                   }}
                 >
                   {labelOnTop && (
@@ -238,6 +230,7 @@ export function TicketStatusTimelineDialog({ open, onClose, ticketId }: TicketSt
                     </Box>
                   )}
                   <Box
+                    className="timeline-marker"
                     title={step.label}
                     aria-label={step.label}
                     sx={{
@@ -257,6 +250,7 @@ export function TicketStatusTimelineDialog({ open, onClose, ticketId }: TicketSt
                         theme.palette.mode === "dark"
                           ? `0 4px 14px rgba(0,0,0,0.35)`
                           : `0 4px 12px ${alpha(accent, 0.25)}`,
+                      transition: "transform 220ms ease, box-shadow 220ms ease, background-color 220ms ease",
                     }}
                   >
                     <TimelineStepMarkerIcon marker={step.marker} color={accent} />

@@ -104,7 +104,8 @@ export function statusTransitionLabel(statusAnterior: string, statusNovo: string
 }
 
 /**
- * Marcos em ordem cronológica (esquerda → direita: mais antigo → mais recente).
+ * Marcos em ordem cronológica (esquerda → direita: mais antigo → mais recente),
+ * com "Concluído" sempre no extremo direito da trilha.
  * Cada linha `status_alterado` em `atividades` vira um marco (pausar/retomar N vezes = N marcos).
  */
 export function buildTicketStatusTimelineSteps(ticket: Ticket): TimelineStep[] {
@@ -118,7 +119,7 @@ export function buildTicketStatusTimelineSteps(ticket: Ticket): TimelineStep[] {
     marker: "aberto",
   });
 
-  const rawList = ticket.atividades ?? [];
+  const rawList = mergeAtividadesWithDadosExtrasTimeline(ticket);
   const statusChanges = rawList
     .filter(isStatusAlteradoActivity)
     .map((a) => {
@@ -168,7 +169,11 @@ export function buildTicketStatusTimelineSteps(ticket: Ticket): TimelineStep[] {
     });
   }
 
-  steps.sort((a, b) => timeMs(a.at) - timeMs(b.at));
+  steps.sort((a, b) => {
+    if (a.marker === "concluido" && b.marker !== "concluido") return 1;
+    if (b.marker === "concluido" && a.marker !== "concluido") return -1;
+    return timeMs(a.at) - timeMs(b.at);
+  });
   return steps;
 }
 
