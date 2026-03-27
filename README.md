@@ -200,3 +200,9 @@ O projeto está preparado para deploy via **Docker** (Coolify ou qualquer orques
 | GET | `/api/realtime/events` | SSE com autenticação Bearer no header |
 | GET | `/api/templates/:dept` | Template do departamento |
 | PUT | `/api/templates` | Salvar template |
+
+## Qualidade de release
+
+- Execute `npm run ci` antes de merge/deploy.
+- Checklist operacional de release: [docs/release-checklist.md](./docs/release-checklist.md).
+- O CI também valida budget de bundle com `npm run bundle:check`.

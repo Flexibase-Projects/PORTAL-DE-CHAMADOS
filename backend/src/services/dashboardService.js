@@ -192,6 +192,7 @@ async function getPermittedDepartmentsForDashboard(authUserId) {
 /** Cache em memória para getStats: TTL 60s. Chave por opções (default vs dateFrom/dateTo) e authUserId. */
 const STATS_CACHE_TTL_MS = 60 * 1000;
 const statsCache = { key: null, value: null, expiresAt: 0 };
+const DEFAULT_HISTORY_DAYS = 120;
 
 function getStatsCacheKey(options) {
   const dateFrom = options.dateFrom ? String(options.dateFrom).slice(0, 10) : null;
@@ -220,142 +221,54 @@ export const dashboardService = {
     const dateFrom = options.dateFrom ? String(options.dateFrom).slice(0, 10) : null;
     const dateTo = options.dateTo ? String(options.dateTo).slice(0, 10) : null;
     const useCustomRange = dateFrom && dateTo && dateFrom <= dateTo;
-
     const client = supabaseAdmin || supabase;
-    let all = [];
-    /** Dashboard mostra chamados cujo area_destino é o departamento do usuário (PDC_users.departamento), sem exigir permissões. */
+    /** Dashboard mostra chamados cujo area_destino é o departamento do usuário (PDC_users.departamento). */
     const authUserId = options.authUserId;
-    if (authUserId) {
-      const permittedSet = await getPermittedDepartmentsForDashboard(authUserId);
-      if (permittedSet.size > 0) {
-        const { data: tickets, error } = await client
-          .from('PDC_tickets')
-          .select('id, status, area_destino, created_at, closed_at, solicitante_id, solicitante:PDC_users!solicitante_id(nome, departamento)')
-          .in('area_destino', [...permittedSet]);
-        DBG('queries done', { error: error?.message, ticketsLen: (tickets || []).length });
-        if (error) throw new Error(error.message);
-        all = tickets || [];
-      }
-    } else {
-      /** Sem usuário autenticado: não exibir dados de outros departamentos. */
-      all = [];
+    if (!authUserId) {
+      const empty = {
+        total: 0,
+        abertos: 0,
+        em_andamento: 0,
+        pausados: 0,
+        concluidos: 0,
+        por_departamento: [],
+        por_dia: [],
+        por_dia_industria: [],
+        por_dia_administrativo: [],
+        por_mes_geral: [],
+        por_mes_industria: [],
+        por_mes_administrativo: [],
+        por_setor: [],
+        top_solicitantes: [],
+      };
+      statsCache.key = cacheKey;
+      statsCache.value = empty;
+      statsCache.expiresAt = Date.now() + STATS_CACHE_TTL_MS;
+      return empty;
     }
 
-    /** Quando useCustomRange, todas as estatísticas usam apenas tickets no intervalo. */
-    const listForStats = useCustomRange
-      ? all.filter((t) => {
-          const created = (t.created_at || '').toString().slice(0, 10);
-          return created >= dateFrom && created <= dateTo;
-        })
-      : all;
-
-    const total = listForStats.length;
-    const abertos = listForStats.filter(t => t.status === 'Aberto').length;
-    const em_andamento = listForStats.filter(t => t.status === 'Em Andamento').length;
-    const pausados = listForStats.filter(t => t.status === 'Pausado').length;
-    const concluidos = listForStats.filter(t => t.status === 'Concluído').length;
-
-    const areaOrigem = (t) => (t.solicitante?.departamento ?? t.area_destino ?? '').trim() || '(sem área)';
-    const deptCounts = {};
-    listForStats.forEach(t => {
-      const area = areaOrigem(t);
-      deptCounts[area] = (deptCounts[area] || 0) + 1;
+    const { data, error } = await client.rpc('pdc_dashboard_stats', {
+      p_auth_user_id: authUserId,
+      p_date_from: useCustomRange ? dateFrom : null,
+      p_date_to: useCustomRange ? dateTo : null,
     });
-    const por_departamento = Object.entries(deptCounts)
-      .map(([area, count]) => ({ area, count }))
-      .sort((a, b) => b.count - a.count);
-
-    /** Por dia: "abertos" = saldo não concluídos ao fim do dia (inclui Pausado); "fechados" = fechados naquele dia. Por mês: mesma ideia no último dia do mês. */
-    const buildPorDia = (list, filterSetor = null) => {
-      const base = filterSetor
-        ? list.filter(t => getSetorParaDashboard(t.solicitante?.departamento ?? t.area_destino) === filterSetor)
-        : list;
-      const out = [];
-      const toDateStr = (x) => (x || '').toString().slice(0, 10);
-      const fechadosNoDia = (dateStr) =>
-        base.filter(t => t.status === 'Concluído' && t.closed_at && toDateStr(t.closed_at) === dateStr).length;
-      const saldoAbertosFimDoDia = (dateStr) =>
-        base.filter((t) => {
-          const created = toDateStr(t.created_at);
-          if (created > dateStr) return false;
-          if (t.status !== 'Concluído' || !t.closed_at) return true;
-          const closed = toDateStr(t.closed_at);
-          return closed > dateStr;
-        }).length;
-      const pausadosNoDia = (dateStr) =>
-        base.filter((t) => t.status === 'Pausado' && toDateStr(t.created_at) <= dateStr).length;
-
-      if (useCustomRange) {
-        const parseYMD = (s) => {
-          const p = String(s).slice(0, 10).split('-').map(Number);
-          return { y: p[0], m: p[1], d: p[2] };
-        };
-        let { y, m, d } = parseYMD(dateFrom);
-        const endYMD = parseYMD(dateTo);
-        for (;;) {
-          const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-          if (dateStr < dateFrom.slice(0, 10) || dateStr > dateTo.slice(0, 10)) break;
-          const loc = new Date(y, m - 1, d);
-          out.push({
-            dateKey: dateStr,
-            date: loc.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
-            abertos: saldoAbertosFimDoDia(dateStr),
-            fechados: fechadosNoDia(dateStr),
-            pausados: pausadosNoDia(dateStr),
-          });
-          if (dateStr === dateTo.slice(0, 10)) break;
-          loc.setDate(loc.getDate() + 1);
-          y = loc.getFullYear();
-          m = loc.getMonth() + 1;
-          d = loc.getDate();
-        }
-      } else {
-        const hoje = new Date();
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date(hoje);
-          d.setDate(d.getDate() - i);
-          const dateStr = d.toISOString().split('T')[0];
-          out.push({
-            date: d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-            abertos: saldoAbertosFimDoDia(dateStr),
-            fechados: fechadosNoDia(dateStr),
-            pausados: pausadosNoDia(dateStr),
-          });
-        }
-      }
-      return out;
+    if (error) throw new Error(error.message);
+    const out = data || {
+      total: 0,
+      abertos: 0,
+      em_andamento: 0,
+      pausados: 0,
+      concluidos: 0,
+      por_departamento: [],
+      por_dia: [],
+      por_dia_industria: [],
+      por_dia_administrativo: [],
+      por_mes_geral: [],
+      por_mes_industria: [],
+      por_mes_administrativo: [],
+      por_setor: [],
+      top_solicitantes: [],
     };
-    const por_dia = buildPorDia(all);
-    const por_dia_industria = buildPorDia(all, 'Industrial');
-    const por_dia_administrativo = buildPorDia(all, 'Administrativo');
-
-    const por_mes_geral = aggregateByMonth(all);
-    const por_mes_industria = aggregateByMonth(all, 'Industrial');
-    const por_mes_administrativo = aggregateByMonth(all, 'Administrativo');
-    const por_setor = aggregateBySetor(listForStats);
-    const top_solicitantes = aggregateTopSolicitantes(listForStats);
-
-    const out = {
-      total,
-      abertos,
-      em_andamento,
-      pausados,
-      concluidos,
-      por_departamento,
-      por_dia,
-      por_dia_industria,
-      por_dia_administrativo,
-      por_mes_geral,
-      por_mes_industria,
-      por_mes_administrativo,
-      por_setor,
-      top_solicitantes,
-    };
-    if (useCustomRange) {
-      out.por_mes_geral_range = aggregateByMonthInRange(listForStats, null, dateFrom, dateTo);
-      out.por_mes_industria_range = aggregateByMonthInRange(listForStats, 'Industrial', dateFrom, dateTo);
-      out.por_mes_administrativo_range = aggregateByMonthInRange(listForStats, 'Administrativo', dateFrom, dateTo);
-    }
 
     statsCache.key = cacheKey;
     statsCache.value = out;

@@ -20,9 +20,11 @@
     "lint": "npx eslint \"frontend/src/**/*.{ts,tsx}\"",
     "typecheck": "npx tsc --noEmit -p frontend/tsconfig.json",
     "build": "npm run build:frontend",
+    "bundle:check": "node scripts/check-bundle-budget.mjs",
     "test:backend": "npm run test -w backend",
+    "test:coverage": "npm run test:coverage -w backend",
     "test:permissions": "node --test backend/tests/permissions/**/*.test.js",
-    "ci": "npm run lint && npm run typecheck && npm run build && npm run test:backend"
+    "ci": "npm run lint && npm run typecheck && npm run build && npm run bundle:check && npm run test:backend && npm run test:coverage"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

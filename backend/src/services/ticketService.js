@@ -923,3 +923,11 @@ export const ticketService = {
     return map;
   },
 };
+
+export const __ticketServiceInternals = {
+  normalizeDept,
+  canViewTicket,
+  canCommentTicket,
+  canEditTicket,
+  applyTicketScope,
+};
